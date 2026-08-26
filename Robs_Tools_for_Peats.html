@@ -80,30 +80,29 @@ body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Ari
 /* ── Username gate overlay ── */
 #userGate {
   position: fixed; inset: 0; z-index: 9999;
-  background: linear-gradient(135deg, #0b1f3d 0%, #1a3c6e 50%, #1565b0 100%);
+  background: var(--light);
   display: flex; align-items: center; justify-content: center;
 }
 #userGate .gate-box {
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
+  background: var(--white); border: 1px solid var(--border);
   border-radius: 20px; padding: 48px 52px 44px;
   max-width: 440px; width: 90%; text-align: center;
-  box-shadow: 0 24px 60px rgba(0,0,0,.5);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(26,60,110,.12);
 }
-#userGate h2 { font-size: 22px; font-weight: 800; color: #7dd3fc; margin-bottom: 6px; letter-spacing: -.01em; }
-#userGate p  { font-size: 14px; color: rgba(255,255,255,.65); margin-bottom: 28px; line-height: 1.5; }
+#userGate h2 { font-size: 22px; font-weight: 800; color: var(--brand); margin-bottom: 6px; letter-spacing: -.01em; }
+#userGate p  { font-size: 14px; color: var(--muted); margin-bottom: 28px; line-height: 1.5; }
 #userGate input {
   width: 100%; padding: 13px 16px; border-radius: 10px;
-  border: 1.5px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1);
-  color: #fff; font-size: 16px; font-family: inherit; font-weight: 600;
+  border: 1.5px solid var(--border); background: var(--light);
+  color: var(--text); font-size: 16px; font-family: inherit; font-weight: 600;
   outline: none; margin-bottom: 16px; text-align: center;
   transition: border-color .15s, background .15s;
 }
-#userGate input::placeholder { color: rgba(255,255,255,.35); font-weight: 400; }
-#userGate input:focus { border-color: #38bdf8; background: rgba(255,255,255,.15); }
+#userGate input::placeholder { color: var(--muted); font-weight: 400; }
+#userGate input:focus { border-color: var(--brand); background: var(--white); }
 #userGate button {
   width: 100%; padding: 13px; border-radius: 10px; border: none;
-  background: #1d6fc0; color: #fff; font-size: 15px; font-weight: 700;
+  background: var(--brand); color: #fff; font-size: 15px; font-weight: 700;
   font-family: inherit; cursor: pointer; transition: background .15s, opacity .15s;
 }
 #userGate button:hover { background: #1a5ea8; }
@@ -652,7 +651,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   <div class="gate-box">
     <h2>Rob's Tools — Peats</h2>
     <p>Please enter your name to continue.<br>This will be included in all exported file names.</p>
-    <input type="text" id="gateNameInput" placeholder="Your full name…" autocomplete="name" maxlength="60"
+    <input type="text" id="gateNameInput" placeholder="Enter your name…" autocomplete="name" maxlength="60"
       oninput="document.getElementById('gateContinueBtn').disabled = !this.value.trim()"
       onkeydown="if(event.key==='Enter' && this.value.trim()) submitUserGate()">
     <button id="gateContinueBtn" onclick="submitUserGate()" disabled>Continue →</button>
@@ -3221,9 +3220,14 @@ function runOgCodeCheck() {
 }
 
 function buildOgCodeCheckHtml() {
-  if (!state.catalogName || !state.rawRows.length || !state.retailerId) return '';
+  if (!state.rawRows.length || !state.retailerId) return '';
   const lines = getOgOrderLines();
   if (!lines.length) return '';
+  if (!state.catalogName) {
+    return '<span style="display:inline-flex;align-items:center;gap:6px;margin-left:10px">'
+      + '<button onclick="runOgCodeCheck()" style="background:var(--light);border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;padding:2px 10px;border-radius:6px;cursor:pointer;white-space:nowrap">🔍 Upload catalog to check codes</button>'
+      + '</span>';
+  }
   const rid = state.retailerId;
   let exact = 0, auto = 0, bad = 0;
   lines.forEach(l => {
@@ -4953,7 +4957,15 @@ async function _downloadCRM() {
     }
 
     branchData.forEach(({ row, qty }, ri) => {
-      const sku    = String(row[cfg.partCol] || '').trim();
+      const rawSku = String(row[cfg.partCol] || '').trim().toUpperCase();
+      // CRM output uses the corrected Peats code (alias-resolved) where available
+      let sku = rawSku;
+      if (state.catalogName) {
+        const resolved = resolveCode(rawSku, state.retailerId);
+        if (resolved.code && resolved.status !== 'unmatched' && resolved.status !== 'discontinued') {
+          sku = resolved.code;
+        }
+      }
       const values = [sku, qty];
       if (includePrice) {
         const prices = getEffectivePrices(row, cfg);
@@ -5006,7 +5018,7 @@ function toggleRow(chk) {
 
 function updateOgCodeBadges() {
   const tt = document.getElementById('tableTitle');
-  if (!tt || !state.retailerId || !state.catalogName) return;
+  if (!tt || !state.retailerId) return;
   const cfg2 = RETAILERS[state.retailerId];
   if (!cfg2) return;
   tt.innerHTML = escHtml(cfg2.name + ' — ' + state.coverage + ' week coverage') + buildOgCodeCheckHtml();
@@ -7799,7 +7811,7 @@ async function buildSoundstoreEntry(data, safeTag) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v35 · 26 Aug 2026 · gh-classic-token';
+const TOOL_BUILD = 'v36 · 26 Aug 2026 · gate-light · check-codes-all · crm-peats-codes';
 try { console.log('%cRob\'s Tools for Peats — BUILD ' + TOOL_BUILD, 'background:#1a3c6e;color:#fff;padding:3px 9px;border-radius:4px;font-weight:700'); } catch(e) {}
 
 async function downloadSoundstoreCRM(data) {
