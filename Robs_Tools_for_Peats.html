@@ -1042,6 +1042,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
             <option value="smyths">Smyths</option>
             <option value="joyces">Joyces</option>
             <option value="soundstore">Soundstore</option>
+            <option value="irwins">Irwins Dungarvan</option>
             <option value="rob-test">Rob Test</option>
           </select>
         </div>
@@ -1110,6 +1111,23 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div id="soundstoreHint" style="display:none;margin:0 0 10px 0;padding:10px 14px;background:#fffbea;border:1px solid #f59e0b;border-radius:8px;font-size:13px;color:#92400e;align-items:center;gap:8px;">
       <span style="font-size:16px;">ℹ️</span>
       <span><strong>Note:</strong> Drop in the <strong>PDF version</strong> of the Soundstore PO — branch (Blackpool/Limerick/Tralee/Waterford/Wilton/Midleton) and account code are detected automatically.</span>
+    </div>
+
+    <!-- Irwins paste area (shown instead of dropzone when Irwins is selected) -->
+    <div id="irwinsPasteWrap" style="display:none;margin:0 0 10px 0">
+      <div style="padding:10px 14px;background:#fffbea;border:1px solid #f59e0b;border-radius:8px 8px 0 0;font-size:13px;color:#92400e;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">📧</span>
+        <span><strong>Irwins Dungarvan</strong> — paste the email order body below, then click <strong>Parse Order</strong>.</span>
+      </div>
+      <textarea id="irwinsEmailBody" rows="12"
+        placeholder="Paste the Irwins email body here…&#10;&#10;7*Nextbase 322GW Dash Cam&#10;Stock Code: NBDVR322GW&#10;Your Price (Ex VAT): €98.75 Stock: 239&#10; &#10;5*Sony WH-CH720N Headphones&#10;Stock Code: WHCH720NLCE7&#10;Your Price (Ex VAT): €84.52 Stock: 37"
+        style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #f59e0b;border-top:none;border-radius:0 0 8px 8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--white);resize:vertical;outline:none;line-height:1.5"
+        oninput="irwinsCheckPasteReady()"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <button id="irwinsPasteBtn" class="btn btn-green" onclick="irwinsParseFromTextarea()" disabled
+          style="font-size:13px;padding:8px 22px;">⚡ Parse Order</button>
+        <span id="irwinsPasteHint" style="font-size:12px;color:var(--muted)">Paste the email body above to continue</span>
+      </div>
     </div>
 
     <!-- Drop zone for conversion -->
@@ -5317,7 +5335,13 @@ function onConvRetailerChange() {
   if (joycesHint) joycesHint.style.display = (sel.value === 'joyces') ? 'flex' : 'none';
   const soundstoreHint = document.getElementById('soundstoreHint');
   if (soundstoreHint) soundstoreHint.style.display = (sel.value === 'soundstore') ? 'flex' : 'none';
-  // File input type
+  // Irwins: show paste area, hide dropzone; all other retailers: show dropzone, hide paste area
+  const irwinsPasteWrap = document.getElementById('irwinsPasteWrap');
+  const convDropzone    = document.getElementById('convDropzone');
+  const isIrwins = sel.value === 'irwins';
+  if (irwinsPasteWrap) irwinsPasteWrap.style.display = isIrwins ? 'block' : 'none';
+  if (convDropzone)    convDropzone.style.display    = isIrwins ? 'none'  : 'block';
+  // File input type (not used by Irwins)
   const isPDF = sel.value === 'joyces' || sel.value === 'soundstore';
   const fileInput = document.getElementById('convFileInput');
   if (fileInput) fileInput.accept = isPDF ? '.pdf' : '.xlsx,.xls,.xlsm';
@@ -5327,7 +5351,7 @@ function onConvRetailerChange() {
   updateConvDownloadBtn();
   // Refresh the catalog label retailer name if catalog is already loaded
   if (state.catalogName) {
-    const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'rob-test':'Rob Test' };
+    const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'irwins':'Irwins Dungarvan', 'rob-test':'Rob Test' };
     const lbl = document.getElementById('convRetailerToggleLabel');
     if (lbl) lbl.textContent = CONV_NAMES[sel.value] || 'Selected Retailer';
   }
@@ -5372,7 +5396,7 @@ function updateConvCatalogUI() {
       document.getElementById('convToggleCost').checked   = convState.showCost;
       document.getElementById('convToggleRetail').checked = convState.showRetail;
       // Show retailer name in the label
-      const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'rob-test':'Rob Test' };
+      const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'irwins':'Irwins Dungarvan', 'rob-test':'Rob Test' };
       const lbl = document.getElementById('convRetailerToggleLabel');
       if (lbl) lbl.textContent = CONV_NAMES[convState.retailerId] || 'Selected Retailer';
     }
@@ -5413,6 +5437,8 @@ function rerenderConvPreview() {
   // so checking it first for Soundstore/Smyths would collapse multi-PO view to one file.
   if (convState.parsedFiles && convState.parsedFiles.length > 1) {
     renderMultiFilePreview(convState.parsedFiles);
+  } else if (rid === 'irwins' && convState.parsedData) {
+    renderIrwinsPreview(convState.parsedData);
   } else if (rid === 'rob-test' && convState.parsedData) {
     renderRobTestPreview(convState.parsedData);
   } else if (rid === 'joyces' && convState.parsedData) {
@@ -5582,7 +5608,11 @@ function resetConvFile() {
   document.getElementById('convFilePill').style.display  = 'none';
   // convUploadBtn removed from toolbar; no-op
 void 0;
-  document.getElementById('convDropzone').style.display  = 'block';
+  // Irwins uses paste area; all others use dropzone
+  const _isIrwinsReset = convState.retailerId === 'irwins';
+  const _irwinsPasteWrapReset = document.getElementById('irwinsPasteWrap');
+  if (_irwinsPasteWrapReset) _irwinsPasteWrapReset.style.display = _isIrwinsReset ? 'block' : 'none';
+  document.getElementById('convDropzone').style.display = _isIrwinsReset ? 'none' : 'block';
   document.getElementById('convResults').style.display   = 'none';
   document.getElementById('convDownloadBtn').disabled    = true;
   const clipBtn2 = document.getElementById('convClipBtn'); if (clipBtn2) clipBtn2.disabled = true;
@@ -5646,6 +5676,10 @@ function renderConvTable() {
   }
   if (convState.retailerId === 'soundstore' && convState.parsedData) {
     renderSoundstorePreview(convState.parsedData);
+    return;
+  }
+  if (convState.retailerId === 'irwins' && convState.parsedData) {
+    renderIrwinsPreview(convState.parsedData);
     return;
   }
   if (convState.retailerId === 'rob-test' && convState.parsedData) {
@@ -5843,6 +5877,10 @@ async function downloadConvertedCRM() {
   }
   if (convState.retailerId === 'smyths' && convState.parsedData) {
     await downloadSmythsCRM(convState.parsedData);
+    return;
+  }
+  if (convState.retailerId === 'irwins' && convState.parsedData) {
+    await downloadIrwinsCRM(convState.parsedData);
     return;
   }
   if (convState.retailerId === 'rob-test' && convState.parsedData) {
@@ -7845,7 +7883,7 @@ async function buildSoundstoreEntry(data, safeTag) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v37 · 26 Aug 2026 · clear-keeps-catalog · discontinued-red-in-export';
+const TOOL_BUILD = 'v38 · 26 Aug 2026 · irwins-dungarvan-conv · clear-keeps-catalog · discontinued-red-in-export';
 try { console.log('%cRob\'s Tools for Peats — BUILD ' + TOOL_BUILD, 'background:#1a3c6e;color:#fff;padding:3px 9px;border-radius:4px;font-weight:700'); } catch(e) {}
 
 async function downloadSoundstoreCRM(data) {
@@ -8180,6 +8218,323 @@ function applyCodeCheck() {
   const cb = ccState.onApply;
   ccState.onApply = null;
   if (typeof cb === 'function') cb(map);
+}
+
+// ════════════════════════════════════════════════════
+//  IRWINS DUNGARVAN ORDER CONVERSION  (email body paste — qty*desc + Stock Code line)
+// ════════════════════════════════════════════════════
+
+const IRWINS_ACCOUNT_KEY     = 'peats_irwins_account';
+const IRWINS_DEFAULT_ACCOUNT = 'PAL001';
+
+function irwinsLoadAccount() {
+  try { return localStorage.getItem(IRWINS_ACCOUNT_KEY) || IRWINS_DEFAULT_ACCOUNT; }
+  catch (e) { return IRWINS_DEFAULT_ACCOUNT; }
+}
+
+function irwinsSaveFromUI(btn) {
+  const inp  = document.getElementById('irwinsAcctInput');
+  const code = inp ? inp.value.trim().toUpperCase() : '';
+  try { localStorage.setItem(IRWINS_ACCOUNT_KEY, code); } catch (e) {}
+  if (convState.parsedData) convState.parsedData.peatsCode = code;
+  if (inp) inp.classList.toggle('missing', !code);
+  if (btn) {
+    btn.textContent = '✔ Saved';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = '💾 Save'; btn.classList.remove('saved'); }, 1600);
+  }
+  showToast('✔ Irwins account code saved.');
+}
+
+/** Enable/disable the Parse button as the user types */
+function irwinsCheckPasteReady() {
+  const ta  = document.getElementById('irwinsEmailBody');
+  const btn = document.getElementById('irwinsPasteBtn');
+  const hint = document.getElementById('irwinsPasteHint');
+  if (!ta || !btn) return;
+  const hasText = ta.value.trim().length > 0;
+  btn.disabled = !hasText;
+  if (hint) hint.textContent = hasText ? 'Click Parse Order to continue' : 'Paste the email body above to continue';
+}
+
+/**
+ * Parse the email body text into order lines.
+ * Format per item (blocks separated by blank lines):
+ *   {qty}*{description}
+ *   Stock Code: {sku}   (or "Code: {sku}")
+ *   Your Price (Ex VAT): €{price} Stock: {stock}
+ */
+function parseIrwinsEmailText(text) {
+  if (!text || !text.trim()) return null;
+  const lines = [];
+  // Split on blank lines to get one block per product
+  const blocks = text.trim().split(/\n[ \t]*\n+/);
+  for (const block of blocks) {
+    const b = block.trim();
+    if (!b) continue;
+    // Qty + description: first occurrence of digits*text
+    const qtyMatch = b.match(/^(\d+)\*(.+)/m);
+    if (!qtyMatch) continue;
+    const qty  = parseInt(qtyMatch[1], 10);
+    const desc = qtyMatch[2].trim();
+    if (!qty || qty <= 0) continue;
+    // SKU: "Stock Code: XXXX" or "Code: XXXX" anywhere in block
+    const skuMatch = b.match(/(?:Stock\s+)?Code:\s*([A-Z0-9][A-Z0-9\-_]*)/i);
+    if (!skuMatch) continue;
+    const sku = skuMatch[1].trim().toUpperCase();
+    if (!sku) continue;
+    // Price (optional): "Your Price (Ex VAT): €XX.XX"
+    const priceMatch = b.match(/Your Price[^€]*€([\d.]+)/i);
+    const price = priceMatch ? (parseFloat(priceMatch[1]) || 0) : 0;
+    lines.push({ sku, desc, qty, price, total: Math.round(price * qty * 100) / 100 });
+  }
+  if (!lines.length) return null;
+  return {
+    lines,
+    totalUnits: lines.reduce((a, l) => a + l.qty, 0),
+    totalValue: Math.round(lines.reduce((a, l) => a + l.total, 0) * 100) / 100,
+    peatsCode:  irwinsLoadAccount(),
+  };
+}
+
+/** Called when the user clicks ⚡ Parse Order */
+function irwinsParseFromTextarea() {
+  const ta = document.getElementById('irwinsEmailBody');
+  if (!ta) return;
+  const parsed = parseIrwinsEmailText(ta.value);
+  if (!parsed || !parsed.lines.length) {
+    showToast('⚠ No order lines found — check the format.');
+    return;
+  }
+  convState.parsedData  = parsed;
+  convState.parsedFiles = [{ fileName: 'Irwins email order', parsedData: parsed }];
+  convState.fileName    = 'Irwins email order';
+  convState.priceOn     = new Set();
+  convState.skuOverrides  = {};
+  convState.excludedSkus  = new Set();
+  convState.codeCheckDoneFor = null;
+
+  document.getElementById('convFileName').textContent   = 'Irwins email (' + parsed.lines.length + ' lines)';
+  document.getElementById('convFilePill').style.display  = 'flex';
+  document.getElementById('irwinsPasteWrap').style.display = 'none';
+  document.getElementById('convDropzone').style.display    = 'none';
+
+  updateConvDownloadBtn();
+  renderConvTable();
+}
+
+function renderIrwinsPreview(data) {
+  const { lines, peatsCode } = data;
+  const resultsDiv = document.getElementById('convResults');
+  const titleEl    = document.getElementById('convTableTitle');
+  const thead      = document.getElementById('convTableHead');
+  const tbody      = document.getElementById('convTableBody');
+
+  const hasCatalog = !!state.catalogName;
+  const showCost   = hasCatalog && convState.showCost;
+  const showRetail = hasCatalog && convState.showRetail;
+
+  titleEl.textContent = 'Irwins Dungarvan Order Preview';
+  document.getElementById('convRowCount').textContent = lines.length + ' lines';
+  resultsDiv.style.display = 'block';
+
+  const validation = hasCatalog ? validateOrderCodes(lines, 'irwins') : null;
+
+  thead.innerHTML = '<tr>'
+    + (hasCatalog ? '<th class="th-col" style="width:40px"></th>' : '')
+    + '<th class="th-col">SKU</th>'
+    + '<th class="th-col">Description</th>'
+    + '<th class="th-col" style="text-align:right">Price</th>'
+    + '<th class="th-col" style="text-align:right">Qty</th>'
+    + '<th class="th-col" style="text-align:right">Line Total</th>'
+    + (showRetail ? '<th class="th-col" style="text-align:right;color:var(--brand)">Margin</th>' : '')
+    + '</tr>';
+
+  const rows = lines.map((l, i) => {
+    const effSku = effectiveSku(l.sku, 'irwins');
+    const entry  = (showCost || showRetail) ? catalogLookup(effSku) : null;
+    const hasCostDiff   = showCost   && entry && entry.cost   != null && Math.abs(l.price - entry.cost) > 0.005;
+    const hasRetailInfo = showRetail && entry && entry.retail != null;
+    const margin = (hasRetailInfo && entry.retail > 0)
+      ? ((entry.retail / 1.23) - l.price) / (entry.retail / 1.23) * 100 : null;
+    const rowStyle = i % 2 === 1 ? 'background:var(--light)' : '';
+
+    let statusCell = '';
+    if (hasCatalog && validation) {
+      const eff = resolveCode(effSku, 'irwins');
+      const st  = eff.status;
+      if (st === 'exact')
+        statusCell = '<td style="text-align:center"><span title="Matches Peats code" style="color:#15803d;font-weight:700">●</span></td>';
+      else if (st === 'auto' || st === 'alias')
+        statusCell = `<td style="text-align:center"><span title="Auto-corrected via ${escHtml(eff.via)} — was ${escHtml(l.sku)}" style="color:#d97706;font-weight:700">●</span></td>`;
+      else if (st === 'discontinued')
+        statusCell = '<td style="text-align:center"><span title="Discontinued" style="color:#6b7280;font-weight:700">●</span></td>';
+      else
+        statusCell = '<td style="text-align:center"><span title="Not found in catalog — will fail CRM import" style="color:#dc2626;font-weight:700">●</span></td>';
+    }
+
+    const retailTag = hasRetailInfo
+      ? `<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €${entry.retail.toFixed(2)}</span>`
+      : '';
+
+    let priceCell;
+    if (hasCostDiff) {
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
+        + `<span class="old-val">€${l.price.toFixed(2)}</span>`
+        + `<span class="new-val">€${entry.cost.toFixed(2)}</span>${retailTag}</td>`;
+    } else {
+      priceCell = `<td style="text-align:right;line-height:1.6"><span style="display:block">${l.price > 0 ? '€' + l.price.toFixed(2) : '—'}</span>${retailTag}</td>`;
+    }
+
+    let marginCell = '';
+    if (showRetail) {
+      if (margin !== null) {
+        const mc = margin >= 25 ? '#22a03a' : margin >= 20 ? '#d97706' : '#dc2626';
+        marginCell = `<td style="text-align:right;font-weight:700;color:${mc}">${margin.toFixed(1)}%</td>`;
+      } else {
+        marginCell = '<td style="text-align:right;color:var(--muted)">—</td>';
+      }
+    }
+
+    const _ovr    = convState.skuOverrides[l.sku];
+    const _hasOvr = _ovr && _ovr !== l.sku;
+    const _strike = _hasOvr
+      ? `<span style="display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2">${escHtml(l.sku)}</span>`
+      : '';
+
+    return `<tr style="${rowStyle}">`
+      + statusCell
+      + `<td style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px">`
+      +   _strike
+      +   `<input type="text" value="${escHtml(effSku)}" data-orig="${escHtml(l.sku)}" `
+      +   `style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:15ch;min-width:70px;cursor:pointer;outline:none" `
+      +   `title="Click to edit SKU" `
+      +   `onfocus="this.style.borderBottomColor='var(--brand)';this.style.background='rgba(255,255,255,.8)'" `
+      +   `onblur="this.style.borderBottomColor='transparent';this.style.background='transparent';updateSkuOverride(this.dataset.orig,this.value)">`
+      + `</td>`
+      + `<td style="font-size:12px">${escHtml(entry && entry.desc ? entry.desc : l.desc)}</td>`
+      + priceCell
+      + `<td style="text-align:right;font-weight:600">${l.qty}</td>`
+      + `<td style="text-align:right">${l.total > 0 ? '€' + l.total.toFixed(2) : '—'}</td>`
+      + marginCell
+      + '</tr>';
+  });
+
+  const totalQty = lines.reduce((a, l) => a + l.qty, 0);
+  const totalVal = lines.reduce((a, l) => a + l.total, 0);
+  rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
+    + `<td colspan="${(hasCatalog ? 1 : 0) + 3}">TOTAL ORDER</td>`
+    + `<td style="text-align:right">${totalQty}</td>`
+    + `<td style="text-align:right">${totalVal > 0 ? '€' + totalVal.toFixed(2) : '—'}</td>`
+    + (showRetail ? '<td></td>' : '')
+    + '</tr>');
+
+  tbody.innerHTML = rows.join('');
+
+  // Account code + code-check toolbar
+  const slot = document.getElementById('convToolbarSlot');
+  if (slot) {
+    const codeCell = buildCodeCheckToolbarHtml();
+    const hasCode  = !!peatsCode;
+    slot.innerHTML = '<div class="tb-group">'
+      + '<span class="tb-cell">'
+      +   '<span class="tb-label">Account</span>'
+      +   `<input id="irwinsAcctInput" class="tb-input${hasCode ? '' : ' missing'}" value="${escHtml(peatsCode)}" `
+      +   `       placeholder="PAL001" oninput="this.value=this.value.toUpperCase()" `
+      +   `       title="Peats account code for the CRM output">`
+      +   '<button class="tb-btn" onclick="irwinsSaveFromUI(this)" title="Remember this account code">💾 Save</button>'
+      + '</span>'
+      + codeCell
+      + '</div>';
+  }
+}
+
+async function downloadIrwinsCRM(data) {
+  if (!data.lines || !data.lines.length) { showToast('ℹ No order lines found.'); return; }
+  const inp       = document.getElementById('irwinsAcctInput');
+  const peatsCode = (inp ? inp.value.trim().toUpperCase() : '') || data.peatsCode || IRWINS_DEFAULT_ACCOUNT;
+  const showCost   = !!state.catalogName && convState.showCost;
+  const showRetail = !!state.catalogName && convState.showRetail;
+
+  const wb = makeWorkbook('Irwins Dungarvan CRM Order');
+  const ws = wb.addWorksheet('CRM Order');
+  const cols = [
+    { header: 'Account',     width: 14 },
+    { header: 'SKU',         width: 18 },
+    { header: 'Description', width: 45 },
+    { header: 'Price',       width: 12 },
+    { header: 'Qty',         width: 8  },
+    { header: 'Line Total',  width: 14 },
+  ];
+  if (showRetail) cols.push({ header: 'Margin %', width: 10 });
+  ws.columns = cols;
+
+  const hdrRow = ws.getRow(1);
+  hdrRow.eachCell(cell => {
+    cell.font      = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+  hdrRow.height = 18;
+
+  const colPrice = 4, colQty = 5, colTotal = 6, colMargin = 7;
+  let totalUnits = 0, totalValue = 0;
+
+  data.lines.forEach((line, i) => {
+    if (isConvExcluded(line.sku)) return;
+    const effSku = effectiveSku(line.sku, 'irwins');
+    const entry  = (showCost || showRetail) ? catalogLookup(effSku) : null;
+    const hasCostDiff   = showCost   && entry && entry.cost   != null && Math.abs(line.price - entry.cost) > 0.005;
+    const hasRetailInfo = showRetail && entry && entry.retail != null;
+    const flagOn   = hasCostDiff && convState.priceOn.has(line.sku);
+    const effPrice = flagOn ? entry.cost : line.price;
+    const effTotal = flagOn
+      ? Math.round(entry.cost * line.qty * 100) / 100
+      : line.total;
+    const margin = (hasRetailInfo && entry.retail > 0)
+      ? Math.round(((entry.retail / 1.23) - effPrice) / (entry.retail / 1.23) * 1000) / 10
+      : null;
+
+    totalUnits += line.qty;
+    totalValue += effTotal;
+
+    const rowData = [peatsCode, effSku, (entry && entry.desc) || line.desc, effPrice || '', line.qty, effTotal || ''];
+    if (showRetail) rowData.push(margin !== null ? margin : '');
+    const row = ws.addRow(rowData);
+    if (i % 2 === 1) row.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF4F6FA'} }; });
+    if (effPrice)  { row.getCell(colPrice).numFmt = '#,##0.00'; row.getCell(colPrice).alignment = { horizontal:'right' }; }
+    row.getCell(colQty).alignment   = { horizontal: 'center' };
+    if (effTotal)  { row.getCell(colTotal).numFmt = '#,##0.00'; row.getCell(colTotal).alignment = { horizontal:'right' }; }
+    if (showRetail && margin !== null) {
+      row.getCell(colMargin).numFmt = '0.0"%"'; row.getCell(colMargin).alignment = { horizontal:'right' };
+    }
+    if (flagOn) {
+      row.getCell(colPrice).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFF00' } };
+      row.getCell(colPrice).font = { bold: true };
+    }
+    if (state.catalogName && resolveCode(effSku, 'irwins').status === 'unmatched') {
+      row.getCell(2).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFC7C7' } };
+      row.getCell(2).font = { bold: true, color: { argb:'FFB91C1C' } };
+    }
+  });
+
+  const totData = ['', '', 'TOTAL ORDER VALUE', '', totalUnits, Math.round(totalValue * 100) / 100];
+  if (showRetail) totData.push('');
+  const totRow = ws.addRow(totData);
+  totRow.font = { bold: true };
+  totRow.getCell(colTotal).numFmt = '#,##0.00'; totRow.getCell(colTotal).alignment = { horizontal:'right' };
+  totRow.getCell(colQty).alignment = { horizontal:'center' };
+  totRow.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8F4EA'} }; });
+
+  ws.autoFilter = { from: 'A1', to: showRetail ? 'G1' : 'F1' };
+  const buf  = await wb.xlsx.writeBuffer();
+  const name = `Irwins_${peatsCode}_${fileStamp()}.xlsx`;
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✔ Downloaded ' + name);
 }
 
 // ════════════════════════════════════════════════════
