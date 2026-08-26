@@ -603,15 +603,25 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 .cc-via.bad  { background: #fee2e2; color: #b91c1c; }
 .cc-via.disc { background: #f3f4f6; color: #6b7280; }
 .cc-via.none { background: var(--light); color: var(--muted); }
-.cc-row-disc td { background: #f9fafb; color: #9ca3af; }
+.cc-row-disc  td { background: #f9fafb; color: #9ca3af; }
+.cc-row-legit td { background: #f0fdfa; }
+.cc-via.legit { background: #ccfbf1; color: #0f766e; }
+.cc-stat.legit { background: #ccfbf1; color: #0f766e; border-color: #5eead4; }
+/* Action column buttons */
+.cc-action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
 .cc-disc-btn {
-  margin-top: 5px; font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer;
-  border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280; line-height: 1.5;
+  font-size: 11px; padding: 3px 9px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280; line-height: 1.5; font-weight: 600;
 }
-.cc-disc-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+.cc-disc-btn:hover { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
+.cc-legit-btn {
+  font-size: 11px; padding: 3px 9px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  border: 1px solid #99f6e4; background: #f0fdfa; color: #0f766e; line-height: 1.5; font-weight: 600;
+}
+.cc-legit-btn:hover { background: #ccfbf1; border-color: #5eead4; }
 .cc-restore-btn {
-  font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer;
-  border: 1px solid #d1d5db; background: #f3f4f6; color: #374151; line-height: 1.5;
+  font-size: 11px; padding: 3px 9px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  border: 1px solid #d1d5db; background: #f3f4f6; color: #374151; line-height: 1.5; font-weight: 600;
 }
 .cc-restore-btn:hover { background: #e5e7eb; }
 .cc-desc { font-size: 12px; color: var(--text); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -2348,6 +2358,34 @@ function pendingDiscRows() {
   return discCodes().filter(c => !window._discBaseline.has(c));
 }
 
+// ─── Legit codes (valid codes confirmed by user, not yet in catalog) ──────────
+const LEGIT_KEY        = 'peats_legit_v1';
+const LEGIT_SHEET_NAME = 'Legit Codes';
+
+function loadLegit() {
+  try { return new Set(JSON.parse(localStorage.getItem(LEGIT_KEY) || '[]')); }
+  catch (e) { return new Set(); }
+}
+function saveLegitSet(s) {
+  try { localStorage.setItem(LEGIT_KEY, JSON.stringify(Array.from(s).sort())); } catch (e) {}
+}
+function markLegit(code) {
+  const s = loadLegit(); s.add(String(code).trim().toUpperCase()); saveLegitSet(s);
+}
+function unmarkLegit(code) {
+  const s = loadLegit(); s.delete(String(code).trim().toUpperCase()); saveLegitSet(s);
+}
+function isLegit(code) {
+  return loadLegit().has(String(code).trim().toUpperCase());
+}
+function legitCodes() {
+  return Array.from(loadLegit()).sort();
+}
+if (typeof window._legitBaseline === 'undefined') window._legitBaseline = new Set();
+function pendingLegitRows() {
+  return legitCodes().filter(c => !window._legitBaseline.has(c));
+}
+
 // Aliases are stored per-customer: { "rob-test": { "WPA7517 KIT": "WPA7517KITV2" }, ... }
 function loadAliases() {
   try { return JSON.parse(localStorage.getItem(CODE_ALIAS_KEY) || '{}'); }
@@ -2407,6 +2445,11 @@ function resolveCode(rawCode, customerId) {
   // Tier 4b — discontinued (marked by user; won't be in catalog, so check here)
   if (isDiscontinued(upper)) {
     return { status: 'discontinued', code: upper, original, via: 'discontinued', entry: null };
+  }
+
+  // Tier 4c — legit (user-confirmed valid code not yet in catalog)
+  if (isLegit(upper)) {
+    return { status: 'legit', code: upper, original, via: 'legit', entry: null };
   }
 
   const n = normCode(original);
@@ -2591,8 +2634,10 @@ function pendingAliasRows() {
  * corrections to any machine or colleague.
  */
 async function downloadCatalogWithAliases() {
-  const rows = aliasRows();
-  if (!rows.length) { showToast('ℹ No code corrections to save yet.'); return; }
+  const rows    = aliasRows();
+  const lCodes  = legitCodes();
+  const dCodes2 = discCodes();
+  if (!rows.length && !lCodes.length && !dCodes2.length) { showToast('ℹ Nothing to save yet.'); return; }
   if (!state.catalogRawBuf) {
     showToast('⚠ Re-upload the catalog first so corrections can be written into it.');
     return;
@@ -2700,6 +2745,36 @@ async function downloadCatalogWithAliases() {
       ctXml   = ctXml.replace('</Types>', '<Override PartName="/' + dPartPath + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
     }
 
+    // ── Also write the Legit Codes sheet ─────────────────────────────
+    const existingLegit = wbXml.match(new RegExp('<sheet[^>]*name="' + rx(LEGIT_SHEET_NAME) + '"[^>]*/>'));
+    if (existingLegit) {
+      const lrid = (existingLegit[0].match(/r:id="([^"]+)"/) || [])[1];
+      const ltgt = lrid ? (relsXml.match(new RegExp('<Relationship[^>]*Id="' + rx(lrid) + '"[^>]*Target="([^"]+)"')) || [])[1] : null;
+      wbXml = wbXml.replace(existingLegit[0], '');
+      if (lrid) relsXml = relsXml.replace(new RegExp('<Relationship[^>]*Id="' + rx(lrid) + '"[^>]*/>'), '');
+      if (ltgt) { const lp = 'xl/' + ltgt.replace(/^\.\//, ''); zip.remove(lp); ctXml = ctXml.replace(new RegExp('<Override[^>]*PartName="/' + rx(lp) + '"[^>]*/>'), ''); }
+    }
+    if (lCodes.length) {
+      let ln = 1; while (zip.file('xl/worksheets/sheet' + ln + '.xml')) ln++;
+      const lPartPath = 'xl/worksheets/sheet' + ln + '.xml';
+      let lMaxRid = 0; (relsXml.match(/Id="rId(\d+)"/g) || []).forEach(m => lMaxRid = Math.max(lMaxRid, parseInt(m.match(/\d+/)[0], 10)));
+      const lNewRid = 'rId' + (lMaxRid + 1);
+      let lMaxSid = 0; (wbXml.match(/sheetId="(\d+)"/g) || []).forEach(m => lMaxSid = Math.max(lMaxSid, parseInt(m.match(/\d+/)[0], 10)));
+      const lData = [['Code','Notes']].concat(lCodes.map(c => [c, 'Confirmed valid — add to catalog']));
+      const lBody = lData.map((r, ri) => '<row r="' + (ri+1) + '">' + r.map((v, ci) => '<c r="' + colL(ci) + (ri+1) + '" t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>').join('') + '</row>').join('');
+      const lSheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+        + '<cols><col min="1" max="1" width="24" customWidth="1"/><col min="2" max="2" width="44" customWidth="1"/></cols>'
+        + '<sheetData>' + lBody + '</sheetData>'
+        + '<autoFilter ref="A1:B' + lData.length + '"/>'
+        + '</worksheet>';
+      zip.file(lPartPath, lSheetXml);
+      relsXml = relsXml.replace('</Relationships>', '<Relationship Id="' + lNewRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + ln + '.xml"/></Relationships>');
+      wbXml   = wbXml.replace('</sheets>', '<sheet name="' + LEGIT_SHEET_NAME + '" sheetId="' + (lMaxSid+1) + '" r:id="' + lNewRid + '"/></sheets>');
+      ctXml   = ctXml.replace('</Types>', '<Override PartName="/' + lPartPath + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+    }
+
     zip.file('xl/workbook.xml', wbXml);
     zip.file('xl/_rels/workbook.xml.rels', relsXml);
     zip.file('[Content_Types].xml', ctXml);
@@ -2707,22 +2782,26 @@ async function downloadCatalogWithAliases() {
     const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{ level:6 },
       mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
+    // Build summary string for toasts
+    const _parts = [];
+    if (rows.length)   _parts.push(`${rows.length} correction${rows.length === 1 ? '' : 's'}`);
+    if (dCodes.length) _parts.push(`${dCodes.length} discontinued`);
+    if (lCodes.length) _parts.push(`${lCodes.length} legit code${lCodes.length === 1 ? '' : 's'}`);
+    const _summary = _parts.join(' + ');
+
     if (GH_READY) {
       // ── GitHub mode: push directly to the repo ──────────────────────
       showToast('⏳ Pushing catalog update to GitHub…');
       try {
         await githubPushCatalog(blob);
-        // Also refresh our local raw buffer with the new bytes
         state.catalogRawBuf = await blob.arrayBuffer();
-        // Clear the pending badges
         state.catalogAliasBaseline = new Set(rows.map(r => r[0] + '|' + r[1] + '|' + r[2]));
-        window._discBaseline = new Set(dCodes);
+        window._discBaseline  = new Set(dCodes);
+        window._legitBaseline = new Set(lCodes);
         ogUpdateCatalogTile();
         if (typeof updateConvCatalogUI === 'function') updateConvCatalogUI();
-        const discMsg = dCodes.length ? ` + ${dCodes.length} discontinued` : '';
-        showToast(`✔ ${rows.length} correction${rows.length === 1 ? '' : 's'}${discMsg} saved to GitHub — all colleagues get the update on next load.`);
+        showToast(`✔ ${_summary} saved to GitHub — all colleagues get the update on next load.`);
       } catch (ghErr) {
-        // Push failed — fall back to local download so work is not lost
         console.error('[GitHub] Push failed:', ghErr);
         const url2 = URL.createObjectURL(blob);
         const a3   = document.createElement('a');
@@ -2740,13 +2819,12 @@ async function downloadCatalogWithAliases() {
       a2.download = state.catalogName.replace(/\.(xlsx|xls)$/i, '') + '_' + fileStamp() + '.xlsx';
       a2.click();
       URL.revokeObjectURL(url);
-      // Clear the pending badges
       state.catalogAliasBaseline = new Set(rows.map(r => r[0] + '|' + r[1] + '|' + r[2]));
-      window._discBaseline = new Set(dCodes);
+      window._discBaseline  = new Set(dCodes);
+      window._legitBaseline = new Set(lCodes);
       ogUpdateCatalogTile();
       if (typeof updateConvCatalogUI === 'function') updateConvCatalogUI();
-      const discMsg2 = dCodes.length ? ` + ${dCodes.length} discontinued` : '';
-      showToast(`✔ ${rows.length} correction${rows.length === 1 ? '' : 's'}${discMsg2} saved into the catalog file.`);
+      showToast(`✔ ${_summary} saved into the catalog file.`);
     }
   } catch (err) {
     showToast('✗ Could not write corrections to catalog: ' + err.message);
@@ -8248,7 +8326,7 @@ async function downloadDomSmithCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v41 · 26 Aug 2026 · dominic-smith-conv';
+const TOOL_BUILD = 'v42 · 26 Aug 2026 · legit-code-check';
 
 function forceReload() {
   const base = window.location.href.split('?')[0].split('#')[0];
@@ -8311,18 +8389,20 @@ function renderCodeCheckRows() {
     const isAuto  = r.status === 'auto' || r.status === 'alias';
     const isBad   = r.status === 'unmatched';
     const isDisc  = r.status === 'discontinued';
+    const isLegitRow = r.status === 'legit';
 
-    const rowCls = isBad ? 'cc-row-bad' : isAuto ? 'cc-row-auto' : isDisc ? 'cc-row-disc' : 'cc-row-exact';
-    const inCls  = isBad ? 'bad' : isAuto ? 'mid' : isDisc ? 'none' : 'ok';
+    const rowCls = isBad ? 'cc-row-bad' : isAuto ? 'cc-row-auto' : isDisc ? 'cc-row-disc' : isLegitRow ? 'cc-row-legit' : 'cc-row-exact';
+    const inCls  = isBad ? 'bad' : isAuto ? 'mid' : (isDisc || isLegitRow) ? 'none' : 'ok';
 
     // "Match" badge
     let via;
-    if (isExact)      via = '<span class="cc-via ok">✔ Exact</span>';
-    else if (isAuto)  via = `<span class="cc-via mid">↻ ${escHtml(r.via)}</span>`;
-    else if (isDisc)  via = '<span class="cc-via disc">🚫 Discontinued</span>';
-    else              via = '<span class="cc-via bad">✕ No match</span>';
+    if (isExact)       via = '<span class="cc-via ok">✔ Exact</span>';
+    else if (isAuto)   via = `<span class="cc-via mid">↻ ${escHtml(r.via)}</span>`;
+    else if (isDisc)   via = '<span class="cc-via disc">🚫 Discontinued</span>';
+    else if (isLegitRow) via = '<span class="cc-via legit">✅ Legit</span>';
+    else               via = '<span class="cc-via bad">✕ No match</span>';
 
-    // Original code column — show strikethrough when it was changed
+    // Original code column
     const changed = normCode(r.code) !== normCode(r.original) || r.code !== r.original;
     const origCell = isExact
       ? '<span class="cc-orig">—</span>'
@@ -8330,15 +8410,17 @@ function renderCodeCheckRows() {
         ? `<span class="cc-orig"><s>${escHtml(r.original)}</s></span>`
         : `<span class="cc-orig">${escHtml(r.original)}</span>`;
 
-    // Product description from catalog (proof the match is right)
+    // Product description
     const descCell = r.entry
       ? `<span class="cc-desc">${escHtml(r.entry.desc || r.desc || '—')}</span>`
         + (r.entry.cost != null ? `<span style="font-size:11px;color:var(--muted);margin-left:8px">€${r.entry.cost.toFixed(2)}</span>` : '')
       : isDisc
         ? `<span class="cc-desc muted">discontinued — excluded from export</span>`
-        : `<span class="cc-desc muted">${escHtml(r.desc || 'not in catalog')}</span>`;
+        : isLegitRow
+          ? `<span class="cc-desc" style="color:#0f766e">confirmed valid — included in export</span>`
+          : `<span class="cc-desc muted">${escHtml(r.desc || 'not in catalog')}</span>`;
 
-    // Suggestions for unmatched codes + disc button
+    // Suggestions (unmatched only — no action buttons in description cell any more)
     let suggestHtml = '';
     if (isBad) {
       const sugg = suggestCodes(r.original, 4);
@@ -8347,29 +8429,27 @@ function renderCodeCheckRows() {
           + sugg.map(s => `<button class="cc-suggest-btn" onclick="pickSuggestion(${i},'${escHtml(s)}')" title="Use ${escHtml(s)}">${escHtml(s)}</button>`).join('')
           + '</div>';
       }
-      suggestHtml += `<div><button class="cc-disc-btn" onclick="markCcDiscontinued(${i})" title="Mark as discontinued — remembers for future POs">🚫 Mark discontinued</button></div>`;
     }
 
-    // Restore button for discontinued rows
-    const restoreHtml = isDisc
-      ? `<div><button class="cc-restore-btn" onclick="restoreCcDiscontinued(${i})" title="Remove discontinued flag — will show as unmatched on next PO">↩ Restore</button></div>`
-      : '';
+    // Action column — Disc + Legit for unmatched; Restore for disc/legit; empty otherwise
+    let actionCell;
+    if (isBad) {
+      actionCell = `<td style="text-align:center">
+        <div class="cc-action-btns" style="justify-content:center">
+          <button class="cc-disc-btn"  onclick="markCcDiscontinued(${i})" title="Mark as discontinued — excluded from export, remembered for future POs">🚫 Disc</button>
+          <button class="cc-legit-btn" onclick="markCcLegit(${i})"        title="Mark as a valid code not yet in the catalog — included in export, saved to catalog">✅ Legit</button>
+        </div>
+      </td>`;
+    } else if (isDisc) {
+      actionCell = `<td style="text-align:center"><button class="cc-restore-btn" onclick="restoreCcDiscontinued(${i})" title="Remove discontinued flag">↩ Restore</button></td>`;
+    } else if (isLegitRow) {
+      actionCell = `<td style="text-align:center"><button class="cc-restore-btn" onclick="unmarkCcLegit(${i})" title="Remove legit flag — will show as unmatched">↩ Unmark</button></td>`;
+    } else {
+      actionCell = '<td></td>';
+    }
 
-    // Export checkbox — only on unmatched rows; exact/auto always export; discontinued always excluded
-    const isExcluded = isBad && ccState.excluded && ccState.excluded.has(r.original.toUpperCase());
-    const exportCell = isBad
-      ? `<td style="text-align:center">
-           <label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)">
-             <input type="checkbox" ${isExcluded ? '' : 'checked'}
-                    onchange="toggleCcExclude(${i}, this.checked)"
-                    style="width:14px;height:14px;cursor:pointer;accent-color:var(--green)">
-           </label>
-         </td>`
-      : isDisc
-        ? '<td style="text-align:center;font-size:11px;color:#9ca3af">—</td>'
-        : '<td></td>';
-
-    return `<tr class="${rowCls}" style="${isExcluded ? 'opacity:0.4' : ''}">
+    const isReadonly = isDisc || isLegitRow;
+    return `<tr class="${rowCls}">
       <td style="color:var(--muted);font-size:11px">${i + 1}</td>
       <td>
         <input type="text" class="cc-code-in ${inCls}" id="cc-in-${i}"
@@ -8377,13 +8457,13 @@ function renderCodeCheckRows() {
                oninput="this.value=this.value.toUpperCase()"
                onchange="recheckCode(${i}, this.value)"
                onblur="recheckCode(${i}, this.value)"
-               ${isDisc ? 'readonly style="pointer-events:none;opacity:0.6"' : ''}>
+               ${isReadonly ? 'readonly style="pointer-events:none;opacity:0.6"' : ''}>
       </td>
       <td>${via}</td>
       <td>${origCell}</td>
-      <td>${descCell}${suggestHtml}${restoreHtml}</td>
+      <td>${descCell}${suggestHtml}</td>
       <td style="text-align:center;font-weight:600">${r.qty != null ? r.qty : ''}</td>
-      ${exportCell}
+      ${actionCell}
     </tr>`;
   }).join('');
 
@@ -8391,18 +8471,20 @@ function renderCodeCheckRows() {
 }
 
 function renderCodeCheckStats() {
-  const rs   = ccState.results;
+  const rs    = ccState.results;
   const exact = rs.filter(r => r.status === 'exact').length;
   const auto  = rs.filter(r => r.status === 'auto' || r.status === 'alias').length;
   const disc  = rs.filter(r => r.status === 'discontinued').length;
+  const leg   = rs.filter(r => r.status === 'legit').length;
   const bad   = rs.filter(r => r.status === 'unmatched').length;
 
   const parts = [];
   parts.push(`<span class="cc-stat ok"><span class="dot"></span>${exact} exact</span>`);
   if (auto) parts.push(`<span class="cc-stat warn"><span class="dot"></span>${auto} auto-corrected</span>`);
+  if (leg)  parts.push(`<span class="cc-stat legit"><span class="dot"></span>${leg} legit</span>`);
   if (disc) parts.push(`<span class="cc-stat none"><span class="dot"></span>${disc} discontinued</span>`);
   if (bad)  parts.push(`<span class="cc-stat bad"><span class="dot"></span>${bad} not found</span>`);
-  if (!auto && !bad && !disc) parts.push('<span class="cc-stat none">All codes clean — ready to convert</span>');
+  if (!auto && !bad && !disc && !leg) parts.push('<span class="cc-stat none">All codes clean — ready to convert</span>');
   document.getElementById('ccStats').innerHTML = parts.join('');
 
   // Footer note
@@ -8412,19 +8494,18 @@ function renderCodeCheckStats() {
       + `That usually means the catalog's code column wasn't read correctly — `
       + `<a href="#" onclick="showCatalogDiag('${escHtml(rs[0].original)}');return false;" style="color:var(--brand);font-weight:700">check the catalog columns</a>.`;
   } else if (bad) {
-    const nExcl = (ccState.excluded && ccState.excluded.size) || 0;
-    const nUnfixed = bad - nExcl;
-    const exclNote = nExcl ? ` <span style="color:#6b7280">(${nExcl} unchecked — excluded from export)</span>` : '';
-    if (nUnfixed > 0) {
-      noteEl.innerHTML = `<strong style="color:#b91c1c">${nUnfixed} code${nUnfixed === 1 ? '' : 's'} won't import.</strong> `
-        + `Edit them above until they turn green, uncheck to exclude from export, or continue to fix in the CRM.${exclNote}`;
-    } else {
-      noteEl.innerHTML = `<strong style="color:#15803d">All unmatched codes excluded from export.</strong>${exclNote}`;
+    if (bad > 0) {
+      noteEl.innerHTML = `<strong style="color:#b91c1c">${bad} code${bad === 1 ? '' : 's'} not found.</strong> `
+        + `Edit until green, mark 🚫 Disc to exclude, or mark ✅ Legit to include as-is.`;
     }
-  } else if (disc && !bad) {
+  } else if (disc && !bad && !leg) {
     const discNote = disc === 1 ? '1 discontinued item' : `${disc} discontinued items`;
     noteEl.innerHTML = `<strong style="color:#6b7280">${discNote} excluded from export.</strong> `
       + `These are remembered — they'll show as discontinued on future POs automatically.`;
+  } else if (leg && !bad) {
+    const legNote = leg === 1 ? '1 legit code' : `${leg} legit codes`;
+    noteEl.innerHTML = `<strong style="color:#0f766e">${legNote} confirmed valid.</strong> `
+      + `Included in export. Hit 💾 Save to Catalog to add them so they match automatically next time.`;
   } else if (auto) {
     noteEl.innerHTML = `<strong style="color:#b45309">${auto} code${auto === 1 ? '' : 's'} auto-corrected.</strong> `
       + `Review the amber rows, then apply.`;
@@ -8433,33 +8514,36 @@ function renderCodeCheckStats() {
   }
 
   // Apply button label
-  const nExcluded = (ccState.excluded && ccState.excluded.size) || 0;
-  const nRemaining = bad - nExcluded;
   const btn = document.getElementById('ccApplyBtn');
-  if (nRemaining > 0) {
-    btn.textContent = `Continue (${nRemaining} unmatched)`;
+  if (bad > 0) {
+    btn.textContent = `Continue (${bad} unmatched)`;
     btn.style.background = 'var(--orange)';
-  } else if (nExcluded > 0 || disc > 0) {
-    const nSkipped = nExcluded + disc;
-    btn.textContent = `Continue (${nSkipped} excluded from export)`;
+  } else if (disc > 0) {
+    btn.textContent = `Continue (${disc} excluded from export)`;
     btn.style.background = 'var(--green)';
   } else {
     btn.textContent = 'Apply & Continue';
     btn.style.background = 'var(--green)';
   }
 
-  // Learned-alias hint
-  const learnEl = document.getElementById('ccLearnNote');
-  const n        = countAliases(ccState.customerId);
+  // Learned-alias hint + Save to Catalog button
+  const learnEl  = document.getElementById('ccLearnNote');
+  const nAlias   = countAliases(ccState.customerId);
   const total    = aliasRows().length;
   const nDisc    = discCodes().length;
-  const hasSaveable = total > 0 || nDisc > 0;
-  const discPart = nDisc ? ` + ${nDisc} discontinued` : '';
-  learnEl.innerHTML = (n || nDisc)
-    ? `<span>💡</span><span>${n ? `${n} code correction${n === 1 ? '' : 's'} remembered` : ''}${n && nDisc ? ', ' : ''}${nDisc ? `${nDisc} discontinued code${nDisc === 1 ? '' : 's'} marked` : ''} — auto-applied on future POs.`
-      + (n ? ` <a href="#" onclick="clearCustomerAliases();return false;" style="color:var(--brand)">Clear corrections</a>` : '') + `</span>`
-      + (hasSaveable ? `<button class="cc-suggest-btn" style="margin-left:auto;padding:7px 18px;font-family:inherit;font-size:13px;font-weight:700;border-radius:6px" onclick="downloadCatalogWithAliases()" title="Write corrections${discPart} into the catalog file so they follow you to any machine">💾 Save to Catalog</button>` : '')
-    : `<span>💡</span><span>Any code you fix here is remembered for this customer and auto-applied next time. Discontinued codes are also remembered.</span>`;
+  const nLegit   = legitCodes().length;
+  const hasSaveable = total > 0 || nDisc > 0 || nLegit > 0;
+  const discPart  = nDisc  ? ` + ${nDisc} discontinued`  : '';
+  const legitPart = nLegit ? ` + ${nLegit} legit code${nLegit === 1 ? '' : 's'}` : '';
+  const memParts = [];
+  if (nAlias) memParts.push(`${nAlias} code correction${nAlias === 1 ? '' : 's'} remembered`);
+  if (nDisc)  memParts.push(`${nDisc} discontinued marked`);
+  if (nLegit) memParts.push(`${nLegit} legit confirmed`);
+  learnEl.innerHTML = memParts.length
+    ? `<span>💡</span><span>${memParts.join(', ')} — auto-applied on future POs.`
+      + (nAlias ? ` <a href="#" onclick="clearCustomerAliases();return false;" style="color:var(--brand)">Clear corrections</a>` : '') + `</span>`
+      + (hasSaveable ? `<button class="cc-suggest-btn" style="margin-left:auto;padding:7px 18px;font-family:inherit;font-size:13px;font-weight:700;border-radius:6px" onclick="downloadCatalogWithAliases()" title="Write corrections${discPart}${legitPart} into the catalog file so they follow you to any machine">💾 Save to Catalog</button>` : '')
+    : `<span>💡</span><span>Fix codes above to auto-apply next time. Mark 🚫 Disc to exclude permanently, or ✅ Legit to confirm a valid code not yet in the catalog.</span>`;
 }
 
 // Re-validate a single row after the user edits it
@@ -8523,7 +8607,25 @@ function restoreCcDiscontinued(i) {
   const r = ccState.results[i];
   if (!r) return;
   unmarkDisc(r.original);
-  // Re-resolve through normal path
+  const re = resolveCode(r.original, ccState.customerId);
+  ccState.results[i] = Object.assign({}, re, { index: r.index, qty: r.qty, desc: r.desc });
+  renderCodeCheckRows();
+}
+
+/** Mark a no-match code as legit — confirmed valid but not yet in catalog. */
+function markCcLegit(i) {
+  const r = ccState.results[i];
+  if (!r) return;
+  markLegit(r.original);
+  ccState.results[i] = Object.assign({}, r, { status: 'legit', code: r.original.toUpperCase(), via: 'legit', entry: null });
+  renderCodeCheckRows();
+}
+
+/** Remove legit flag — reverts the row to unmatched. */
+function unmarkCcLegit(i) {
+  const r = ccState.results[i];
+  if (!r) return;
+  unmarkLegit(r.original);
   const re = resolveCode(r.original, ccState.customerId);
   ccState.results[i] = Object.assign({}, re, { index: r.index, qty: r.qty, desc: r.desc });
   renderCodeCheckRows();
@@ -8560,9 +8662,8 @@ function applyCodeCheck() {
       return;
     }
 
-    // If the user unchecked this No-Match row, exclude it from the export entirely
-    if (ccState.excluded && ccState.excluded.has(orig)) {
-      convState.excludedSkus.add(orig);
+    // Legit items are included in export as-is (no SKU override needed)
+    if (r.status === 'legit') {
       delete convState.skuOverrides[r.original];
       return;
     }
@@ -8582,7 +8683,10 @@ function applyCodeCheck() {
   closeCodeCheck();
   // This file has now been reviewed — don't re-prompt on download or push
   convState.codeCheckDoneFor = convState.fileName;
-  if (learned) showToast(`✔ ${learned} code correction${learned === 1 ? '' : 's'} applied and remembered.`);
+  const nLegitApplied = ccState.results.filter(r => r.status === 'legit').length;
+  if (learned && nLegitApplied) showToast(`✔ ${learned} correction${learned === 1 ? '' : 's'} applied + ${nLegitApplied} legit code${nLegitApplied === 1 ? '' : 's'} confirmed.`);
+  else if (learned) showToast(`✔ ${learned} code correction${learned === 1 ? '' : 's'} applied and remembered.`);
+  else if (nLegitApplied) showToast(`✔ ${nLegitApplied} legit code${nLegitApplied === 1 ? '' : 's'} confirmed — hit 💾 Save to Catalog to add them.`);
   else if (convState.excludedSkus.size) showToast(`ℹ ${convState.excludedSkus.size} line${convState.excludedSkus.size === 1 ? '' : 's'} excluded from export.`);
 
   const cb = ccState.onApply;
@@ -9738,7 +9842,7 @@ function markCrmDone(idx) {
             <th style="width:110px">From PO</th>
             <th style="width:260px">Product</th>
             <th style="width:50px;text-align:center">Qty</th>
-            <th style="width:70px;text-align:center">Export</th>
+            <th style="width:110px;text-align:center">Action</th>
           </tr>
         </thead>
         <tbody id="ccTableBody"></tbody>
