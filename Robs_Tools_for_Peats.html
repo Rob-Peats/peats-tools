@@ -5730,7 +5730,11 @@ function getConvClipboardLines() {
   const data = convState.parsedData;
   if (!rid || !data) return out;
 
-  if (rid === 'rob-test') {
+  if (rid === 'irwins') {
+    (data.lines || []).filter(function(l){ return !isConvExcluded(l.sku); }).forEach(function(l) {
+      out.push({ sku: effectiveSku(l.sku, rid), qty: l.qty, price: effPrice(l.sku, l.price || 0) });
+    });
+  } else if (rid === 'rob-test') {
     (data.lines || []).filter(function(l){ return !isConvExcluded(l.sku); }).forEach(function(l) {
       out.push({ sku: effectiveSku(l.sku, rid), qty: l.qty, price: effPrice(l.sku, l.price || 0) });
     });
@@ -7883,7 +7887,7 @@ async function buildSoundstoreEntry(data, safeTag) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v38 · 26 Aug 2026 · irwins-dungarvan-conv · clear-keeps-catalog · discontinued-red-in-export';
+const TOOL_BUILD = 'v39 · 26 Aug 2026 · irwins-clipboard-fix · irwins-dungarvan-conv';
 try { console.log('%cRob\'s Tools for Peats — BUILD ' + TOOL_BUILD, 'background:#1a3c6e;color:#fff;padding:3px 9px;border-radius:4px;font-weight:700'); } catch(e) {}
 
 async function downloadSoundstoreCRM(data) {
