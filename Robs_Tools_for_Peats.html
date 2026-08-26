@@ -1044,6 +1044,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
             <option value="smyths">Smyths</option>
             <option value="joyces">Joyces</option>
             <option value="soundstore">Soundstore</option>
+            <option value="dominic-smith">Dominic Smith</option>
             <option value="irwins">Irwins Dungarvan</option>
             <option value="rob-test">Rob Test</option>
           </select>
@@ -1113,6 +1114,12 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div id="soundstoreHint" style="display:none;margin:0 0 10px 0;padding:10px 14px;background:#fffbea;border:1px solid #f59e0b;border-radius:8px;font-size:13px;color:#92400e;align-items:center;gap:8px;">
       <span style="font-size:16px;">ℹ️</span>
       <span><strong>Note:</strong> Drop in the <strong>PDF version</strong> of the Soundstore PO — branch (Blackpool/Limerick/Tralee/Waterford/Wilton/Midleton) and account code are detected automatically.</span>
+    </div>
+
+    <!-- Dominic Smith PDF hint -->
+    <div id="domSmithHint" style="display:none;margin:0 0 10px 0;padding:10px 14px;background:#fffbea;border:1px solid #f59e0b;border-radius:8px;font-size:13px;color:#92400e;align-items:center;gap:8px;">
+      <span style="font-size:16px;">ℹ️</span>
+      <span><strong>Note:</strong> Drop in the <strong>PDF version</strong> of the Dominic Smith PO — branch (Gorey/Dundrum/Cavan/Navan/Blanchardstown/Sandyford) and account code are detected automatically. Drop multiple POs at once.</span>
     </div>
 
     <!-- Irwins paste area (shown instead of dropzone when Irwins is selected) -->
@@ -1631,7 +1638,7 @@ function handleDrop(e, type) {
   e.preventDefault(); e.currentTarget.classList.remove('drag-over');
   const allFiles = getDragFiles(e);
   if (type === 'conv') {
-    const isPDF = convState.retailerId === 'joyces' || convState.retailerId === 'soundstore';
+    const isPDF = convState.retailerId === 'joyces' || convState.retailerId === 'soundstore' || convState.retailerId === 'dominic-smith';
     const files = isPDF
       ? allFiles.filter(function(f){ return /\.pdf$/i.test(f.name); })
       : allFiles.filter(function(f){ return /\.(xlsx|xls|xlsm)$/i.test(f.name); });
@@ -5337,6 +5344,8 @@ function onConvRetailerChange() {
   if (joycesHint) joycesHint.style.display = (sel.value === 'joyces') ? 'flex' : 'none';
   const soundstoreHint = document.getElementById('soundstoreHint');
   if (soundstoreHint) soundstoreHint.style.display = (sel.value === 'soundstore') ? 'flex' : 'none';
+  const domSmithHint = document.getElementById('domSmithHint');
+  if (domSmithHint) domSmithHint.style.display = (sel.value === 'dominic-smith') ? 'flex' : 'none';
   // Irwins: show paste area, hide dropzone; all other retailers: show dropzone, hide paste area
   const irwinsPasteWrap = document.getElementById('irwinsPasteWrap');
   const convDropzone    = document.getElementById('convDropzone');
@@ -5344,7 +5353,7 @@ function onConvRetailerChange() {
   if (irwinsPasteWrap) irwinsPasteWrap.style.display = isIrwins ? 'block' : 'none';
   if (convDropzone)    convDropzone.style.display    = isIrwins ? 'none'  : 'block';
   // File input type (not used by Irwins)
-  const isPDF = sel.value === 'joyces' || sel.value === 'soundstore';
+  const isPDF = sel.value === 'joyces' || sel.value === 'soundstore' || sel.value === 'dominic-smith';
   const fileInput = document.getElementById('convFileInput');
   if (fileInput) fileInput.accept = isPDF ? '.pdf' : '.xlsx,.xls,.xlsm';
   // Dropzone sub-text
@@ -5353,7 +5362,7 @@ function onConvRetailerChange() {
   updateConvDownloadBtn();
   // Refresh the catalog label retailer name if catalog is already loaded
   if (state.catalogName) {
-    const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'irwins':'Irwins Dungarvan', 'rob-test':'Rob Test' };
+    const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'dominic-smith':'Dominic Smith', 'irwins':'Irwins Dungarvan', 'rob-test':'Rob Test' };
     const lbl = document.getElementById('convRetailerToggleLabel');
     if (lbl) lbl.textContent = CONV_NAMES[sel.value] || 'Selected Retailer';
   }
@@ -5398,7 +5407,7 @@ function updateConvCatalogUI() {
       document.getElementById('convToggleCost').checked   = convState.showCost;
       document.getElementById('convToggleRetail').checked = convState.showRetail;
       // Show retailer name in the label
-      const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'irwins':'Irwins Dungarvan', 'rob-test':'Rob Test' };
+      const CONV_NAMES = { 'easons':'Easons', 'golden-disc':'Golden Disc', 'smyths':'Smyths', 'joyces':'Joyces', 'soundstore':'Soundstore', 'dominic-smith':'Dominic Smith', 'irwins':'Irwins Dungarvan', 'rob-test':'Rob Test' };
       const lbl = document.getElementById('convRetailerToggleLabel');
       if (lbl) lbl.textContent = CONV_NAMES[convState.retailerId] || 'Selected Retailer';
     }
@@ -5447,6 +5456,8 @@ function rerenderConvPreview() {
     renderJoycesPreview(convState.parsedData);
   } else if (rid === 'soundstore' && convState.parsedData) {
     renderSoundstorePreview(convState.parsedData);
+  } else if (rid === 'dominic-smith' && convState.parsedData) {
+    renderDomSmithPreview(convState.parsedData);
   }
 }
 
@@ -5489,11 +5500,13 @@ async function processConvFiles(files) {
   const results = await Promise.all(Array.from(files).map(file =>
     new Promise(resolve => {
       const reader = new FileReader();
-      if (retailerId === 'joyces' || retailerId === 'soundstore') {
+      if (retailerId === 'joyces' || retailerId === 'soundstore' || retailerId === 'dominic-smith') {
         reader.onload = async e => {
           try {
             const pd = retailerId === 'soundstore'
               ? await parseSoundstoreOrder(e.target.result)
+              : retailerId === 'dominic-smith'
+              ? await parseDomSmithOrder(e.target.result)
               : await parseJoycesOrder(e.target.result);
             resolve(pd ? { fileName: file.name, parsedData: pd } : null);
           } catch(err) { console.warn(retailerId + ' PDF parse error', file.name, err); resolve(null); }
@@ -5680,6 +5693,10 @@ function renderConvTable() {
     renderSoundstorePreview(convState.parsedData);
     return;
   }
+  if (convState.retailerId === 'dominic-smith' && convState.parsedData) {
+    renderDomSmithPreview(convState.parsedData);
+    return;
+  }
   if (convState.retailerId === 'irwins' && convState.parsedData) {
     renderIrwinsPreview(convState.parsedData);
     return;
@@ -5751,6 +5768,10 @@ function getConvClipboardLines() {
   } else if (rid === 'soundstore') {
     (data.products || []).filter(function(p){ return !isConvExcluded(p.sku); }).forEach(function(p) {
       out.push({ sku: convState.skuOverrides[p.sku] || p.sku, qty: p.qty, price: effPrice(p.sku, p.price || p.unitCost || 0) });
+    });
+  } else if (rid === 'dominic-smith') {
+    (data.products || []).filter(function(p){ return !isConvExcluded(p.sku); }).forEach(function(p) {
+      out.push({ sku: convState.skuOverrides[p.sku] || p.sku, qty: p.qty, price: effPrice(p.sku, p.price || 0) });
     });
   } else if (rid === 'easons' && data.ordersByStore) {
     Object.keys(data.ordersByStore).forEach(function(storeCode) {
@@ -5901,6 +5922,10 @@ async function downloadConvertedCRM() {
     await downloadSoundstoreCRM(convState.parsedData);
     return;
   }
+  if (convState.retailerId === 'dominic-smith' && convState.parsedData) {
+    await downloadDomSmithCRM(convState.parsedData);
+    return;
+  }
   showToast('⚠ No conversion handler for this retailer yet.');
 }
 
@@ -5931,7 +5956,7 @@ function renderMultiFilePreview(parsedFiles) {
   const showMarginCol = showRetail;
 
   // Column count: base 5 (SKU, Desc, Price, Qty, Total) + checkbox col + margin col
-  const isCatalogRetailer = (retailer === 'joyces' || retailer === 'soundstore' || retailer === 'smyths');
+  const isCatalogRetailer = (retailer === 'joyces' || retailer === 'soundstore' || retailer === 'smyths' || retailer === 'dominic-smith');
   const numCols = isCatalogRetailer
     ? 5 + (showCost ? 1 : 0) + (showMarginCol ? 1 : 0)
     : 5;
@@ -6113,6 +6138,54 @@ function renderMultiFilePreview(parsedFiles) {
           + marginCell
           + '</tr>');
       }
+    } else if (retailer === 'dominic-smith') {
+      label     = (pd.branchName || 'Unknown') + ' — PO ' + (pd.orderNo || '—');
+      fileLines = (pd.products || []).length;
+      fileUnits = pd.totalUnits || 0;
+      fileValue = pd.totalValue || 0;
+      for (let i = 0; i < (pd.products||[]).length; i++) {
+        const p = pd.products[i];
+        const poCost  = p.price || 0;
+        const entry   = (showCost || showRetail) ? catalogLookup(convState.skuOverrides[p.sku] || p.sku) : null;
+        const hasCostDiff   = showCost && entry && entry.cost != null && Math.abs(poCost - entry.cost) > 0.005;
+        const hasRetailInfo = showRetail && entry && entry.retail != null;
+        const margin        = (hasRetailInfo && entry.retail > 0) ? ((entry.retail / 1.23) - poCost) / (entry.retail / 1.23) * 100 : null;
+        var chkCell = '';
+        if (showCost) {
+          if (hasCostDiff) {
+            var isOn = convState.priceOn.has(p.sku);
+            chkCell = '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '')
+              + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
+          } else { chkCell = '<td></td>'; }
+        }
+        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
+        var priceCell;
+        if (hasCostDiff) {
+          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
+        } else if (hasRetailInfo) {
+          priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>';
+        } else {
+          priceCell = '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
+        }
+        var marginCell = '';
+        if (showMarginCol) {
+          if (margin !== null) {
+            var mc = margin >= 25 ? '#22a03a' : margin >= 20 ? '#d97706' : '#dc2626';
+            marginCell = '<td style="text-align:right;font-weight:700;color:' + mc + '">' + margin.toFixed(1) + '%</td>';
+          } else { marginCell = '<td style="text-align:right;color:var(--muted)">—</td>'; }
+        }
+        const _dsOvr = convState.skuOverrides[p.sku];
+        const _dsHasOvr = _dsOvr && _dsOvr !== p.sku;
+        const _dsStrike = _dsHasOvr ? '<span style="display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2">' + escHtml(p.sku) + '</span>' : '';
+        productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
+          + chkCell
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + _dsStrike + '<input type="text" value="' + escHtml(_dsOvr || p.sku) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
+          + priceCell
+          + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
+          + '<td style="text-align:right">€' + (p.totalCost||0).toFixed(2) + '</td>'
+          + marginCell + '</tr>');
+      }
     } else if (retailer === 'easons') {
       label     = (pd.storesWithPO||[]).length + ' stores';
       fileLines = (pd.storesWithPO||[]).reduce(function(a,sc){ return a+(pd.ordersByStore[sc]||[]).length;},0);
@@ -6216,7 +6289,8 @@ async function downloadMultiFileCRM(parsedFiles) {
     else if (retailer === 'golden-disc') entries = await buildGoldenDiscEntries(pd, gdLoadAccounts(), safeTag);
     else if (retailer === 'smyths')      entries = await buildSmythsEntry(pd, smythsLoadAccount(), safeTag);
     else if (retailer === 'joyces')      entries = await buildJoycesEntry(pd, safeTag);
-    else if (retailer === 'soundstore')  entries = await buildSoundstoreEntry(pd, safeTag);
+    else if (retailer === 'soundstore')   entries = await buildSoundstoreEntry(pd, safeTag);
+    else if (retailer === 'dominic-smith') entries = await buildDomSmithEntry(pd, safeTag);
     entries.forEach(e => { zip.file(e.name, e.buf); fileCount++; });
   }
 
@@ -7888,8 +7962,293 @@ async function buildSoundstoreEntry(data, safeTag) {
   return [{ buf, name }];
 }
 
+// ════ DOMINIC SMITH — PDF PO PARSER ════
+// Branches: Gorey(SMI01H) Dundrum(SMI02H) Cavan(SMI03H) Navan(SMI04H) Blanch(SMI05H) Sandyford(SMI07H)
+
+const DS_BRANCHES = [
+  { key:'G', code:'SMI01H', name:'Gorey',          patterns:['gorey'] },
+  { key:'D', code:'SMI02H', name:'Dundrum',         patterns:['dundrum'] },
+  { key:'C', code:'SMI03H', name:'Cavan',           patterns:['co. cavan','co cavan','cavan retail','cavan'] },
+  { key:'N', code:'SMI04H', name:'Navan',           patterns:['navan'] },
+  { key:'B', code:'SMI05H', name:'Blanchardstown',  patterns:['blanchardstown','blanchard'] },
+  { key:'S', code:'SMI07H', name:'Sandyford',       patterns:['sandyford','dublin 18','d18'] },
+];
+
+function getDomSmithBranch(pageText) {
+  var lower = pageText.toLowerCase();
+  for (var bi = 0; bi < DS_BRANCHES.length; bi++) {
+    var b = DS_BRANCHES[bi];
+    for (var pi = 0; pi < b.patterns.length; pi++) {
+      if (lower.indexOf(b.patterns[pi]) >= 0) return b;
+    }
+  }
+  return null;
+}
+
+function parseDomSmithPage(pageItems) {
+  var rows = groupJoycesItemsByRow(pageItems, 3);
+  var headerIdx = -1;
+  for (var ri = 0; ri < rows.length; ri++) {
+    var texts = rows[ri].items.map(function(i){ return i.text.toLowerCase(); });
+    var joined = texts.join(' ');
+    if ((joined.indexOf('stock') >= 0 || joined.indexOf('item') >= 0) && joined.indexOf('qty') >= 0 && joined.indexOf('price') >= 0) {
+      headerIdx = ri; break;
+    }
+  }
+  if (headerIdx < 0) return [];
+
+  var colStock = 45, colDesc = 130, colQty = 395, colPrice = 450, colTotal = 510;
+  rows[headerIdx].items.forEach(function(h) {
+    var t = h.text.toLowerCase().trim();
+    if (t === 'stock' || t === 'stock code' || t === 'item') colStock = h.x;
+    else if (t === 'description') colDesc = h.x;
+    else if (t === 'qty.' || t === 'qty') colQty = h.x;
+    else if (t === 'price') colPrice = h.x;
+    else if (t === 'total') colTotal = h.x;
+  });
+
+  var endIdx = rows.length;
+  for (var ri2 = headerIdx + 1; ri2 < rows.length; ri2++) {
+    var rowStr = rows[ri2].items.map(function(i){ return i.text; }).join(' ').toLowerCase();
+    if (/sub total|nb\. please|purchase order total|total order/.test(rowStr)) { endIdx = ri2; break; }
+  }
+
+  var products = [], lastProd = null;
+  for (var ri3 = headerIdx + 1; ri3 < endIdx; ri3++) {
+    var row = rows[ri3];
+    var items = row.items;
+    if (!items.length) continue;
+    var leftItems = items.filter(function(i){ return i.x <= colDesc - 5; });
+    var priceItems = items.filter(function(i){
+      return i.x >= colPrice - 25 && i.x < colTotal - 5 && /^\d+\.\d{2}$/.test(i.text);
+    });
+    if (leftItems.length > 0 && priceItems.length > 0) {
+      var sku = leftItems[0].text.trim().toUpperCase();
+      if (!sku || sku.length < 2) continue;
+      var descItems = items.filter(function(i){
+        return i.x >= colDesc - 10 && i.x < colQty - 20;
+      });
+      var desc = descItems.map(function(i){ return i.text; }).join(' ').trim();
+      var qtyItems = items.filter(function(i){
+        return /^\d+$/.test(i.text) && i.x >= colQty - 30 && i.x < colPrice - 10;
+      });
+      var qty = qtyItems.length > 0 ? parseInt(qtyItems[0].text) : 0;
+      if (!qty || qty <= 0) continue;
+      var priceSorted = priceItems.slice().sort(function(a,b){ return a.x - b.x; });
+      var priceVal = priceSorted.length > 0 ? (parseFloat(priceSorted[0].text) || 0) : 0;
+      var totalItems = items.filter(function(i){
+        return i.x >= colTotal - 20 && /^\d+\.\d{2}$/.test(i.text);
+      });
+      var totalVal = totalItems.length > 0
+        ? (parseFloat(totalItems[totalItems.length-1].text) || 0)
+        : Math.round(priceVal * qty * 100) / 100;
+      lastProd = { sku: sku, description: desc, qty: qty, price: priceVal, totalCost: totalVal };
+      products.push(lastProd);
+    } else if (lastProd) {
+      var contItems = items.filter(function(i){
+        return i.x >= colDesc - 20 && i.x < colQty - 20;
+      });
+      if (contItems.length > 0) {
+        lastProd.description = (lastProd.description + ' ' + contItems.map(function(i){ return i.text; }).join(' ')).trim();
+      }
+    }
+  }
+  return products;
+}
+
+async function parseDomSmithOrder(arrayBuffer) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let orderNo = '', orderDate = '', branch = null;
+  const allProducts = [];
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const tc   = await page.getTextContent();
+    const items = tc.items
+      .filter(function(i){ return i.str && i.str.trim(); })
+      .map(function(i){ return { text: i.str.trim(), x: Math.round(i.transform[4]), y: Math.round(i.transform[5]) }; });
+    if (pageNum === 1) {
+      var pageText = items.map(function(i){ return i.text; }).join(' ');
+      var orderNoIdx = -1;
+      for (var k = 0; k < items.length; k++) {
+        if (/order\.?\s*no/i.test(items[k].text)) { orderNoIdx = k; break; }
+      }
+      if (orderNoIdx >= 0) {
+        for (var kk = Math.max(0, orderNoIdx-5); kk <= Math.min(items.length-1, orderNoIdx+8); kk++) {
+          if (/^\d{5,7}$/.test(items[kk].text)) { orderNo = items[kk].text; break; }
+        }
+      }
+      if (!orderNo) {
+        for (var m = 0; m < items.length; m++) {
+          if (/^\d{5,7}$/.test(items[m].text)) { orderNo = items[m].text; break; }
+        }
+      }
+      for (var d = 0; d < items.length; d++) {
+        if (/^\d{2}\/\d{2}\/\d{2,4}$/.test(items[d].text)) { orderDate = items[d].text; break; }
+      }
+      branch = getDomSmithBranch(pageText);
+    }
+    const pageProducts = parseDomSmithPage(items);
+    allProducts.push(...pageProducts);
+  }
+  if (!allProducts.length) return null;
+  const totalValue = Math.round(allProducts.reduce(function(a,p){ return a + p.totalCost; }, 0) * 100) / 100;
+  const totalUnits = allProducts.reduce(function(a,p){ return a + p.qty; }, 0);
+  return {
+    orderNo, orderDate,
+    branchKey:   branch ? branch.key  : '',
+    branchName:  branch ? branch.name : 'Unknown',
+    accountCode: branch ? branch.code : '',
+    products: allProducts, totalValue, totalUnits
+  };
+}
+
+function renderDomSmithPreview(data) {
+  { const _s = document.getElementById('convToolbarSlot'); if (_s) _s.innerHTML = '<div class="tb-group">' + buildCodeCheckToolbarHtml() + '</div>'; }
+  const { products, orderNo, accountCode, branchName } = data;
+  const resultsDiv = document.getElementById('convResults');
+  const titleEl    = document.getElementById('convTableTitle');
+  const thead      = document.getElementById('convTableHead');
+  const tbody      = document.getElementById('convTableBody');
+  document.getElementById('convSummaryCards').innerHTML = '';
+  const gdBar = document.getElementById('gdAccountsBar');   if (gdBar) gdBar.innerHTML = '';
+  const smBar = document.getElementById('smythsAccountBar'); if (smBar) smBar.innerHTML = '';
+  const hasCatalog  = !!state.catalogName;
+  const showCost    = hasCatalog && convState.showCost;
+  const showRetail  = hasCatalog && convState.showRetail;
+  const showMarginCol = showRetail;
+  titleEl.textContent = 'Dominic Smith ' + (branchName||'') + ' — PO ' + (orderNo || '(unknown)');
+  document.getElementById('convRowCount').textContent = (products||[]).length + ' lines';
+  resultsDiv.style.display = 'block';
+  var chkCol = showCost ? '<th class="th-col chk-pricing" style="min-width:60px">Update<br>Pricing</th>' : '';
+  var marginHdr = showMarginCol ? '<th class="th-col" style="text-align:right;color:var(--brand)">Margin</th>' : '';
+  thead.innerHTML = '<tr>' + chkCol + '<th class="th-col">SKU</th><th class="th-col">Description</th><th class="th-col" style="text-align:right">Price</th><th class="th-col" style="text-align:right">Qty</th><th class="th-col" style="text-align:right">Line Total</th>' + marginHdr + '</tr>';
+  var rows = [];
+  for (var i = 0; i < (products||[]).length; i++) {
+    var p = products[i];
+    var entry = (showCost || showRetail) ? catalogLookup(convState.skuOverrides[p.sku] || p.sku) : null;
+    var hasCostDiff   = showCost && entry && entry.cost != null && Math.abs(p.price - entry.cost) > 0.005;
+    var hasRetailInfo = showRetail && entry && entry.retail != null;
+    var margin = (hasRetailInfo && entry.retail > 0) ? ((entry.retail / 1.23) - p.price) / (entry.retail / 1.23) * 100 : null;
+    var rowStyle = i%2===1 ? 'background:var(--light)' : '';
+    var chkCell = '';
+    if (showCost) {
+      if (hasCostDiff) {
+        var isOn = convState.priceOn.has(p.sku);
+        chkCell = '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
+      } else { chkCell = '<td></td>'; }
+    }
+    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
+    var priceCell;
+    if (hasCostDiff) {
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
+    } else if (hasRetailInfo) {
+      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+    } else {
+      priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
+    }
+    var marginCell = '';
+    if (showMarginCol) {
+      if (margin !== null) {
+        var mc = margin >= 25 ? '#22a03a' : margin >= 20 ? '#d97706' : '#dc2626';
+        marginCell = '<td style="text-align:right;font-weight:700;color:' + mc + '">' + margin.toFixed(1) + '%</td>';
+      } else { marginCell = '<td style="text-align:right;color:var(--muted)">—</td>'; }
+    }
+    var dsOvr = convState.skuOverrides[p.sku];
+    var dsHasOvr = dsOvr && dsOvr !== p.sku;
+    var dsStrike = dsHasOvr ? '<span style="display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2">' + escHtml(p.sku) + '</span>' : '';
+    rows.push('<tr style="' + rowStyle + '">'
+      + chkCell
+      + '<td style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px">' + dsStrike + '<input type="text" value="' + escHtml(dsOvr || p.sku) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
+      + priceCell
+      + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
+      + '<td style="text-align:right">€' + (p.totalCost||0).toFixed(2) + '</td>'
+      + marginCell + '</tr>');
+  }
+  tbody.innerHTML = rows.join('');
+}
+
+async function buildDomSmithEntry(data, safeTag) {
+  safeTag = safeTag || function(s){ return String(s||'').replace(/[^a-zA-Z0-9\-]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); };
+  const { products, orderNo, accountCode, branchName } = data;
+  if (!products || !products.length) return [];
+  const hasCatalog = !!state.catalogName;
+  const showCost   = hasCatalog && convState.showCost;
+  const showRetail = hasCatalog && convState.showRetail;
+  const wb = makeWorkbook('Dominic Smith CRM Order');
+  const ws = wb.addWorksheet('CRM Order');
+  var showMarginXl = hasCatalog && convState.showRetail;
+  var xlCols = [
+    { header: 'Account',     width: 12 },
+    { header: 'PO Number',   width: 14 },
+    { header: 'SKU',         width: 18 },
+    { header: 'Description', width: 44 },
+    { header: 'Price',       width: 12 },
+    { header: 'Qty',         width: 8  },
+    { header: 'Line Total',  width: 14 },
+  ];
+  if (showMarginXl) xlCols.push({ header: 'Margin %', width: 10 });
+  ws.columns = xlCols;
+  const hdrRow = ws.getRow(1);
+  hdrRow.eachCell(function(cell) {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+  hdrRow.height = 18;
+  var colPrice = 5, colQty = 6, colTotal = 7, colMargin = 8;
+  products.forEach(function(p, i) {
+    if (isConvExcluded(p.sku)) return;
+    var entry = (showCost || showRetail) ? catalogLookup(convState.skuOverrides[p.sku] || p.sku) : null;
+    var hasCostDiff   = showCost && entry && entry.cost != null && Math.abs(p.price - entry.cost) > 0.005;
+    var hasRetailInfo = showRetail && entry && entry.retail != null;
+    var flagOn  = hasCostDiff && convState.priceOn.has(p.sku);
+    var effP    = flagOn ? entry.cost : p.price;
+    var effT    = flagOn ? Math.round(entry.cost * p.qty * 100) / 100 : p.totalCost;
+    var margin  = (hasRetailInfo && entry.retail > 0) ? Math.round(((entry.retail / 1.23) - effP) / (entry.retail / 1.23) * 1000) / 10 : null;
+    var rowData = [ accountCode, orderNo, convState.skuOverrides[p.sku] || p.sku, p.description, effP, p.qty, effT ];
+    if (showMarginXl) rowData.push(margin !== null ? margin : '');
+    const row = ws.addRow(rowData);
+    if (i%2===1) row.eachCell(function(cell){ cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF4F6FA'} }; });
+    row.getCell(colPrice).numFmt = '#,##0.00'; row.getCell(colPrice).alignment = { horizontal: 'right' };
+    row.getCell(colQty).alignment = { horizontal: 'center' };
+    row.getCell(colTotal).numFmt = '#,##0.00'; row.getCell(colTotal).alignment = { horizontal: 'right' };
+    if (showMarginXl && margin !== null) { row.getCell(colMargin).numFmt = '0.0"%"'; row.getCell(colMargin).alignment = { horizontal: 'right' }; }
+    if (flagOn) { row.getCell(colPrice).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFF00' } }; row.getCell(colPrice).font = { bold: true }; }
+  });
+  const totalQty = products.reduce(function(a,p){ return a+p.qty; }, 0);
+  const totalVal = Math.round(products.reduce(function(a,p){ return a+p.totalCost; }, 0)*100)/100;
+  var totData = [ '', '', '', 'TOTAL ORDER VALUE', '', totalQty, totalVal ];
+  if (showMarginXl) totData.push('');
+  const totRow = ws.addRow(totData);
+  totRow.font = { bold: true };
+  totRow.getCell(colTotal).numFmt = '#,##0.00'; totRow.getCell(colTotal).alignment = { horizontal: 'right' };
+  totRow.getCell(colQty).alignment = { horizontal: 'center' };
+  totRow.eachCell(function(cell){ cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8F4EA'} }; });
+  ws.autoFilter = { from: 'A1', to: showMarginXl ? 'H1' : 'G1' };
+  const buf  = await wb.xlsx.writeBuffer();
+  const name = 'DomSmith_' + safeTag(branchName) + '_PO' + safeTag(orderNo) + '_' + safeTag(accountCode) + '_' + fileStamp() + '.xlsx';
+  return [{ buf, name }];
+}
+
+async function downloadDomSmithCRM(data) {
+  if (!data.products || !data.products.length) { showToast('ℹ No order lines found.'); return; }
+  const safeTag = function(s){ return String(s||'').replace(/[^a-zA-Z0-9\-]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); };
+  const entries = await buildDomSmithEntry(data, safeTag);
+  if (!entries.length) return;
+  const e    = entries[0];
+  const blob = new Blob([e.buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = e.name; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✔ Downloaded ' + e.name);
+}
+
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v40 · 26 Aug 2026 · get-latest-reload-btn';
+const TOOL_BUILD = 'v41 · 26 Aug 2026 · dominic-smith-conv';
 
 function forceReload() {
   const base = window.location.href.split('?')[0].split('#')[0];
@@ -9092,6 +9451,14 @@ function showCrmPushQueue() {
     } else if (rid === 'soundstore') {
       peatsCode = data.accountCode || '';
       branchName = 'Soundstore ' + (data.branchName || '');
+      outLines = (data.products || []).filter(p => !isConvExcluded(p.sku)).map(p => {
+        const sku = convState.skuOverrides[p.sku] || p.sku;
+        return { sku, desc: p.description || '', qty: p.qty };
+      });
+      totalValue = (data.products || []).reduce((a, p) => a + (p.totalCost || 0), 0);
+    } else if (rid === 'dominic-smith') {
+      peatsCode = data.accountCode || '';
+      branchName = 'Dominic Smith ' + (data.branchName || '');
       outLines = (data.products || []).filter(p => !isConvExcluded(p.sku)).map(p => {
         const sku = convState.skuOverrides[p.sku] || p.sku;
         return { sku, desc: p.description || '', qty: p.qty };
