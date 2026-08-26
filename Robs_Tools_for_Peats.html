@@ -3751,9 +3751,30 @@ async function _downloadExcelAppend(cfg) {
 
     const dataRow = ws.addRow(vals);
 
+    // Red styling for discontinued products
+    const _discPartA = String(row[cfg.partCol] || '').trim().toUpperCase();
+    const _isDiscA   = isDiscontinued(_discPartA);
+    if (_isDiscA) {
+      map.forEach((c, i) => {
+        const cell = dataRow.getCell(i + 1);
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFDE8E8' } };
+        cell.font = Object.assign({}, cell.font || {}, { color:{ argb:'FFB91C1C' }, italic:true });
+      });
+      cfg.branches.forEach((_, i) => {
+        const cell = dataRow.getCell(cOrder + i + 1);
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFDE8E8' } };
+        cell.font = { color:{ argb:'FFB91C1C' }, italic:true, bold: sugg[i] > 0 };
+      });
+      if (!skipUnits) {
+        const cell = dataRow.getCell(cUnits + 1);
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFDE8E8' } };
+        cell.font = { color:{ argb:'FFB91C1C' }, italic:true };
+      }
+    }
+
     // Highlight suggested quantities
     sugg.forEach((q, i) => {
-      if (q > 0) {
+      if (q > 0 && !_isDiscA) {
         const cell = dataRow.getCell(cOrder + i + 1);
         cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFE6F4EC' } };
         cell.font = { bold:true, color:{ argb:'FF1F6B3E' } };
@@ -3944,6 +3965,21 @@ async function _downloadExcelSections(cfg) {
     cfg.suggestCols.forEach((c, i) => { vals[c] = sugg[i]; });
 
     const dataRow = ws.addRow(vals);
+
+    // Red styling for discontinued products
+    const _discPartS = String(row[cfg.partCol] || '').trim().toUpperCase();
+    if (isDiscontinued(_discPartS)) {
+      cfg.infoCols.forEach(c => {
+        const cell = dataRow.getCell(c + 1);
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFDE8E8' } };
+        cell.font = Object.assign({}, cell.font || {}, { color:{ argb:'FFB91C1C' }, italic:true });
+      });
+      cfg.suggestCols.forEach((c, si) => {
+        const cell = dataRow.getCell(c + 1);
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFDE8E8' } };
+        cell.font = { color:{ argb:'FFB91C1C' }, italic:true, bold: sugg[si] > 0 };
+      });
+    }
 
     // Yellow highlight for updated prices
     if (prices.costUpdated) {
@@ -5098,9 +5134,7 @@ function hardReset() {
   state.excluded.clear();
   state.noPriceUpdate.clear();
   state.overrides = {};
-  // Clear catalog
-  state.catalog     = {};
-  state.catalogName = '';
+  // Catalog is intentionally preserved — Clear All only resets the report
   state.multiReport = null;
   state.weeksByPart = null;
   const _mrb = document.getElementById('multiReportBar'); if (_mrb) _mrb.remove();
@@ -5123,7 +5157,7 @@ function hardReset() {
   document.getElementById('downloadBackordBtn').style.display = 'none';
   document.getElementById('downloadBackordBtn').disabled = true;
   document.getElementById('fileInput').value         = '';
-  showToast('↺ Cleared — ready for a new report.');
+  showToast('↺ Cleared — catalog kept, ready for a new report.');
 }
 
 function showToast(msg) {
@@ -7811,7 +7845,7 @@ async function buildSoundstoreEntry(data, safeTag) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v36 · 26 Aug 2026 · gate-light · check-codes-all · crm-peats-codes';
+const TOOL_BUILD = 'v37 · 26 Aug 2026 · clear-keeps-catalog · discontinued-red-in-export';
 try { console.log('%cRob\'s Tools for Peats — BUILD ' + TOOL_BUILD, 'background:#1a3c6e;color:#fff;padding:3px 9px;border-radius:4px;font-weight:700'); } catch(e) {}
 
 async function downloadSoundstoreCRM(data) {
