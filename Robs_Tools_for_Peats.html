@@ -880,9 +880,9 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="ctrl-group">
       <select id="retailerSelect" onchange="onRetailerChange()">
         <option value="" disabled selected style="color:#c0392b;font-weight:700">— Select Retailer —</option>
-        <option value="dominic-smith">Dominic Smith</option>
-        <option value="briscoes">Briscoes</option>
         <option value="beattys">Beattys</option>
+        <option value="briscoes">Briscoes</option>
+        <option value="dominic-smith">Dominic Smith</option>
         <option value="telfords">Telfords</option>
       </select>
     </div>
@@ -1052,14 +1052,14 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         <div class="ctrl-group">
           <select id="convRetailerSelect" onchange="onConvRetailerChange()">
             <option value="" disabled selected style="color:#c0392b;font-weight:700">— Select Retailer —</option>
+            <option value="dominic-smith">Dominic Smith</option>
             <option value="easons">Easons</option>
             <option value="golden-disc">Golden Disc</option>
-            <option value="smyths">Smyths</option>
-            <option value="joyces">Joyces</option>
-            <option value="soundstore">Soundstore</option>
-            <option value="dominic-smith">Dominic Smith</option>
             <option value="irwins">Irwins Dungarvan</option>
+            <option value="joyces">Joyces</option>
             <option value="rob-test">Rob Test</option>
+            <option value="smyths">Smyths</option>
+            <option value="soundstore">Soundstore</option>
           </select>
         </div>
 
@@ -8329,7 +8329,7 @@ async function downloadDomSmithCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v43 · 27 Aug 2026 · manual-adjust-legit';
+const TOOL_BUILD = 'v44 · 27 Aug 2026 · alpha-dropdowns';
 
 function forceReload() {
   const base = window.location.href.split('?')[0].split('#')[0];
