@@ -8329,7 +8329,7 @@ async function downloadDomSmithCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v44 · 27 Aug 2026 · alpha-dropdowns';
+const TOOL_BUILD = 'v45 · 27 Aug 2026 · dedup-propagation';
 
 function forceReload() {
   const base = window.location.href.split('?')[0].split('#')[0];
@@ -8565,34 +8565,46 @@ function renderCodeCheckStats() {
     : `<span>💡</span><span>Fix codes above to auto-apply next time. Mark 🚫 Disc to exclude permanently, or ✅ Legit to confirm a valid code not yet in the catalog.</span>`;
 }
 
-// Re-validate a single row after the user edits it
+// Re-validate a single row after the user edits it — propagates to all rows with the same original code
 function recheckCode(i, newVal) {
-  const r  = ccState.results[i];
-  const nv = String(newVal || '').trim().toUpperCase();
+  const r       = ccState.results[i];
+  const nv      = String(newVal || '').trim().toUpperCase();
+  const origKey = r.original.toUpperCase();
 
-  // If the row was previously manually adjusted, unmark the old legit entry first
-  if (r.status === 'manual') unmarkLegit(r.code);
+  // Unmark any previously-manual rows sharing this original code
+  ccState.results.forEach(row => {
+    if (row.original.toUpperCase() === origKey && row.status === 'manual') unmarkLegit(row.code);
+  });
 
+  // Determine the new resolution
+  let patch;
   if (state.catalog[nv]) {
-    // Manual fix landed on a real catalog code — this becomes a learned alias
-    r.code   = nv;
-    r.entry  = state.catalog[nv];
-    r.status = (nv === r.original.toUpperCase()) ? 'exact' : 'auto';
-    r.via    = (nv === r.original.toUpperCase()) ? 'Peats code' : 'manual fix';
-    r.manual = (nv !== r.original.toUpperCase());
+    patch = {
+      code:   nv,
+      entry:  state.catalog[nv],
+      status: nv === origKey ? 'exact' : 'auto',
+      via:    nv === origKey ? 'Peats code' : 'manual fix',
+      manual: nv !== origKey
+    };
   } else {
-    // Re-run the full resolver in case they typed an alt code
     const re = resolveCode(nv, ccState.customerId);
     if (re.status !== 'unmatched') {
-      r.code = re.code; r.entry = re.entry; r.status = 'auto'; r.via = re.via; r.manual = true;
-    } else if (nv && nv !== r.original.toUpperCase()) {
-      // Edited code isn't in catalog and differs from original — mark as adjusted/legit immediately
+      patch = { code: re.code, entry: re.entry, status: 'auto', via: re.via, manual: true };
+    } else if (nv && nv !== origKey) {
       markLegit(nv);
-      r.code = nv; r.entry = null; r.status = 'manual'; r.via = 'manual'; r.manual = true;
+      patch = { code: nv, entry: null, status: 'manual', via: 'manual', manual: true };
     } else {
-      r.code = nv || r.original.toUpperCase(); r.entry = null; r.status = 'unmatched'; r.via = ''; r.manual = false;
+      patch = { code: nv || origKey, entry: null, status: 'unmatched', via: '', manual: false };
     }
   }
+
+  // Apply the same resolution to every row that shares the same original code
+  ccState.results.forEach((row, j) => {
+    if (row.original.toUpperCase() === origKey) {
+      ccState.results[j] = Object.assign({}, row, patch);
+    }
+  });
+
   renderCodeCheckRows();
 }
 
@@ -8618,55 +8630,79 @@ function toggleCcExclude(i, included) {
   renderCodeCheckStats();
 }
 
-/** Mark a no-match code as discontinued — saves to localStorage, re-renders. */
+/** Mark a no-match code as discontinued — saves to localStorage, propagates to all duplicate rows. */
 function markCcDiscontinued(i) {
   const r = ccState.results[i];
   if (!r) return;
   markDisc(r.original);
-  // Re-resolve this result as discontinued
-  ccState.results[i] = Object.assign({}, r, { status: 'discontinued', code: r.original, via: 'discontinued', entry: null });
+  const origKey = r.original.toUpperCase();
+  ccState.results.forEach((row, j) => {
+    if (row.original.toUpperCase() === origKey && (row.status === 'unmatched' || row.status === 'manual')) {
+      if (row.status === 'manual') unmarkLegit(row.code);
+      ccState.results[j] = Object.assign({}, row, { status: 'discontinued', code: origKey, via: 'discontinued', entry: null });
+    }
+  });
   renderCodeCheckRows();
 }
 
-/** Remove discontinued flag — reverts the row to unmatched, re-renders. */
+/** Remove discontinued flag — reverts all matching rows to unmatched. */
 function restoreCcDiscontinued(i) {
   const r = ccState.results[i];
   if (!r) return;
   unmarkDisc(r.original);
-  const re = resolveCode(r.original, ccState.customerId);
-  ccState.results[i] = Object.assign({}, re, { index: r.index, qty: r.qty, desc: r.desc });
+  const origKey = r.original.toUpperCase();
+  ccState.results.forEach((row, j) => {
+    if (row.original.toUpperCase() === origKey && row.status === 'discontinued') {
+      const re = resolveCode(row.original, ccState.customerId);
+      ccState.results[j] = Object.assign({}, re, { index: row.index, qty: row.qty, desc: row.desc });
+    }
+  });
   renderCodeCheckRows();
 }
 
-/** Mark a no-match code as legit — confirmed valid but not yet in catalog. */
+/** Mark a no-match code as legit — confirmed valid but not yet in catalog. Propagates to all duplicate rows. */
 function markCcLegit(i) {
   const r = ccState.results[i];
   if (!r) return;
   markLegit(r.original);
-  ccState.results[i] = Object.assign({}, r, { status: 'legit', code: r.original.toUpperCase(), via: 'legit', entry: null });
+  const origKey = r.original.toUpperCase();
+  ccState.results.forEach((row, j) => {
+    if (row.original.toUpperCase() === origKey && (row.status === 'unmatched' || row.status === 'manual')) {
+      if (row.status === 'manual') unmarkLegit(row.code);
+      ccState.results[j] = Object.assign({}, row, { status: 'legit', code: origKey, via: 'legit', entry: null });
+    }
+  });
   renderCodeCheckRows();
 }
 
-/** Remove legit flag — reverts the row to unmatched. */
+/** Remove legit flag — reverts all matching rows to unmatched. */
 function unmarkCcLegit(i) {
   const r = ccState.results[i];
   if (!r) return;
   unmarkLegit(r.original);
-  const re = resolveCode(r.original, ccState.customerId);
-  ccState.results[i] = Object.assign({}, re, { index: r.index, qty: r.qty, desc: r.desc });
+  const origKey = r.original.toUpperCase();
+  ccState.results.forEach((row, j) => {
+    if (row.original.toUpperCase() === origKey && row.status === 'legit') {
+      const re = resolveCode(row.original, ccState.customerId);
+      ccState.results[j] = Object.assign({}, re, { index: row.index, qty: row.qty, desc: row.desc });
+    }
+  });
   renderCodeCheckRows();
 }
 
-/** Remove manual-adjusted flag — unmarks the adjusted code from legit, reverts to unmatched. */
+/** Remove manual-adjusted flag — unmarks the adjusted code from legit, reverts all matching rows. */
 function unmarkCcManual(i) {
   const r = ccState.results[i];
   if (!r) return;
-  unmarkLegit(r.code); // r.code holds the adjusted value that was saved as legit
-  const re = resolveCode(r.original, ccState.customerId);
-  ccState.results[i] = Object.assign({}, re, { index: r.index, qty: r.qty, desc: r.desc });
-  // Reset the input field back to the original code
-  const inp = document.getElementById('cc-in-' + i);
-  if (inp) inp.value = re.code || r.original;
+  const adjCode = r.code;
+  unmarkLegit(adjCode);
+  const origKey = r.original.toUpperCase();
+  ccState.results.forEach((row, j) => {
+    if (row.original.toUpperCase() === origKey && row.status === 'manual') {
+      const re = resolveCode(row.original, ccState.customerId);
+      ccState.results[j] = Object.assign({}, re, { index: row.index, qty: row.qty, desc: row.desc });
+    }
+  });
   renderCodeCheckRows();
 }
 
