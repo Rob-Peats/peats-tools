@@ -604,9 +604,12 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 .cc-via.disc { background: #f3f4f6; color: #6b7280; }
 .cc-via.none { background: var(--light); color: var(--muted); }
 .cc-row-disc  td { background: #f9fafb; color: #9ca3af; }
-.cc-row-legit td { background: #f0fdfa; }
-.cc-via.legit { background: #ccfbf1; color: #0f766e; }
+.cc-row-legit  td { background: #f0fdfa; }
+.cc-via.legit  { background: #ccfbf1; color: #0f766e; }
 .cc-stat.legit { background: #ccfbf1; color: #0f766e; border-color: #5eead4; }
+.cc-row-manual td { background: #fffbeb; }
+.cc-via.manual  { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.cc-stat.manual { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
 /* Action column buttons */
 .cc-action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
 .cc-disc-btn {
@@ -8326,7 +8329,7 @@ async function downloadDomSmithCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v42 · 26 Aug 2026 · legit-code-check';
+const TOOL_BUILD = 'v43 · 27 Aug 2026 · manual-adjust-legit';
 
 function forceReload() {
   const base = window.location.href.split('?')[0].split('#')[0];
@@ -8385,22 +8388,24 @@ function renderCodeCheckRows() {
   const tbody = document.getElementById('ccTableBody');
 
   tbody.innerHTML = ccState.results.map((r, i) => {
-    const isExact = r.status === 'exact';
-    const isAuto  = r.status === 'auto' || r.status === 'alias';
-    const isBad   = r.status === 'unmatched';
-    const isDisc  = r.status === 'discontinued';
-    const isLegitRow = r.status === 'legit';
+    const isExact     = r.status === 'exact';
+    const isAuto      = r.status === 'auto' || r.status === 'alias';
+    const isBad       = r.status === 'unmatched';
+    const isDisc      = r.status === 'discontinued';
+    const isLegitRow  = r.status === 'legit';
+    const isManualRow = r.status === 'manual';
 
-    const rowCls = isBad ? 'cc-row-bad' : isAuto ? 'cc-row-auto' : isDisc ? 'cc-row-disc' : isLegitRow ? 'cc-row-legit' : 'cc-row-exact';
-    const inCls  = isBad ? 'bad' : isAuto ? 'mid' : (isDisc || isLegitRow) ? 'none' : 'ok';
+    const rowCls = isBad ? 'cc-row-bad' : isAuto ? 'cc-row-auto' : isDisc ? 'cc-row-disc' : isLegitRow ? 'cc-row-legit' : isManualRow ? 'cc-row-manual' : 'cc-row-exact';
+    const inCls  = isBad ? 'bad' : isAuto ? 'mid' : (isDisc || isLegitRow) ? 'none' : isManualRow ? 'mid' : 'ok';
 
     // "Match" badge
     let via;
-    if (isExact)       via = '<span class="cc-via ok">✔ Exact</span>';
-    else if (isAuto)   via = `<span class="cc-via mid">↻ ${escHtml(r.via)}</span>`;
-    else if (isDisc)   via = '<span class="cc-via disc">🚫 Discontinued</span>';
+    if (isExact)         via = '<span class="cc-via ok">✔ Exact</span>';
+    else if (isAuto)     via = `<span class="cc-via mid">↻ ${escHtml(r.via)}</span>`;
+    else if (isDisc)     via = '<span class="cc-via disc">🚫 Discontinued</span>';
     else if (isLegitRow) via = '<span class="cc-via legit">✅ Legit</span>';
-    else               via = '<span class="cc-via bad">✕ No match</span>';
+    else if (isManualRow) via = '<span class="cc-via manual">✏️ Adjusted</span>';
+    else                 via = '<span class="cc-via bad">✕ No match</span>';
 
     // Original code column
     const changed = normCode(r.code) !== normCode(r.original) || r.code !== r.original;
@@ -8418,7 +8423,9 @@ function renderCodeCheckRows() {
         ? `<span class="cc-desc muted">discontinued — excluded from export</span>`
         : isLegitRow
           ? `<span class="cc-desc" style="color:#0f766e">confirmed valid — included in export</span>`
-          : `<span class="cc-desc muted">${escHtml(r.desc || 'not in catalog')}</span>`;
+          : isManualRow
+            ? `<span class="cc-desc" style="color:#92400e">manually adjusted — included in export</span>`
+            : `<span class="cc-desc muted">${escHtml(r.desc || 'not in catalog')}</span>`;
 
     // Suggestions (unmatched only — no action buttons in description cell any more)
     let suggestHtml = '';
@@ -8444,6 +8451,8 @@ function renderCodeCheckRows() {
       actionCell = `<td style="text-align:center"><button class="cc-restore-btn" onclick="restoreCcDiscontinued(${i})" title="Remove discontinued flag">↩ Restore</button></td>`;
     } else if (isLegitRow) {
       actionCell = `<td style="text-align:center"><button class="cc-restore-btn" onclick="unmarkCcLegit(${i})" title="Remove legit flag — will show as unmatched">↩ Unmark</button></td>`;
+    } else if (isManualRow) {
+      actionCell = `<td style="text-align:center"><button class="cc-restore-btn" onclick="unmarkCcManual(${i})" title="Remove adjusted code — reverts to original unmatched">↩ Unmark</button></td>`;
     } else {
       actionCell = '<td></td>';
     }
@@ -8476,15 +8485,17 @@ function renderCodeCheckStats() {
   const auto  = rs.filter(r => r.status === 'auto' || r.status === 'alias').length;
   const disc  = rs.filter(r => r.status === 'discontinued').length;
   const leg   = rs.filter(r => r.status === 'legit').length;
+  const man   = rs.filter(r => r.status === 'manual').length;
   const bad   = rs.filter(r => r.status === 'unmatched').length;
 
   const parts = [];
   parts.push(`<span class="cc-stat ok"><span class="dot"></span>${exact} exact</span>`);
   if (auto) parts.push(`<span class="cc-stat warn"><span class="dot"></span>${auto} auto-corrected</span>`);
+  if (man)  parts.push(`<span class="cc-stat manual"><span class="dot"></span>${man} adjusted</span>`);
   if (leg)  parts.push(`<span class="cc-stat legit"><span class="dot"></span>${leg} legit</span>`);
   if (disc) parts.push(`<span class="cc-stat none"><span class="dot"></span>${disc} discontinued</span>`);
   if (bad)  parts.push(`<span class="cc-stat bad"><span class="dot"></span>${bad} not found</span>`);
-  if (!auto && !bad && !disc && !leg) parts.push('<span class="cc-stat none">All codes clean — ready to convert</span>');
+  if (!auto && !bad && !disc && !leg && !man) parts.push('<span class="cc-stat none">All codes clean — ready to convert</span>');
   document.getElementById('ccStats').innerHTML = parts.join('');
 
   // Footer note
@@ -8496,9 +8507,12 @@ function renderCodeCheckStats() {
   } else if (bad) {
     if (bad > 0) {
       noteEl.innerHTML = `<strong style="color:#b91c1c">${bad} code${bad === 1 ? '' : 's'} not found.</strong> `
-        + `Edit until green, mark 🚫 Disc to exclude, or mark ✅ Legit to include as-is.`;
+        + `Edit the code directly, mark 🚫 Disc to exclude, or mark ✅ Legit to include as-is.`;
     }
-  } else if (disc && !bad && !leg) {
+  } else if (man && !bad) {
+    noteEl.innerHTML = `<strong style="color:#92400e">${man} code${man === 1 ? '' : 's'} manually adjusted.</strong> `
+      + `Included in export and saved to legit store. Hit 💾 Save to Catalog to add them permanently.`;
+  } else if (disc && !bad && !leg && !man) {
     const discNote = disc === 1 ? '1 discontinued item' : `${disc} discontinued items`;
     noteEl.innerHTML = `<strong style="color:#6b7280">${discNote} excluded from export.</strong> `
       + `These are remembered — they'll show as discontinued on future POs automatically.`;
@@ -8521,6 +8535,9 @@ function renderCodeCheckStats() {
   } else if (disc > 0) {
     btn.textContent = `Continue (${disc} excluded from export)`;
     btn.style.background = 'var(--green)';
+  } else if (man > 0) {
+    btn.textContent = `Apply & Continue (${man} adjusted)`;
+    btn.style.background = 'var(--green)';
   } else {
     btn.textContent = 'Apply & Continue';
     btn.style.background = 'var(--green)';
@@ -8535,10 +8552,12 @@ function renderCodeCheckStats() {
   const hasSaveable = total > 0 || nDisc > 0 || nLegit > 0;
   const discPart  = nDisc  ? ` + ${nDisc} discontinued`  : '';
   const legitPart = nLegit ? ` + ${nLegit} legit code${nLegit === 1 ? '' : 's'}` : '';
+  const nManual = ccState.results.filter(r => r.status === 'manual').length;
   const memParts = [];
-  if (nAlias) memParts.push(`${nAlias} code correction${nAlias === 1 ? '' : 's'} remembered`);
-  if (nDisc)  memParts.push(`${nDisc} discontinued marked`);
-  if (nLegit) memParts.push(`${nLegit} legit confirmed`);
+  if (nAlias)  memParts.push(`${nAlias} code correction${nAlias === 1 ? '' : 's'} remembered`);
+  if (nDisc)   memParts.push(`${nDisc} discontinued marked`);
+  if (nLegit)  memParts.push(`${nLegit} legit confirmed`);
+  if (nManual) memParts.push(`${nManual} manually adjusted`);
   learnEl.innerHTML = memParts.length
     ? `<span>💡</span><span>${memParts.join(', ')} — auto-applied on future POs.`
       + (nAlias ? ` <a href="#" onclick="clearCustomerAliases();return false;" style="color:var(--brand)">Clear corrections</a>` : '') + `</span>`
@@ -8550,6 +8569,9 @@ function renderCodeCheckStats() {
 function recheckCode(i, newVal) {
   const r  = ccState.results[i];
   const nv = String(newVal || '').trim().toUpperCase();
+
+  // If the row was previously manually adjusted, unmark the old legit entry first
+  if (r.status === 'manual') unmarkLegit(r.code);
 
   if (state.catalog[nv]) {
     // Manual fix landed on a real catalog code — this becomes a learned alias
@@ -8563,8 +8585,12 @@ function recheckCode(i, newVal) {
     const re = resolveCode(nv, ccState.customerId);
     if (re.status !== 'unmatched') {
       r.code = re.code; r.entry = re.entry; r.status = 'auto'; r.via = re.via; r.manual = true;
+    } else if (nv && nv !== r.original.toUpperCase()) {
+      // Edited code isn't in catalog and differs from original — mark as adjusted/legit immediately
+      markLegit(nv);
+      r.code = nv; r.entry = null; r.status = 'manual'; r.via = 'manual'; r.manual = true;
     } else {
-      r.code = nv; r.entry = null; r.status = 'unmatched'; r.via = ''; r.manual = false;
+      r.code = nv || r.original.toUpperCase(); r.entry = null; r.status = 'unmatched'; r.via = ''; r.manual = false;
     }
   }
   renderCodeCheckRows();
@@ -8631,6 +8657,19 @@ function unmarkCcLegit(i) {
   renderCodeCheckRows();
 }
 
+/** Remove manual-adjusted flag — unmarks the adjusted code from legit, reverts to unmatched. */
+function unmarkCcManual(i) {
+  const r = ccState.results[i];
+  if (!r) return;
+  unmarkLegit(r.code); // r.code holds the adjusted value that was saved as legit
+  const re = resolveCode(r.original, ccState.customerId);
+  ccState.results[i] = Object.assign({}, re, { index: r.index, qty: r.qty, desc: r.desc });
+  // Reset the input field back to the original code
+  const inp = document.getElementById('cc-in-' + i);
+  if (inp) inp.value = re.code || r.original;
+  renderCodeCheckRows();
+}
+
 function clearCustomerAliases() {
   const all = loadAliases();
   delete all[ccState.customerId];
@@ -8668,6 +8707,12 @@ function applyCodeCheck() {
       return;
     }
 
+    // Manually adjusted items — override original with the adjusted code for export
+    if (r.status === 'manual') {
+      convState.skuOverrides[r.original] = r.code;
+      return;
+    }
+
     if (r.code && r.code.toUpperCase() !== orig) {
       map[r.original] = r.code;
       convState.skuOverrides[r.original] = r.code;
@@ -8683,9 +8728,12 @@ function applyCodeCheck() {
   closeCodeCheck();
   // This file has now been reviewed — don't re-prompt on download or push
   convState.codeCheckDoneFor = convState.fileName;
-  const nLegitApplied = ccState.results.filter(r => r.status === 'legit').length;
-  if (learned && nLegitApplied) showToast(`✔ ${learned} correction${learned === 1 ? '' : 's'} applied + ${nLegitApplied} legit code${nLegitApplied === 1 ? '' : 's'} confirmed.`);
+  const nLegitApplied  = ccState.results.filter(r => r.status === 'legit').length;
+  const nManualApplied = ccState.results.filter(r => r.status === 'manual').length;
+  const nSaveable = nLegitApplied + nManualApplied;
+  if (learned && nSaveable) showToast(`✔ ${learned} correction${learned === 1 ? '' : 's'} applied + ${nSaveable} code${nSaveable === 1 ? '' : 's'} confirmed — hit 💾 Save to Catalog.`);
   else if (learned) showToast(`✔ ${learned} code correction${learned === 1 ? '' : 's'} applied and remembered.`);
+  else if (nManualApplied) showToast(`✔ ${nManualApplied} adjusted code${nManualApplied === 1 ? '' : 's'} included — hit 💾 Save to Catalog to add them.`);
   else if (nLegitApplied) showToast(`✔ ${nLegitApplied} legit code${nLegitApplied === 1 ? '' : 's'} confirmed — hit 💾 Save to Catalog to add them.`);
   else if (convState.excludedSkus.size) showToast(`ℹ ${convState.excludedSkus.size} line${convState.excludedSkus.size === 1 ? '' : 's'} excluded from export.`);
 
