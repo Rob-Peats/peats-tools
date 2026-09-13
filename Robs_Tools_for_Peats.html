@@ -1014,6 +1014,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
               style="background:#0f766e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔬 Probe Stock Fields</button>
             <button onclick="crmProbePurchaseTransactions()" id="crmPurchaseProbeBtn"
               style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📦 Probe Purchase Transactions</button>
+            <button onclick="crmProbeProductImages()" id="crmImagesProbeBtn"
+              style="background:#0e7490;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🖼 Probe Product Images</button>
           </div>
           <div id="crmApiOutput" style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:var(--text);white-space:pre-wrap;min-height:80px;max-height:400px;overflow-y:auto;line-height:1.6">
             <span style="color:var(--muted)">Output will appear here…</span>
@@ -20673,6 +20675,113 @@ async function crmProbePurchaseTransactions() {
     crmApiLog('✗ ' + e.message, true);
   }
   btn.disabled = false; btn.textContent = '📦 Probe Purchase Transactions';
+}
+
+async function crmProbeProductImages() {
+  const btn = document.getElementById('crmImagesProbeBtn');
+  btn.disabled = true; btn.textContent = '⏳ Probing…';
+  const pat = getCrmPat();
+  if (!pat) {
+    crmApiLog('✗ No PAT saved — enter your token in Settings first.');
+    btn.disabled = false; btn.textContent = '🖼 Probe Product Images';
+    return;
+  }
+
+  const CRM = 'https://crm-odata-v1-westeurope.prospect365.com';
+  let out = '🖼 Product Images — Full Field Probe\n' + '═'.repeat(44) + '\n\n';
+  crmApiLog(out);
+
+  // Try candidate endpoint names
+  const candidates = ['ProductItemImages', 'ProductImages', 'ItemImages', 'ProductItemImage'];
+  let found = null;
+
+  for (const ep of candidates) {
+    try {
+      out += 'Trying ' + ep + '…\n';
+      crmApiLog(out);
+      const resp = await fetch(CRM + '/' + ep + '?$top=1', {
+        headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        out += '✓ ' + ep + ' exists! (' + (data.value || []).length + ' record returned)\n\n';
+        found = { ep, data };
+        break;
+      } else {
+        out += '  HTTP ' + resp.status + ' — not found\n';
+      }
+    } catch(e) {
+      out += '  Error: ' + e.message + '\n';
+    }
+  }
+
+  if (!found) {
+    out += '\n⚠ None of the candidate endpoints responded.\nTry checking Prospect 365 docs for the image entity name.\n';
+    crmApiLog(out);
+    btn.disabled = false; btn.textContent = '🖼 Probe Product Images';
+    return;
+  }
+
+  const { ep, data } = found;
+  const items = data.value || [];
+
+  if (items.length) {
+    const item = items[0];
+    const entries = Object.entries(item);
+    out += '── All fields on ' + ep + ' (' + entries.length + ') ──\n';
+    entries.forEach(([k, v]) => {
+      const val = v == null ? '(null)' : (String(v).length > 100 ? String(v).slice(0, 100) + '…' : String(v));
+      out += '  ' + k.padEnd(38) + val + '\n';
+    });
+    out += '\n';
+  }
+
+  // Now fetch images for the currently loaded SKU
+  const lines = (typeof getConvOrderLines === 'function') ? getConvOrderLines() : [];
+  const firstSku = lines.length ? (effectiveSku(lines[0].sku, convState && convState.retailerId) || lines[0].sku) : null;
+
+  if (firstSku) {
+    out += '─'.repeat(44) + '\n';
+    out += 'Using SKU from loaded order: ' + firstSku + '\n\n';
+    crmApiLog(out);
+
+    // Try common FK field names for filtering
+    const filterFields = ['ProductItemId', 'ItemId', 'ProductId', 'Sku'];
+    for (const ff of filterFields) {
+      try {
+        const url = CRM + '/' + ep + '?$filter=' + ff + ' eq \'' + firstSku.replace(/'/g, "''") + '\'&$top=10';
+        const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+        if (resp.ok) {
+          const d = await resp.json();
+          const recs = d.value || [];
+          if (recs.length) {
+            out += 'Filter on ' + ff + ' returned ' + recs.length + ' image record(s):\n\n';
+            recs.forEach((r, i) => {
+              out += '  Image ' + (i + 1) + ':\n';
+              Object.entries(r).forEach(([k, v]) => {
+                const val = v == null ? '(null)' : (String(v).length > 100 ? String(v).slice(0, 100) + '…' : String(v));
+                out += '    ' + k.padEnd(36) + val + '\n';
+              });
+              out += '\n';
+            });
+            break;
+          } else {
+            out += 'Filter on ' + ff + ' returned 0 records.\n';
+          }
+        } else {
+          out += 'Filter on ' + ff + ' — HTTP ' + resp.status + '\n';
+        }
+      } catch(e) {
+        out += 'Filter on ' + ff + ' error: ' + e.message + '\n';
+      }
+    }
+  } else {
+    out += '\n💡 Tip: Load an order in the Order Conversion tool first to also probe images for a specific SKU.\n';
+  }
+
+  out += '\n' + '─'.repeat(44) + '\n✅ Done — share the image records above so we can identify the URL field pattern.\n';
+  crmApiLog(out);
+  btn.disabled = false; btn.textContent = '🖼 Probe Product Images';
 }
 
 async function crmTestSalesOrderPost() {
