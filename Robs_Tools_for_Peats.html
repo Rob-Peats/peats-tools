@@ -7903,7 +7903,7 @@ function renderMultiFilePreview(parsedFiles) {
         const _multiOvr = convState.skuOverrides[l.sku];
         productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
           + chkCell
-          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
           + priceCell
           + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -8000,7 +8000,7 @@ function renderMultiFilePreview(parsedFiles) {
         const _ecOvr = convState.skuOverrides[p.sku];
         productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
           + chkCell
-          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -8040,7 +8040,7 @@ function renderMultiFilePreview(parsedFiles) {
         const _stOvr = convState.skuOverrides[p.sku];
         productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
           + chkCell
-          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -8104,7 +8104,7 @@ function renderMultiFilePreview(parsedFiles) {
 
         productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
           + chkCell
-          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -8154,7 +8154,7 @@ function renderMultiFilePreview(parsedFiles) {
         }
         productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
           + chkCell
-          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -8204,7 +8204,7 @@ function renderMultiFilePreview(parsedFiles) {
 
         productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
           + chkCell
-          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -8253,7 +8253,7 @@ function renderMultiFilePreview(parsedFiles) {
         const _dsOvr = convState.skuOverrides[p.sku];
         productRows.push('<tr style="' + (i%2===1?'background:var(--light)':'') + '">'
           + chkCell
-          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+          + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -9162,7 +9162,7 @@ function renderSmythsPreview(data) {
 
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -9602,7 +9602,7 @@ function renderJoycesPreview(data) {
     var joycesOverride = convState.skuOverrides[p.sku];
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:11px;color:var(--muted)">' + escHtml(p.joycesCode) + '</td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
@@ -10033,7 +10033,7 @@ function renderCallaghansPreview(data) {
 
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -10329,7 +10329,7 @@ function renderJJsPreview(data) {
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku)
-        + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -10586,7 +10586,7 @@ function renderMarlboroPreview(data) {
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku)
-        + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -11433,7 +11433,7 @@ function renderSoundstorePreview(data) {
     var ssOvr = convState.skuOverrides[p.sku];
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -11761,7 +11761,7 @@ function renderDomSmithPreview(data) {
     var dsOvr = convState.skuOverrides[p.sku];
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
@@ -12984,6 +12984,7 @@ function renderExpertStoresPreview(data) {
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
       + '<td style="font-size:12px;padding:4px 8px;font-weight:600;color:var(--brand)">'
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '')
         + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
         + 'style="font-size:12px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:130px;min-width:90px;cursor:pointer;outline:none" '
         + 'title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" '
@@ -13323,6 +13324,7 @@ function renderExpertNenaghPreview(data) {
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
       + '<td style="font-size:12px;padding:4px 8px;font-weight:600;color:var(--brand)">'
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '')
         + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
         + 'style="font-size:12px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:130px;min-width:90px;cursor:pointer;outline:none" '
         + 'title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" '
@@ -13712,6 +13714,7 @@ function renderBriscoesPreview(data) {
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
       + '<td style="font-size:12px;padding:4px 8px;font-weight:600;color:var(--brand)">'
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '')
         + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
         + 'style="font-size:12px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:130px;min-width:90px;cursor:pointer;outline:none" '
         + 'title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" '
@@ -14102,7 +14105,7 @@ function renderStakelumsPreview(data) {
       + chkCell
       + '<td style="font-size:12px;padding:4px 8px;min-width:120px">'
         + skuPrefix(p.sku)
-        + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
         + 'style="font-size:12px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:130px;min-width:90px;cursor:pointer;outline:none" '
         + 'title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" '
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
@@ -14519,7 +14522,7 @@ function renderRonaynesPreview(data) {
       + chkCell
       + '<td style="font-size:12px;padding:4px 8px;min-width:120px">'
         + skuPrefix(p.sku)
-        + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
         + 'style="font-size:12px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:130px;min-width:90px;cursor:pointer;outline:none" '
         + 'title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" '
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
@@ -15212,6 +15215,7 @@ function renderElectroCityPreview(data) {
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
       + '<td style="font-size:12px;padding:4px 8px;font-weight:600;color:var(--brand)">'
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '')
         + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" '
         + 'style="font-size:12px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:130px;min-width:90px;cursor:pointer;outline:none" '
         + 'title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" '
@@ -17550,7 +17554,7 @@ function renderAirportShannonPreview(data) {
 
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -17808,7 +17812,7 @@ function renderAirportCorkPreview(data) {
 
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -18157,7 +18161,7 @@ function renderTelfordsPreview(data) {
 
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -18609,7 +18613,7 @@ function renderTJOMahonyPreview(data) {
     }
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -18860,7 +18864,7 @@ function renderKingMoffattPreview(data) {
     }
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -19099,7 +19103,7 @@ function renderEnnisElecPreview(data) {
       + chkCell
       + '<td style="font-size:12px;padding:4px 8px;font-weight:600;color:var(--brand)">'
         + skuPrefix(p.sku)
-        + '<input type="text" value="' + escHtml(effSku) + '" data-orig="' + escHtml(p.sku) + '" '
+        + (convState.skuOverrides[p.sku] && convState.skuOverrides[p.sku] !== p.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(p.sku) + '</span>' : '') + + '<input type="text" value="' + escHtml(effSku) + '" data-orig="' + escHtml(p.sku) + '" '
         + 'style="font-size:12px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:130px;min-width:90px;cursor:pointer;outline:none" '
         + 'title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" '
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
@@ -19423,7 +19427,7 @@ function renderBeattysPreview(data) {
     }
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -19731,7 +19735,7 @@ function renderPeterMurphyPreview(data) {
     }
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effSkuL) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effSkuL) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
@@ -19879,7 +19883,7 @@ function renderAirportDublinPreview(data) {
 
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:13px;min-width:120px">' + (convState.skuOverrides[l.sku] && convState.skuOverrides[l.sku] !== l.sku ? '<span style=\'display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2\'>' + escHtml(l.sku) + '</span>' : '') + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
