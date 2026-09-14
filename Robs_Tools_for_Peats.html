@@ -1695,8 +1695,9 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
      ══════════════════════════════════════════════════ -->
 <div id="tool-stockanalysis" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
 
-  <!-- Toolbar: brand filter only -->
-  <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;">
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
+    <!-- Brand filter -->
     <div class="brand-filter-wrap" id="saaBrandWrap">
       <button class="brand-filter-btn" id="saaBrandBtn" onclick="saaToggleBrandPanel(event)">
         🏷 Brands <span id="saaBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none"></span>
@@ -1710,30 +1711,50 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         </div>
       </div>
     </div>
-    <div id="saaLoadingIndicator" style="display:none;font-size:12px;color:var(--muted);">⏳ Loading stock…</div>
+
+    <!-- Cover thresholds -->
+    <div style="display:flex;gap:6px;align-items:stretch;border-left:1px solid var(--border);padding-left:12px;margin-left:2px;">
+      <div style="background:var(--light);border:1px solid var(--border);border-radius:8px;padding:5px 10px;display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b91c1c">🔴 Critical below</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input type="number" id="saaCriticalWks" value="4" min="1" max="52" onchange="saaUpdateThresholds()"
+            style="width:40px;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:13px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);">
+          <span style="font-size:11px;color:var(--muted);font-weight:600">wks</span>
+        </div>
+      </div>
+      <div style="background:var(--light);border:1px solid var(--border);border-radius:8px;padding:5px 10px;display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b45309">🟡 Low Cover below</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input type="number" id="saaLowCoverWks" value="8" min="1" max="52" onchange="saaUpdateThresholds()"
+            style="width:40px;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:13px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);">
+          <span style="font-size:11px;color:var(--muted);font-weight:600">wks</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="saaLoadingIndicator" style="display:none;font-size:12px;color:var(--muted);">⏳ Loading…</div>
     <div style="flex:1"></div>
     <div id="saaErrorMsg" style="display:none;font-size:12px;color:#c0392b;"></div>
-  </div>
-
-  <!-- Tab + search bar (hidden until data loaded) -->
-  <div id="saaViewRow" style="display:none;align-items:center;gap:12px;padding:8px 16px;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;">
-    <div style="flex:1"></div>
-    <div id="saaViewTabs" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
-    <div style="flex:1;display:flex;justify-content:flex-end;">
-      <div class="search-x-wrap">
-        <input type="search" id="saaSearch" placeholder="Search code, description, brand…"
-               oninput="saaRenderTable();_syncSearchX('saaSearch','saaSearchX')"
-               style="width:240px;">
-        <button class="search-x-btn" id="saaSearchX"
-                onclick="_clearSearch('saaSearch','saaSearchX',saaRenderTable)" title="Clear">✕</button>
-      </div>
+    <div class="search-x-wrap" id="saaSearchWrap" style="display:none;">
+      <input type="search" id="saaSearch" placeholder="Search code, description, brand…"
+             oninput="saaRenderTable();_syncSearchX('saaSearch','saaSearchX')"
+             style="width:240px;">
+      <button class="search-x-btn" id="saaSearchX"
+              onclick="_clearSearch('saaSearch','saaSearchX',saaRenderTable)" title="Clear">✕</button>
     </div>
   </div>
 
-  <!-- Summary cards (hidden until loaded) -->
-  <div id="saaSummaryCards" style="display:none;flex-shrink:0;padding:10px 16px;gap:10px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
+  <!-- Big summary cards (hidden until data loaded) — cards above tabs like backorder tool -->
+  <div id="saaSummaryCards" style="display:none;flex-shrink:0;padding:14px 20px;gap:12px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
 
-  <!-- Table -->
+  <!-- Tab row (hidden until data loaded) -->
+  <div id="saaViewRow" style="display:none;align-items:center;gap:12px;padding:8px 16px;background:var(--white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;">
+    <div style="flex:1"></div>
+    <div id="saaViewTabs" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+    <div style="flex:1"></div>
+  </div>
+
+  <!-- Table / content area -->
   <div style="flex:1;overflow:auto;">
     <div id="saaContent" style="padding:40px;text-align:center;color:var(--muted);font-size:14px;">
       Loading stock positions…
@@ -6927,6 +6948,10 @@ let saaView         = 'all';
 let saaStockMap     = new Map();    // SKU → stock data (accumulated incrementally)
 let saaLoadedBrands = new Set();    // brands whose stock has been fetched
 let saaFetching     = false;
+// Cover thresholds (weeks) — read from toolbar inputs at runtime
+function saaCritWks()  { return parseInt(document.getElementById('saaCriticalWks')?.value  || '4',  10) || 4;  }
+function saaLowWks()   { return parseInt(document.getElementById('saaLowCoverWks')?.value  || '8',  10) || 8;  }
+function saaUpdateThresholds() { saaRebuildData(); if (saaData.length) saaRenderAll(); }
 
 function saaOnOpen() {
   const hasCat = state.catalog && Object.keys(state.catalog).length > 0;
@@ -6947,9 +6972,10 @@ function saaOnOpen() {
 }
 
 function saaShowPickPrompt() {
-  document.getElementById('saaViewRow').style.display    = 'none';
-  document.getElementById('saaSummaryCards').style.display = 'none';
-  document.getElementById('saaTable').style.display       = 'none';
+  document.getElementById('saaSummaryCards').style.display  = 'none';
+  document.getElementById('saaViewRow').style.display       = 'none';
+  document.getElementById('saaSearchWrap').style.display    = 'none';
+  document.getElementById('saaTable').style.display         = 'none';
   document.getElementById('saaLoadingIndicator').style.display = 'none';
   const content = document.getElementById('saaContent');
   content.style.display = 'block';
@@ -7077,12 +7103,13 @@ function saaRebuildData() {
     const weeksCover  = (proj != null && avgPerMonth != null && avgPerMonth > 0)
       ? parseFloat((proj / (avgPerMonth / 4.33)).toFixed(1)) : null;
     // Status: prefer weeks-cover-based; fall back to stock-level logic
+    const critWks = saaCritWks(), lowWks = saaLowWks();
     let status = 2;
     if (free === null) status = 3;
     else if (avgPerMonth != null && avgPerMonth > 0) {
-      if (weeksCover < 4)      status = 0; // red: < 4 weeks cover
-      else if (weeksCover < 8) status = 1; // amber: 4–8 weeks
-      else                     status = 2; // green: 8+ weeks
+      if (weeksCover < critWks)      status = 0; // red: below critical threshold
+      else if (weeksCover < lowWks)  status = 1; // amber: below low-cover threshold
+      else                           status = 2; // green: healthy
     } else {
       // No recent sales — fall back to stock position
       if (proj < 0)        status = 0;
@@ -7207,13 +7234,14 @@ async function saaLoadForSelectedBrands() {
 function saaSetView(v) { saaView = v; saaRenderTable(); }
 
 function saaRenderAll() {
-  saaRenderTabs();
   saaRenderSummaryCards();
+  saaRenderTabs();
   saaRenderTable();
-  document.getElementById('saaViewRow').style.display = 'flex';
   document.getElementById('saaSummaryCards').style.display = 'flex';
-  document.getElementById('saaContent').style.display = 'none';
-  document.getElementById('saaTable').style.display = 'table';
+  document.getElementById('saaViewRow').style.display      = 'flex';
+  document.getElementById('saaSearchWrap').style.display   = 'flex';
+  document.getElementById('saaContent').style.display      = 'none';
+  document.getElementById('saaTable').style.display        = 'table';
 }
 
 function saaRenderTabs() {
@@ -7249,24 +7277,51 @@ function saaRenderTabs() {
 }
 
 function saaRenderSummaryCards() {
-  const oversold      = saaData.filter(r => r.status === 0);
-  const shortfallVal  = oversold.reduce((a,r) => a + (Math.abs(r.free||0) * (r.cost||0)), 0);
-  const onOrderCount  = saaData.filter(r => r.onOrder > 0).length;
-  const onOrderUnits  = saaData.reduce((a,r) => a + (r.onOrder||0), 0);
-  const healthyPct    = saaData.length ? Math.round(saaData.filter(r=>r.status===2).length / saaData.length * 100) : 0;
-  const lowCover = saaData.filter(r => r.weeksCover != null && r.weeksCover < 8).length;
+  const critWks      = saaCritWks(), lowWks = saaLowWks();
+  const critical     = saaData.filter(r => r.status === 0);
+  const shortfallVal = critical.reduce((a,r) => a + (Math.abs(r.free||0) * (r.cost||0)), 0);
+  const lowCover     = saaData.filter(r => r.status === 1);
+  const onOrderSKUs  = saaData.filter(r => r.onOrder > 0);
+  const onOrderUnits = saaData.reduce((a,r) => a + (r.onOrder||0), 0);
+  const noSales      = saaData.filter(r => r.avgPerMonth != null && r.avgPerMonth === 0);
+  const healthy      = saaData.filter(r => r.status === 2);
+  const healthyPct   = saaData.length ? Math.round(healthy.length / saaData.length * 100) : 0;
+
   const cards = [
-    { label:'Total SKUs',     val: saaData.length,                                      col:'#1a3c6e' },
-    { label:'Critical (<4wk)',val: oversold.length + ' SKUs',                           col:'#c0392b' },
-    { label:'Shortfall Cost', val: '€' + shortfallVal.toFixed(2),                       col:'#c0392b' },
-    { label:'Low Cover (<8wk)',val: lowCover + ' SKUs',                                 col:'#d68910' },
-    { label:'On Order Lines', val: onOrderCount + ' SKUs / ' + Math.round(onOrderUnits) + ' units', col:'#1a6ea8' },
-    { label:'Healthy',        val: healthyPct + '%',                                    col:'#1f6b3e' },
+    { label:'TOTAL SKUS',
+      val: saaData.length,
+      sub: [...saaSelBrands].length + ' brand' + (saaSelBrands.size===1?'':'s') + ' loaded',
+      col:'#1a3c6e', onclick:'' },
+    { label:'CRITICAL (<' + critWks + ' WKS)',
+      val: critical.length,
+      sub: 'shortfall €' + shortfallVal.toFixed(0),
+      col:'#b91c1c', onclick:"saaSetView('red')" },
+    { label:'LOW COVER (<' + lowWks + ' WKS)',
+      val: lowCover.length,
+      sub: lowCover.length + ' SKUs need attention',
+      col:'#b45309', onclick:"saaSetView('yellow')" },
+    { label:'ON ORDER',
+      val: onOrderSKUs.length,
+      sub: Math.round(onOrderUnits).toLocaleString('en-IE') + ' units inbound',
+      col:'#1a6ea8', onclick:"saaSetView('onorder')" },
+    { label:'NO RECENT SALES',
+      val: noSales.length,
+      sub: 'nil sold in 3 months',
+      col:'#6b7280', onclick:"saaSetView('nosales')" },
+    { label:'HEALTHY',
+      val: healthyPct + '%',
+      sub: healthy.length + ' SKUs · 8+ wks cover',
+      col:'#1f6b3e', onclick:"saaSetView('healthy')" },
   ];
+
   document.getElementById('saaSummaryCards').innerHTML = cards.map(c =>
-    `<div style="background:var(--white);border-radius:8px;padding:8px 16px;border-left:3px solid ${c.col};box-shadow:var(--shadow);min-width:120px;">
-       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">${c.label}</div>
-       <div style="font-size:16px;font-weight:800;color:${c.col};margin-top:2px">${c.val}</div>
+    `<div onclick="${c.onclick}" style="background:var(--white);border-radius:10px;padding:14px 20px;
+       border-bottom:3px solid ${c.col};box-shadow:var(--shadow);min-width:130px;flex:1;
+       ${c.onclick?'cursor:pointer;':''}transition:box-shadow .15s;"
+       ${c.onclick?'onmouseover="this.style.boxShadow=\'0 4px 16px rgba(0,0,0,.13)\'"onmouseout="this.style.boxShadow=\'var(--shadow)\'"':''}>
+       <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px">${c.label}</div>
+       <div style="font-size:28px;font-weight:800;color:${c.col};line-height:1.05">${c.val}</div>
+       <div style="font-size:11px;color:var(--muted);margin-top:4px">${c.sub}</div>
      </div>`
   ).join('');
 }
