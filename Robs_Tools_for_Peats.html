@@ -21399,74 +21399,90 @@ async function crmProbeSalesLines() {
     return;
   }
 
-  let out = '📈 SalesOrderLines — Full Field Probe\n' + '═'.repeat(50) + '\n\n';
+  // Candidate entity names for sales line data
+  const candidates = [
+    'SalesOrderLines', 'SalesLines', 'SalesTransactions', 'SalesInvoiceLines',
+    'SalesHistoryLines', 'SalesHistory', 'InvoiceLines', 'OrderLines',
+    'SalesLedgerTransactions', 'SalesLedgers', 'SalesAnalysis',
+    'ProductSalesAnalysis', 'SalesOrderLineItems', 'Transactions'
+  ];
+
+  let out = '📈 Sales Entity Sweep\n' + '═'.repeat(50) + '\n\n';
+  out += 'Trying ' + candidates.length + ' candidate entity names…\n\n';
   crmApiLog(out);
 
-  try {
-    // 1. Fetch one unrestricted record to see all available fields
-    out += '── Sample record (no filter) ──\n';
-    const sample = await crmApiFetch('/SalesOrderLines?$top=1');
-    if (sample && sample.value && sample.value.length > 0) {
-      const rec = sample.value[0];
-      const fields = Object.entries(rec);
-      out += `Total fields: ${fields.length}\n\n`;
-      // Group fields: date fields, qty/value fields, id fields, other
-      const dates  = fields.filter(([k]) => /date|Date/i.test(k));
-      const qtys   = fields.filter(([k]) => /qty|quantity|Quantity|units|Units|ordered|Ordered|value|Value|amount|Amount/i.test(k));
-      const ids    = fields.filter(([k]) => /id|Id|code|Code|status|Status|type|Type/i.test(k));
-      const others = fields.filter(([k]) => !dates.find(d=>d[0]===k) && !qtys.find(q=>q[0]===k) && !ids.find(i=>i[0]===k));
-
-      out += '📅 Date fields:\n';
-      dates.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
-      out += '\n📦 Qty / Value fields:\n';
-      qtys.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
-      out += '\n🔑 ID / Status / Type fields:\n';
-      ids.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
-      out += '\n📋 Other fields:\n';
-      others.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
-    } else {
-      out += '  No records returned (entity may be empty or filtered)\n';
-    }
-
-    // 2. Try to get a recent record for a loaded SKU
-    const cat = state.catalog || {};
-    const skus = Object.keys(cat);
-    if (skus.length > 0) {
-      const sku = skus[0];
-      out += `\n── Targeted record for SKU: ${sku} ──\n`;
-      try {
-        const targeted = await crmApiFetch(
-          `/SalesOrderLines?$filter=${encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g,"''")}'`)}&$top=3&$orderby=OrderDate desc`
-        );
-        if (targeted && targeted.value && targeted.value.length > 0) {
-          targeted.value.forEach((rec, i) => {
-            out += `\nRecord ${i+1}:\n`;
-            Object.entries(rec).forEach(([k,v]) => { if (v !== null && v !== '') out += `  ${k}: ${v}\n`; });
-          });
+  let found = null;
+  for (const name of candidates) {
+    try {
+      const data = await crmApiFetch('/' + name + '?$top=1');
+      if (data && (data.value !== undefined)) {
+        out += `✔ ${name} — EXISTS`;
+        if (data.value.length > 0) {
+          const keys = Object.keys(data.value[0]);
+          out += ` (${keys.length} fields)\n`;
+          out += '   Fields: ' + keys.join(', ') + '\n';
+          if (!found) found = { name, rec: data.value[0] };
         } else {
-          out += '  No SalesOrderLines found for this SKU — trying without $orderby…\n';
-          const fallback = await crmApiFetch(
-            `/SalesOrderLines?$filter=${encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g,"''")}'`)}&$top=3`
-          );
-          if (fallback && fallback.value && fallback.value.length > 0) {
-            fallback.value.forEach((rec, i) => {
-              out += `\nRecord ${i+1}:\n`;
-              Object.entries(rec).forEach(([k,v]) => { if (v !== null && v !== '') out += `  ${k}: ${v}\n`; });
-            });
-          } else {
-            out += '  Still no records — entity may require different filter or field name.\n';
-          }
+          out += ' (empty — no records)\n';
         }
-      } catch(e2) {
-        out += '  Targeted query failed: ' + e2.message + '\n';
-        out += '  (OrderDate field may not exist — check date fields above)\n';
+      } else {
+        out += `✗ ${name} — unexpected response\n`;
+      }
+    } catch(e) {
+      const msg = e.message || '';
+      if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
+        out += `✗ ${name} — 404\n`;
+      } else {
+        out += `⚠ ${name} — ${msg.split('\n')[0].slice(0,60)}\n`;
       }
     }
-
-    out += '\n' + '─'.repeat(30) + '\nDone!\n';
-  } catch(e) {
-    out += '✗ ' + e.message + '\n';
+    crmApiLog(out);
+    await new Promise(r => setTimeout(r, 120));
   }
+
+  // If we found a usable entity, do a full field dump + SKU-targeted sample
+  if (found) {
+    out += `\n${'─'.repeat(40)}\n✅ Using entity: ${found.name}\n${'─'.repeat(40)}\n\n`;
+    const rec = found.rec;
+    const fields = Object.entries(rec);
+    const dates  = fields.filter(([k]) => /date|Date/i.test(k));
+    const qtys   = fields.filter(([k]) => /qty|quantity|units|ordered|value|amount/i.test(k));
+    const ids    = fields.filter(([k]) => /id|code|status|type/i.test(k));
+    const others = fields.filter(([k]) => !dates.find(d=>d[0]===k) && !qtys.find(q=>q[0]===k) && !ids.find(i=>i[0]===k));
+
+    out += '📅 Date fields:\n';
+    dates.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+    out += '\n📦 Qty / Value fields:\n';
+    qtys.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+    out += '\n🔑 ID / Status / Type fields:\n';
+    ids.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+    out += '\n📋 Other fields:\n';
+    others.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+
+    // Try a targeted SKU lookup
+    const skus = Object.keys(state.catalog || {});
+    if (skus.length > 0) {
+      const sku = skus[0];
+      out += `\n── Targeted: SKU ${sku} (top 2) ──\n`;
+      try {
+        const t = await crmApiFetch(
+          `/${found.name}?$filter=${encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g,"''")}'`)}&$top=2`
+        );
+        if (t && t.value && t.value.length > 0) {
+          t.value.forEach((r2, i) => {
+            out += `Record ${i+1}: `;
+            out += Object.entries(r2).filter(([,v])=>v!==null&&v!=='').map(([k,v])=>`${k}=${v}`).join(' | ') + '\n';
+          });
+        } else {
+          out += '  No records for this SKU\n';
+        }
+      } catch(e2) { out += '  Targeted query failed: ' + e2.message + '\n'; }
+    }
+  } else {
+    out += '\n❌ No accessible sales entity found. Sales data may require a different API scope or Prospect 365 plan.\n';
+  }
+
+  out += '\n' + '─'.repeat(30) + '\nDone!\n';
   crmApiLog(out);
   btn.disabled = false; btn.textContent = '📈 Probe Sales Lines';
 }
