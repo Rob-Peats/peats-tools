@@ -1012,6 +1012,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
               style="background:#b8791d;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🚀 Test Order POST</button>
             <button onclick="crmProbeStockFields()" id="crmStockProbeBtn"
               style="background:#0f766e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔬 Probe Stock Fields</button>
+            <button onclick="crmProbeSalesLines()" id="crmSalesLinesProbeBtn"
+              style="background:#c2410c;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📈 Probe Sales Lines</button>
             <button onclick="crmProbePurchaseTransactions()" id="crmPurchaseProbeBtn"
               style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📦 Probe Purchase Transactions</button>
             <button onclick="crmProbeProductImages()" id="crmImagesProbeBtn"
@@ -21382,6 +21384,93 @@ async function crmProbeStockFields() {
  * especially anything related to "On Order" quantity by SKU.
  * Fetches one record (no filter) + one targeted by a loaded SKU if available.
  */
+
+/**
+ * Probe SalesOrderLines entity — dumps all fields from a sample record
+ * and a recent record for a loaded SKU so we can identify date, qty, status fields.
+ */
+async function crmProbeSalesLines() {
+  const btn = document.getElementById('crmSalesLinesProbeBtn');
+  btn.disabled = true; btn.textContent = '⏳ Probing…';
+  const pat = getCrmPat();
+  if (!pat) {
+    crmApiLog('✗ No PAT saved — enter your token in Settings first.');
+    btn.disabled = false; btn.textContent = '📈 Probe Sales Lines';
+    return;
+  }
+
+  let out = '📈 SalesOrderLines — Full Field Probe\n' + '═'.repeat(50) + '\n\n';
+  crmApiLog(out);
+
+  try {
+    // 1. Fetch one unrestricted record to see all available fields
+    out += '── Sample record (no filter) ──\n';
+    const sample = await crmApiFetch('/SalesOrderLines?$top=1');
+    if (sample && sample.value && sample.value.length > 0) {
+      const rec = sample.value[0];
+      const fields = Object.entries(rec);
+      out += `Total fields: ${fields.length}\n\n`;
+      // Group fields: date fields, qty/value fields, id fields, other
+      const dates  = fields.filter(([k]) => /date|Date/i.test(k));
+      const qtys   = fields.filter(([k]) => /qty|quantity|Quantity|units|Units|ordered|Ordered|value|Value|amount|Amount/i.test(k));
+      const ids    = fields.filter(([k]) => /id|Id|code|Code|status|Status|type|Type/i.test(k));
+      const others = fields.filter(([k]) => !dates.find(d=>d[0]===k) && !qtys.find(q=>q[0]===k) && !ids.find(i=>i[0]===k));
+
+      out += '📅 Date fields:\n';
+      dates.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+      out += '\n📦 Qty / Value fields:\n';
+      qtys.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+      out += '\n🔑 ID / Status / Type fields:\n';
+      ids.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+      out += '\n📋 Other fields:\n';
+      others.forEach(([k,v]) => { out += `  ${k}: ${v}\n`; });
+    } else {
+      out += '  No records returned (entity may be empty or filtered)\n';
+    }
+
+    // 2. Try to get a recent record for a loaded SKU
+    const cat = state.catalog || {};
+    const skus = Object.keys(cat);
+    if (skus.length > 0) {
+      const sku = skus[0];
+      out += `\n── Targeted record for SKU: ${sku} ──\n`;
+      try {
+        const targeted = await crmApiFetch(
+          `/SalesOrderLines?$filter=${encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g,"''")}'`)}&$top=3&$orderby=OrderDate desc`
+        );
+        if (targeted && targeted.value && targeted.value.length > 0) {
+          targeted.value.forEach((rec, i) => {
+            out += `\nRecord ${i+1}:\n`;
+            Object.entries(rec).forEach(([k,v]) => { if (v !== null && v !== '') out += `  ${k}: ${v}\n`; });
+          });
+        } else {
+          out += '  No SalesOrderLines found for this SKU — trying without $orderby…\n';
+          const fallback = await crmApiFetch(
+            `/SalesOrderLines?$filter=${encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g,"''")}'`)}&$top=3`
+          );
+          if (fallback && fallback.value && fallback.value.length > 0) {
+            fallback.value.forEach((rec, i) => {
+              out += `\nRecord ${i+1}:\n`;
+              Object.entries(rec).forEach(([k,v]) => { if (v !== null && v !== '') out += `  ${k}: ${v}\n`; });
+            });
+          } else {
+            out += '  Still no records — entity may require different filter or field name.\n';
+          }
+        }
+      } catch(e2) {
+        out += '  Targeted query failed: ' + e2.message + '\n';
+        out += '  (OrderDate field may not exist — check date fields above)\n';
+      }
+    }
+
+    out += '\n' + '─'.repeat(30) + '\nDone!\n';
+  } catch(e) {
+    out += '✗ ' + e.message + '\n';
+  }
+  crmApiLog(out);
+  btn.disabled = false; btn.textContent = '📈 Probe Sales Lines';
+}
+
 async function crmProbePurchaseTransactions() {
   const btn = document.getElementById('crmPurchaseProbeBtn');
   btn.disabled = true; btn.textContent = '⏳ Probing…';
