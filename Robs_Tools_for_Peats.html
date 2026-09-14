@@ -944,12 +944,12 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <span class="hub-card-launch">View Status →</span>
     </div>
 
-    <!-- Stock Analysis — placeholder -->
-    <div class="hub-card" onclick="showToast('📊 Stock Analysis — coming soon!')">
+    <!-- Stock Analysis -->
+    <div class="hub-card" onclick="launchTool('stockanalysis')">
       <div class="hub-card-icon">📊</div>
       <h3>Stock Analysis</h3>
-      <p>Deep-dive analytics across your catalogue — slow movers, overstock alerts and replenishment insights.</p>
-      <span class="hub-card-launch">Coming Soon →</span>
+      <p>Live stock positions from the CRM — free stock, on order, shortfalls and status at a glance.</p>
+      <span class="hub-card-launch">Open →</span>
     </div>
 
     <!-- Admin — PIN required -->
@@ -1687,6 +1687,83 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 <div id="tool-soa" style="display:none; flex-direction:column; height:calc(100vh - 64px);">
   <iframe id="soaFrame" style="flex:1; border:none; width:100%;" title="SOA Template Tool"></iframe>
 </div><!-- /tool-soa -->
+
+<!-- ══════════════════════════════════════════════════
+     TOOL: Stock Analysis
+     ══════════════════════════════════════════════════ -->
+<div id="tool-stockanalysis" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
+
+  <!-- Toolbar -->
+  <div id="soaToolbar" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-wrap:wrap;">
+
+    <!-- Brand filter -->
+    <div class="brand-filter-wrap" id="saaBrandWrap">
+      <button class="brand-filter-btn" id="saaBrandBtn" onclick="saaToggleBrandPanel(event)">
+        🏷 Brands <span id="saaBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none"></span>
+        <span style="font-size:10px;opacity:.6">▾</span>
+      </button>
+      <div class="brand-filter-panel" id="saaBrandPanel" style="display:none;min-width:230px">
+        <input class="brand-search-inp" id="saaBrandSearch" placeholder="Search brands…" oninput="saaFilterBrandList(this.value)" autocomplete="off">
+        <div class="brand-list-scroll" id="saaBrandList"></div>
+      </div>
+    </div>
+
+    <!-- Problem toggles -->
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;">
+      <input type="checkbox" id="saaProblemsOnly" onchange="saaApplyFilter()" style="width:14px;height:14px;accent-color:var(--brand);">
+      🔴 Problems only
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;">
+      <input type="checkbox" id="saaOnOrderOnly" onchange="saaApplyFilter()" style="width:14px;height:14px;accent-color:var(--brand);">
+      📦 Has on-order
+    </label>
+
+    <div style="flex:1"></div>
+
+    <!-- Catalog not loaded notice (hidden when catalog present) -->
+    <span id="saaNoCatalog" style="font-size:12px;color:var(--muted);display:none">⚠ Load a catalog first</span>
+
+    <!-- Load button -->
+    <button id="saaLoadBtn" class="btn btn-brand" onclick="saaLoad(this)" style="font-size:13px;padding:6px 16px;">
+      📊 Load Stock
+    </button>
+  </div>
+
+  <!-- Summary bar -->
+  <div id="saaSummaryBar" style="display:none;align-items:center;gap:10px;padding:7px 16px;background:var(--light);border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;">
+    <span id="saaSumTotal" style="font-weight:700;color:var(--text)"></span>
+    <span id="saaSumRed" style="color:#c0392b;font-weight:700"></span>
+    <span id="saaSumYellow" style="color:#d68910;font-weight:700"></span>
+    <span id="saaSumOnOrder" style="color:#1a6ea8;font-weight:700"></span>
+    <span id="saaSumShortfall" style="color:#c0392b;font-weight:700"></span>
+    <div style="flex:1"></div>
+    <span id="saaSumFiltered" style="color:var(--muted)"></span>
+  </div>
+
+  <!-- Table container -->
+  <div style="flex:1;overflow:auto;">
+    <div id="saaContent" style="padding:32px;text-align:center;color:var(--muted);font-size:14px;">
+      Load a catalog and click <strong>Load Stock</strong> to view stock positions.
+    </div>
+    <table id="saaTable" style="display:none;width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:var(--light);position:sticky;top:0;z-index:10;">
+          <th onclick="saaSort('brand')"  style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Brand <span id="saaThBrand"></span></th>
+          <th onclick="saaSort('code')"   style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Code <span id="saaThCode"></span></th>
+          <th onclick="saaSort('desc')"   style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Description <span id="saaThDesc"></span></th>
+          <th onclick="saaSort('cost')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Cost <span id="saaThCost"></span></th>
+          <th onclick="saaSort('phys')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Physical <span id="saaThPhys"></span></th>
+          <th onclick="saaSort('sales')"  style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Sales Ord <span id="saaThSales"></span></th>
+          <th onclick="saaSort('free')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#e8f5e9;">Free Stock <span id="saaThFree"></span></th>
+          <th onclick="saaSort('onorder')" style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">On Order <span id="saaThOnorder"></span></th>
+          <th onclick="saaSort('proj')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Projected <span id="saaThProj"></span></th>
+          <th onclick="saaSort('status')" style="padding:8px 8px;text-align:center;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Status <span id="saaThStatus"></span></th>
+        </tr>
+      </thead>
+      <tbody id="saaTableBody"></tbody>
+    </table>
+  </div>
+</div><!-- /tool-stockanalysis -->
 
 <div id="tool-export" style="display:none; flex-direction:column; height:calc(100vh - 64px);">
   <iframe id="exportFrame" style="flex:1; border:none; width:100%;" title="Export from Product Catalogue"></iframe>
@@ -6772,6 +6849,7 @@ function launchTool(tool) {
   document.getElementById('tool-export').style.display      = 'none';
   document.getElementById('tool-backorder').style.display   = 'none';
   document.getElementById('tool-webimport').style.display    = 'none';
+  document.getElementById('tool-stockanalysis').style.display = 'none';
   document.getElementById('tool-crmsettings').style.display  = 'none';
 
   function setToolName(name) {
@@ -6822,6 +6900,10 @@ function launchTool(tool) {
     // Show banner if catalog not loaded
     const banner = document.getElementById('wiCatalogBanner');
     if (banner) banner.style.display = (!state.catalog || !Object.keys(state.catalog).length) ? 'block' : 'none';
+  } else if (tool === 'stockanalysis') {
+    document.getElementById('tool-stockanalysis').style.display = 'flex';
+    setToolName('Stock Analysis');
+    saaOnOpen();
   } else if (tool === 'export') {
     document.getElementById('tool-export').style.display = 'flex';
     setToolName('Export from Product Catalogue');
@@ -6850,6 +6932,278 @@ function launchTool(tool) {
   }
   setHeaderClearBtn(tool);
 }
+
+// ══════════════════════════════════════════════════
+//  STOCK ANALYSIS TOOL
+// ══════════════════════════════════════════════════
+
+let saaData       = [];   // [{code,brand,desc,cost,phys,sales,free,onOrder,proj,status}]
+let saaFiltered   = [];   // current filtered+sorted subset
+let saaSortCol    = 'status';
+let saaSortDir    = 1;    // 1=asc, -1=desc
+let saaBrands     = [];   // all unique brands from catalog
+let saaSelBrands  = new Set(); // '' means all
+
+function saaOnOpen() {
+  const hasCat = state.catalog && Object.keys(state.catalog).length > 0;
+  const noEl = document.getElementById('saaNoCatalog');
+  const btn  = document.getElementById('saaLoadBtn');
+  if (noEl) noEl.style.display = hasCat ? 'none' : '';
+  if (btn)  btn.disabled       = !hasCat;
+  // Populate brand dropdown from catalog if not done yet
+  if (hasCat && saaBrands.length === 0) saaBuildBrands();
+}
+
+function saaBuildBrands() {
+  const brands = new Set();
+  Object.values(state.catalog || {}).forEach(e => { if (e.brand) brands.add(e.brand); });
+  saaBrands = [...brands].sort((a, b) => a.localeCompare(b));
+  saaRenderBrandList('');
+}
+
+function saaRenderBrandList(filter) {
+  const list = document.getElementById('saaBrandList');
+  if (!list) return;
+  const fl = filter.toLowerCase();
+  const visible = saaBrands.filter(b => !fl || b.toLowerCase().includes(fl));
+  const allChecked = saaSelBrands.size === 0;
+  list.innerHTML =
+    `<label class="brand-chk-row brand-all-row">
+       <input type="checkbox" ${allChecked ? 'checked' : ''} onchange="saaToggleAllBrands(this)"> All brands
+     </label>` +
+    visible.map(b =>
+      `<label class="brand-chk-row">
+         <input type="checkbox" value="${escHtml(b)}" ${saaSelBrands.size === 0 || saaSelBrands.has(b) ? 'checked' : ''} onchange="saaToggleBrand(this)">
+         ${escHtml(b)}
+       </label>`
+    ).join('');
+}
+
+function saaFilterBrandList(val) { saaRenderBrandList(val); }
+
+function saaToggleBrandPanel(e) {
+  e.stopPropagation();
+  const p = document.getElementById('saaBrandPanel');
+  const open = p.style.display !== 'none';
+  p.style.display = open ? 'none' : 'block';
+  if (!open) document.getElementById('saaBrandSearch').value = '';
+  saaRenderBrandList('');
+}
+
+function saaToggleAllBrands(chk) {
+  saaSelBrands.clear();
+  saaRenderBrandList(document.getElementById('saaBrandSearch').value || '');
+  saaUpdateBrandBtn();
+  saaApplyFilter();
+}
+
+function saaToggleBrand(chk) {
+  const brand = chk.value;
+  if (chk.checked) {
+    saaSelBrands.add(brand);
+  } else {
+    saaSelBrands.delete(brand);
+  }
+  // If all are individually checked, treat as "all"
+  if (saaSelBrands.size === saaBrands.length) saaSelBrands.clear();
+  saaUpdateBrandBtn();
+  saaApplyFilter();
+}
+
+function saaUpdateBrandBtn() {
+  const cnt = document.getElementById('saaBrandCount');
+  if (!cnt) return;
+  if (saaSelBrands.size === 0) {
+    cnt.style.display = 'none';
+  } else {
+    cnt.textContent = saaSelBrands.size;
+    cnt.style.display = '';
+  }
+}
+
+// Close brand panel when clicking outside
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('saaBrandWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const p = document.getElementById('saaBrandPanel');
+    if (p) p.style.display = 'none';
+  }
+});
+
+async function saaLoad(btn) {
+  const cat = state.catalog || {};
+  const skus = Object.keys(cat);
+  if (!skus.length) { showToast('⚠ No catalog loaded.'); return; }
+  const pat = getCrmPat();
+  if (!pat) { showToast('⚠ No CRM token — check Admin settings.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Loading…';
+  document.getElementById('saaContent').style.display = 'block';
+  document.getElementById('saaContent').innerHTML = '<span style="color:var(--muted)">Fetching stock levels… this may take a moment for large catalogs.</span>';
+  document.getElementById('saaTable').style.display = 'none';
+  document.getElementById('saaSummaryBar').style.display = 'none';
+
+  try {
+    const stockMap = await fetchConvStockLevels(skus);
+
+    saaData = skus.map(code => {
+      const e  = cat[code] || {};
+      const s  = stockMap.get(code) || {};
+      const free    = s.qty      != null ? s.qty      : null;
+      const phys    = s.physStock  != null ? s.physStock  : null;
+      const sales   = s.salesOrders != null ? s.salesOrders : null;
+      const onOrder = s.onOrder  != null ? s.onOrder  : 0;
+      const proj    = free != null ? (free + onOrder) : null;
+
+      // Status: 🔴 oversold (free < 0), 🟡 zero free stock, 🟢 positive
+      let status = 2; // green
+      if (free === null) status = 3; // unknown/grey — not in CRM
+      else if (free < 0)  status = 0; // red
+      else if (free === 0) status = 1; // yellow
+
+      return {
+        code,
+        brand:   e.brand   || '',
+        desc:    e.desc    || '',
+        cost:    (e.cost   != null && e.cost > 0) ? e.cost : null,
+        phys, sales, free, onOrder, proj, status
+      };
+    }).filter(r => r.status !== 3); // exclude SKUs not found in CRM
+
+    // Also include CRM-only SKUs (in stockMap but not cat) — skip, catalog is source of truth
+
+    saaBuildBrands();
+    saaApplyFilter();
+
+    document.getElementById('saaContent').style.display = 'none';
+    document.getElementById('saaTable').style.display = 'table';
+    document.getElementById('saaSummaryBar').style.display = 'flex';
+
+    btn.textContent = '🔄 Refresh';
+    btn.disabled    = false;
+  } catch(err) {
+    document.getElementById('saaContent').innerHTML = '<span style="color:#c0392b">Error: ' + escHtml(err.message) + '</span>';
+    btn.textContent = '📊 Load Stock';
+    btn.disabled    = false;
+  }
+}
+
+function saaApplyFilter() {
+  const problemsOnly = document.getElementById('saaProblemsOnly')?.checked;
+  const onOrderOnly  = document.getElementById('saaOnOrderOnly')?.checked;
+
+  saaFiltered = saaData.filter(r => {
+    if (saaSelBrands.size > 0 && !saaSelBrands.has(r.brand)) return false;
+    if (problemsOnly && r.status >= 2) return false;
+    if (onOrderOnly  && !(r.onOrder > 0)) return false;
+    return true;
+  });
+
+  saaSort(saaSortCol, true);
+}
+
+function saaSort(col, noToggle) {
+  const prevCol = saaSortCol;
+  if (!noToggle) {
+    if (saaSortCol === col) saaSortDir = -saaSortDir;
+    else { saaSortCol = col; saaSortDir = col === 'status' ? 1 : (col === 'desc' || col === 'code' || col === 'brand' ? 1 : -1); }
+  }
+
+  // Update sort indicators
+  ['brand','code','desc','cost','phys','sales','free','onorder','proj','status'].forEach(c => {
+    const el = document.getElementById('saaThBrand'.replace('Brand', c.charAt(0).toUpperCase() + c.slice(1)));
+    // simplified — just reset all then set active
+  });
+  ['Brand','Code','Desc','Cost','Phys','Sales','Free','Onorder','Proj','Status'].forEach(cap => {
+    const el = document.getElementById('saaTh' + cap);
+    if (el) el.textContent = '';
+  });
+  const activeEl = document.getElementById('saaTh' + saaSortCol.charAt(0).toUpperCase() + saaSortCol.slice(1));
+  if (activeEl) activeEl.textContent = saaSortDir === 1 ? ' ▲' : ' ▼';
+
+  const colVal = (r) => {
+    switch(saaSortCol) {
+      case 'brand':   return (r.brand || '').toLowerCase();
+      case 'code':    return (r.code  || '').toLowerCase();
+      case 'desc':    return (r.desc  || '').toLowerCase();
+      case 'cost':    return r.cost    ?? -Infinity;
+      case 'phys':    return r.phys    ?? -Infinity;
+      case 'sales':   return r.sales   ?? -Infinity;
+      case 'free':    return r.free    ?? -Infinity;
+      case 'onorder': return r.onOrder ?? 0;
+      case 'proj':    return r.proj    ?? -Infinity;
+      case 'status':  return r.status;
+      default:        return '';
+    }
+  };
+
+  saaFiltered.sort((a, b) => {
+    const va = colVal(a), vb = colVal(b);
+    if (va < vb) return -saaSortDir;
+    if (va > vb) return  saaSortDir;
+    // secondary: code asc
+    return (a.code || '').localeCompare(b.code || '');
+  });
+
+  saaRenderTable();
+}
+
+function saaRenderTable() {
+  const tbody = document.getElementById('saaTableBody');
+  if (!tbody) return;
+
+  const STATUS_LIGHT = ['🔴','🟡','🟢','⚪'];
+  const STATUS_LABEL = ['Oversold','Zero stock','In stock','Unknown'];
+  const STATUS_BG    = ['#fdf0ef','#fffbe6','#f0fdf4','#f8f8f8'];
+
+  let redCount = 0, yellowCount = 0, onOrderCount = 0;
+  let shortfallValue = 0;
+
+  // Count totals from ALL data (not just filtered)
+  saaData.forEach(r => {
+    if (r.status === 0) redCount++;
+    if (r.status === 1) yellowCount++;
+    if (r.onOrder > 0)  onOrderCount++;
+    if (r.free !== null && r.free < 0 && r.cost != null) {
+      shortfallValue += Math.abs(r.free) * r.cost;
+    }
+  });
+
+  // Summary bar
+  const el = id => document.getElementById(id);
+  if (el('saaSumTotal'))     el('saaSumTotal').textContent    = saaData.length + ' SKUs total';
+  if (el('saaSumRed'))       el('saaSumRed').textContent      = redCount    ? ('🔴 ' + redCount + ' oversold') : '';
+  if (el('saaSumYellow'))    el('saaSumYellow').textContent   = yellowCount ? ('🟡 ' + yellowCount + ' zero stock') : '';
+  if (el('saaSumOnOrder'))   el('saaSumOnOrder').textContent  = onOrderCount ? ('📦 ' + onOrderCount + ' on order') : '';
+  if (el('saaSumShortfall')) el('saaSumShortfall').textContent = shortfallValue > 0
+    ? ('⚠ Shortfall cost: €' + shortfallValue.toFixed(2)) : '';
+  if (el('saaSumFiltered'))  el('saaSumFiltered').textContent = saaFiltered.length < saaData.length
+    ? ('Showing ' + saaFiltered.length + ' of ' + saaData.length) : '';
+
+  // Render rows
+  tbody.innerHTML = saaFiltered.map(r => {
+    const bg = STATUS_BG[r.status] || '';
+    const fmt = v => v != null ? v.toLocaleString('en-IE', {minimumFractionDigits: 0, maximumFractionDigits: 2}) : '—';
+    const fmtInt = v => v != null ? Math.round(v).toLocaleString('en-IE') : '—';
+    const freeStyle = r.free != null && r.free < 0 ? 'color:#c0392b;font-weight:700' : (r.free === 0 ? 'color:#d68910;font-weight:600' : '');
+    const projStyle = r.proj != null && r.proj < 0 ? 'color:#c0392b;font-weight:700' : '';
+    return `<tr style="background:${bg};border-bottom:1px solid var(--border);" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <td style="padding:6px 10px;white-space:nowrap;font-size:11px;color:var(--muted)">${escHtml(r.brand)}</td>
+      <td style="padding:6px 10px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:700">${escHtml(r.code)}</td>
+      <td style="padding:6px 10px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${escHtml(r.desc)}</td>
+      <td style="padding:6px 10px;text-align:right;white-space:nowrap;color:var(--orange)">${r.cost != null ? '€' + r.cost.toFixed(2) : '—'}</td>
+      <td style="padding:6px 10px;text-align:right;white-space:nowrap">${fmtInt(r.phys)}</td>
+      <td style="padding:6px 10px;text-align:right;white-space:nowrap">${fmtInt(r.sales)}</td>
+      <td style="padding:6px 10px;text-align:right;white-space:nowrap;background:#e8f5e9;${freeStyle}">${fmtInt(r.free)}</td>
+      <td style="padding:6px 10px;text-align:right;white-space:nowrap;color:#1a6ea8">${r.onOrder > 0 ? fmtInt(r.onOrder) : '—'}</td>
+      <td style="padding:6px 10px;text-align:right;white-space:nowrap;${projStyle}">${fmtInt(r.proj)}</td>
+      <td style="padding:6px 8px;text-align:center;white-space:nowrap;font-size:16px" title="${STATUS_LABEL[r.status]}">${STATUS_LIGHT[r.status]}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── End Stock Analysis ──────────────────────────────────────────────────────
 
 // ── Admin PIN ──────────────────────────────────────────────
 const ADMIN_PIN = '2012'; // change this to your preferred PIN
