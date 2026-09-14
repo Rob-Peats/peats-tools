@@ -1693,73 +1693,48 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
      ══════════════════════════════════════════════════ -->
 <div id="tool-stockanalysis" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
 
-  <!-- Toolbar -->
-  <div id="soaToolbar" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-wrap:wrap;">
-
-    <!-- Brand filter -->
+  <!-- Toolbar: brand filter only -->
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;">
     <div class="brand-filter-wrap" id="saaBrandWrap">
       <button class="brand-filter-btn" id="saaBrandBtn" onclick="saaToggleBrandPanel(event)">
         🏷 Brands <span id="saaBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none"></span>
         <span style="font-size:10px;opacity:.6">▾</span>
       </button>
-      <div class="brand-filter-panel" id="saaBrandPanel" style="display:none;min-width:230px">
+      <div class="brand-filter-panel" id="saaBrandPanel" style="display:none;min-width:230px;">
         <input class="brand-search-inp" id="saaBrandSearch" placeholder="Search brands…" oninput="saaFilterBrandList(this.value)" autocomplete="off">
         <div class="brand-list-scroll" id="saaBrandList"></div>
       </div>
     </div>
-
-    <!-- Problem toggles -->
-    <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;">
-      <input type="checkbox" id="saaProblemsOnly" onchange="saaApplyFilter()" style="width:14px;height:14px;accent-color:var(--brand);">
-      🔴 Problems only
-    </label>
-    <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;">
-      <input type="checkbox" id="saaOnOrderOnly" onchange="saaApplyFilter()" style="width:14px;height:14px;accent-color:var(--brand);">
-      📦 Has on-order
-    </label>
-
+    <div id="saaLoadingIndicator" style="display:none;font-size:12px;color:var(--muted);">⏳ Loading stock…</div>
     <div style="flex:1"></div>
-
-    <!-- Catalog not loaded notice (hidden when catalog present) -->
-    <span id="saaNoCatalog" style="font-size:12px;color:var(--muted);display:none">⚠ Load a catalog first</span>
-
-    <!-- Load button -->
-    <button id="saaLoadBtn" class="btn btn-brand" onclick="saaLoad(this)" style="font-size:13px;padding:6px 16px;">
-      📊 Load Stock
-    </button>
+    <div id="saaErrorMsg" style="display:none;font-size:12px;color:#c0392b;"></div>
   </div>
 
-  <!-- Summary bar -->
-  <div id="saaSummaryBar" style="display:none;align-items:center;gap:10px;padding:7px 16px;background:var(--light);border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;">
-    <span id="saaSumTotal" style="font-weight:700;color:var(--text)"></span>
-    <span id="saaSumRed" style="color:#c0392b;font-weight:700"></span>
-    <span id="saaSumYellow" style="color:#d68910;font-weight:700"></span>
-    <span id="saaSumOnOrder" style="color:#1a6ea8;font-weight:700"></span>
-    <span id="saaSumShortfall" style="color:#c0392b;font-weight:700"></span>
+  <!-- Tab + search bar (hidden until data loaded) -->
+  <div id="saaViewRow" style="display:none;align-items:center;gap:12px;padding:8px 16px;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;">
     <div style="flex:1"></div>
-    <span id="saaSumFiltered" style="color:var(--muted)"></span>
+    <div id="saaViewTabs" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+    <div style="flex:1;display:flex;justify-content:flex-end;">
+      <div class="search-x-wrap">
+        <input type="search" id="saaSearch" placeholder="Search code, description, brand…"
+               oninput="saaRenderTable();_syncSearchX('saaSearch','saaSearchX')"
+               style="width:240px;">
+        <button class="search-x-btn" id="saaSearchX"
+                onclick="_clearSearch('saaSearch','saaSearchX',saaRenderTable)" title="Clear">✕</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Table container -->
+  <!-- Summary cards (hidden until loaded) -->
+  <div id="saaSummaryCards" style="display:none;flex-shrink:0;padding:10px 16px;gap:10px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
+
+  <!-- Table -->
   <div style="flex:1;overflow:auto;">
-    <div id="saaContent" style="padding:32px;text-align:center;color:var(--muted);font-size:14px;">
-      Load a catalog and click <strong>Load Stock</strong> to view stock positions.
+    <div id="saaContent" style="padding:40px;text-align:center;color:var(--muted);font-size:14px;">
+      Loading stock positions…
     </div>
     <table id="saaTable" style="display:none;width:100%;border-collapse:collapse;font-size:12px;">
-      <thead>
-        <tr style="background:var(--light);position:sticky;top:0;z-index:10;">
-          <th onclick="saaSort('brand')"  style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Brand <span id="saaThBrand"></span></th>
-          <th onclick="saaSort('code')"   style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Code <span id="saaThCode"></span></th>
-          <th onclick="saaSort('desc')"   style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Description <span id="saaThDesc"></span></th>
-          <th onclick="saaSort('cost')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Cost <span id="saaThCost"></span></th>
-          <th onclick="saaSort('phys')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Physical <span id="saaThPhys"></span></th>
-          <th onclick="saaSort('sales')"  style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Sales Ord <span id="saaThSales"></span></th>
-          <th onclick="saaSort('free')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#e8f5e9;">Free Stock <span id="saaThFree"></span></th>
-          <th onclick="saaSort('onorder')" style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">On Order <span id="saaThOnorder"></span></th>
-          <th onclick="saaSort('proj')"   style="padding:8px 10px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Projected <span id="saaThProj"></span></th>
-          <th onclick="saaSort('status')" style="padding:8px 8px;text-align:center;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Status <span id="saaThStatus"></span></th>
-        </tr>
-      </thead>
+      <thead id="saaTableHead"></thead>
       <tbody id="saaTableBody"></tbody>
     </table>
   </div>
@@ -6937,21 +6912,30 @@ function launchTool(tool) {
 //  STOCK ANALYSIS TOOL
 // ══════════════════════════════════════════════════
 
-let saaData       = [];   // [{code,brand,desc,cost,phys,sales,free,onOrder,proj,status}]
-let saaFiltered   = [];   // current filtered+sorted subset
+let saaData       = [];   // full dataset after load
+let saaFiltered   = [];   // current view filtered+sorted
 let saaSortCol    = 'status';
-let saaSortDir    = 1;    // 1=asc, -1=desc
-let saaBrands     = [];   // all unique brands from catalog
-let saaSelBrands  = new Set(); // '' means all
+let saaSortDir    = 1;
+let saaBrands     = [];
+let saaSelBrands  = new Set();
+let saaView       = 'all'; // 'all' | 'red' | 'yellow' | 'onorder' | 'healthy'
+let saaLoaded     = false;
 
 function saaOnOpen() {
   const hasCat = state.catalog && Object.keys(state.catalog).length > 0;
-  const noEl = document.getElementById('saaNoCatalog');
-  const btn  = document.getElementById('saaLoadBtn');
-  if (noEl) noEl.style.display = hasCat ? 'none' : '';
-  if (btn)  btn.disabled       = !hasCat;
-  // Populate brand dropdown from catalog if not done yet
-  if (hasCat && saaBrands.length === 0) saaBuildBrands();
+  if (!hasCat) {
+    document.getElementById('saaContent').style.display = 'block';
+    document.getElementById('saaContent').innerHTML =
+      '<p style="color:var(--muted);font-size:14px">No catalog loaded — load a catalog from the hub first.</p>';
+    return;
+  }
+  // Auto-load immediately if not yet loaded
+  if (!saaLoaded) {
+    saaLoad();
+  } else {
+    // Re-render with existing data (switching back to tool)
+    saaRenderAll();
+  }
 }
 
 function saaBuildBrands() {
@@ -6989,39 +6973,25 @@ function saaToggleBrandPanel(e) {
   if (!open) document.getElementById('saaBrandSearch').value = '';
   saaRenderBrandList('');
 }
-
-function saaToggleAllBrands(chk) {
+function saaToggleAllBrands() {
   saaSelBrands.clear();
-  saaRenderBrandList(document.getElementById('saaBrandSearch').value || '');
+  saaRenderBrandList(document.getElementById('saaBrandSearch')?.value || '');
   saaUpdateBrandBtn();
-  saaApplyFilter();
+  saaRenderTable();
 }
-
 function saaToggleBrand(chk) {
   const brand = chk.value;
-  if (chk.checked) {
-    saaSelBrands.add(brand);
-  } else {
-    saaSelBrands.delete(brand);
-  }
-  // If all are individually checked, treat as "all"
+  if (chk.checked) saaSelBrands.add(brand); else saaSelBrands.delete(brand);
   if (saaSelBrands.size === saaBrands.length) saaSelBrands.clear();
   saaUpdateBrandBtn();
-  saaApplyFilter();
+  saaRenderTable();
 }
-
 function saaUpdateBrandBtn() {
   const cnt = document.getElementById('saaBrandCount');
   if (!cnt) return;
-  if (saaSelBrands.size === 0) {
-    cnt.style.display = 'none';
-  } else {
-    cnt.textContent = saaSelBrands.size;
-    cnt.style.display = '';
-  }
+  if (saaSelBrands.size === 0) { cnt.style.display = 'none'; }
+  else { cnt.textContent = saaSelBrands.size; cnt.style.display = ''; }
 }
-
-// Close brand panel when clicking outside
 document.addEventListener('click', function(e) {
   const wrap = document.getElementById('saaBrandWrap');
   if (wrap && !wrap.contains(e.target)) {
@@ -7030,19 +7000,25 @@ document.addEventListener('click', function(e) {
   }
 });
 
-async function saaLoad(btn) {
+async function saaLoad() {
   const cat = state.catalog || {};
   const skus = Object.keys(cat);
-  if (!skus.length) { showToast('⚠ No catalog loaded.'); return; }
+  if (!skus.length) return;
   const pat = getCrmPat();
-  if (!pat) { showToast('⚠ No CRM token — check Admin settings.'); return; }
+  if (!pat) {
+    document.getElementById('saaContent').innerHTML =
+      '<p style="color:#c0392b;font-size:13px">⚠ No CRM token saved — configure it in Admin settings.</p>';
+    return;
+  }
 
-  btn.disabled = true;
-  btn.textContent = '⏳ Loading…';
+  document.getElementById('saaLoadingIndicator').style.display = '';
   document.getElementById('saaContent').style.display = 'block';
-  document.getElementById('saaContent').innerHTML = '<span style="color:var(--muted)">Fetching stock levels… this may take a moment for large catalogs.</span>';
+  document.getElementById('saaContent').innerHTML = '<span style="color:var(--muted);font-size:13px">Fetching live stock from CRM…</span>';
   document.getElementById('saaTable').style.display = 'none';
-  document.getElementById('saaSummaryBar').style.display = 'none';
+  document.getElementById('saaViewRow').style.display = 'none';
+  document.getElementById('saaSummaryCards').style.display = 'none';
+  const errEl = document.getElementById('saaErrorMsg');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
 
   try {
     const stockMap = await fetchConvStockLevels(skus);
@@ -7050,83 +7026,135 @@ async function saaLoad(btn) {
     saaData = skus.map(code => {
       const e  = cat[code] || {};
       const s  = stockMap.get(code) || {};
-      const free    = s.qty      != null ? s.qty      : null;
+      const free    = s.qty       != null ? s.qty       : null;
       const phys    = s.physStock  != null ? s.physStock  : null;
       const sales   = s.salesOrders != null ? s.salesOrders : null;
-      const onOrder = s.onOrder  != null ? s.onOrder  : 0;
+      const onOrder = s.onOrder   != null ? s.onOrder   : 0;
       const proj    = free != null ? (free + onOrder) : null;
 
-      // Status: 🔴 oversold (free < 0), 🟡 zero free stock, 🟢 positive
-      let status = 2; // green
-      if (free === null) status = 3; // unknown/grey — not in CRM
-      else if (free < 0)  status = 0; // red
-      else if (free === 0) status = 1; // yellow
+      // status: 0=red(oversold), 1=yellow(zero), 2=green(positive), 3=grey(not in CRM)
+      let status = 2;
+      if (free === null) status = 3;
+      else if (free < 0)  status = 0;
+      else if (free === 0) status = 1;
 
-      return {
-        code,
-        brand:   e.brand   || '',
-        desc:    e.desc    || '',
-        cost:    (e.cost   != null && e.cost > 0) ? e.cost : null,
-        phys, sales, free, onOrder, proj, status
-      };
-    }).filter(r => r.status !== 3); // exclude SKUs not found in CRM
+      return { code, brand: e.brand||'', desc: e.desc||'', cost: (e.cost>0 ? e.cost : null),
+               phys, sales, free, onOrder, proj, status };
+    }).filter(r => r.status !== 3); // skip SKUs not found in CRM
 
-    // Also include CRM-only SKUs (in stockMap but not cat) — skip, catalog is source of truth
-
+    saaLoaded = true;
     saaBuildBrands();
-    saaApplyFilter();
-
-    document.getElementById('saaContent').style.display = 'none';
-    document.getElementById('saaTable').style.display = 'table';
-    document.getElementById('saaSummaryBar').style.display = 'flex';
-
-    btn.textContent = '🔄 Refresh';
-    btn.disabled    = false;
+    saaView = 'all';
+    saaRenderAll();
   } catch(err) {
-    document.getElementById('saaContent').innerHTML = '<span style="color:#c0392b">Error: ' + escHtml(err.message) + '</span>';
-    btn.textContent = '📊 Load Stock';
-    btn.disabled    = false;
+    document.getElementById('saaContent').innerHTML =
+      '<span style="color:#c0392b">Error: ' + escHtml(err.message) + '</span>';
+    if (errEl) { errEl.textContent = err.message; errEl.style.display = ''; }
+  } finally {
+    document.getElementById('saaLoadingIndicator').style.display = 'none';
   }
 }
 
-function saaApplyFilter() {
-  const problemsOnly = document.getElementById('saaProblemsOnly')?.checked;
-  const onOrderOnly  = document.getElementById('saaOnOrderOnly')?.checked;
+function saaSetView(v) { saaView = v; saaRenderTable(); }
 
-  saaFiltered = saaData.filter(r => {
-    if (saaSelBrands.size > 0 && !saaSelBrands.has(r.brand)) return false;
-    if (problemsOnly && r.status >= 2) return false;
-    if (onOrderOnly  && !(r.onOrder > 0)) return false;
-    return true;
-  });
-
-  saaSort(saaSortCol, true);
+function saaRenderAll() {
+  saaRenderTabs();
+  saaRenderSummaryCards();
+  saaRenderTable();
+  document.getElementById('saaViewRow').style.display = 'flex';
+  document.getElementById('saaSummaryCards').style.display = 'flex';
+  document.getElementById('saaContent').style.display = 'none';
+  document.getElementById('saaTable').style.display = 'table';
 }
 
-function saaSort(col, noToggle) {
-  const prevCol = saaSortCol;
-  if (!noToggle) {
-    if (saaSortCol === col) saaSortDir = -saaSortDir;
-    else { saaSortCol = col; saaSortDir = col === 'status' ? 1 : (col === 'desc' || col === 'code' || col === 'brand' ? 1 : -1); }
-  }
+function saaRenderTabs() {
+  const counts = {
+    all:     saaData.length,
+    red:     saaData.filter(r => r.status === 0).length,
+    yellow:  saaData.filter(r => r.status === 1).length,
+    onorder: saaData.filter(r => r.onOrder > 0).length,
+    healthy: saaData.filter(r => r.status === 2 && r.onOrder === 0).length,
+  };
+  const TABS = [
+    { k:'all',     label:'All',        col:'#1a3c6e' },
+    { k:'red',     label:'🔴 Oversold', col:'#b91c1c' },
+    { k:'yellow',  label:'🟡 Zero Stock', col:'#b45309' },
+    { k:'onorder', label:'📦 On Order', col:'#1a6ea8' },
+    { k:'healthy', label:'🟢 Healthy',  col:'#1f6b3e' },
+  ];
+  document.getElementById('saaViewTabs').innerHTML = TABS.map(t => {
+    const on = saaView === t.k;
+    return `<button onclick="saaSetView('${t.k}')" style="
+      font-size:13px;font-weight:700;padding:8px 16px;border-radius:8px;cursor:pointer;
+      display:inline-flex;align-items:center;gap:7px;transition:all .15s;font-family:inherit;
+      border:1.5px solid ${on ? t.col : 'var(--border)'};
+      background:${on ? t.col : 'var(--white)'};color:${on ? '#fff' : t.col};
+      box-shadow:${on ? '0 2px 8px rgba(0,0,0,.13)' : 'none'};">
+      ${t.label}
+      <span style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;
+        background:${on ? 'rgba(255,255,255,.25)' : 'var(--light)'};color:${on ? '#fff' : t.col};">${counts[t.k]}</span>
+    </button>`;
+  }).join('');
+}
 
-  // Update sort indicators
-  ['brand','code','desc','cost','phys','sales','free','onorder','proj','status'].forEach(c => {
-    const el = document.getElementById('saaThBrand'.replace('Brand', c.charAt(0).toUpperCase() + c.slice(1)));
-    // simplified — just reset all then set active
-  });
-  ['Brand','Code','Desc','Cost','Phys','Sales','Free','Onorder','Proj','Status'].forEach(cap => {
-    const el = document.getElementById('saaTh' + cap);
-    if (el) el.textContent = '';
-  });
-  const activeEl = document.getElementById('saaTh' + saaSortCol.charAt(0).toUpperCase() + saaSortCol.slice(1));
-  if (activeEl) activeEl.textContent = saaSortDir === 1 ? ' ▲' : ' ▼';
+function saaRenderSummaryCards() {
+  const oversold = saaData.filter(r => r.status === 0);
+  const shortfallUnits = oversold.reduce((a,r) => a + Math.abs(r.free || 0), 0);
+  const shortfallVal   = oversold.reduce((a,r) => a + (Math.abs(r.free || 0) * (r.cost || 0)), 0);
+  const onOrderCount   = saaData.filter(r => r.onOrder > 0).length;
+  const onOrderUnits   = saaData.reduce((a,r) => a + (r.onOrder || 0), 0);
+  const healthyPct     = saaData.length ? Math.round(saaData.filter(r=>r.status===2).length / saaData.length * 100) : 0;
 
-  const colVal = (r) => {
+  const cards = [
+    { label: 'Total SKUs',    val: saaData.length,                          col: '#1a3c6e' },
+    { label: 'Oversold',      val: oversold.length + ' SKUs',               col: '#c0392b' },
+    { label: 'Shortfall Cost',val: '€' + shortfallVal.toFixed(2),           col: '#c0392b' },
+    { label: 'Zero Stock',    val: saaData.filter(r=>r.status===1).length + ' SKUs', col: '#d68910' },
+    { label: 'On Order Lines',val: onOrderCount + ' SKUs / ' + Math.round(onOrderUnits) + ' units', col: '#1a6ea8' },
+    { label: 'Healthy',       val: healthyPct + '%',                        col: '#1f6b3e' },
+  ];
+
+  document.getElementById('saaSummaryCards').innerHTML = cards.map(c =>
+    `<div style="background:var(--white);border-radius:8px;padding:8px 16px;border-left:3px solid ${c.col};box-shadow:var(--shadow);min-width:120px;">
+       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">${c.label}</div>
+       <div style="font-size:16px;font-weight:800;color:${c.col};margin-top:2px">${c.val}</div>
+     </div>`
+  ).join('');
+}
+
+function saaRenderTable() {
+  if (!saaLoaded) return;
+  saaRenderTabs();
+
+  const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
+
+  // Filter by view tab
+  let rows = saaData.filter(r => {
+    switch(saaView) {
+      case 'red':     return r.status === 0;
+      case 'yellow':  return r.status === 1;
+      case 'onorder': return r.onOrder > 0;
+      case 'healthy': return r.status === 2 && r.onOrder === 0;
+      default: return true;
+    }
+  });
+
+  // Brand filter
+  if (saaSelBrands.size > 0) rows = rows.filter(r => saaSelBrands.has(r.brand));
+
+  // Search filter
+  if (q) rows = rows.filter(r =>
+    r.code.toLowerCase().includes(q) ||
+    r.desc.toLowerCase().includes(q) ||
+    r.brand.toLowerCase().includes(q)
+  );
+
+  // Sort
+  const colVal = r => {
     switch(saaSortCol) {
-      case 'brand':   return (r.brand || '').toLowerCase();
-      case 'code':    return (r.code  || '').toLowerCase();
-      case 'desc':    return (r.desc  || '').toLowerCase();
+      case 'brand':   return (r.brand||'').toLowerCase();
+      case 'code':    return (r.code||'').toLowerCase();
+      case 'desc':    return (r.desc||'').toLowerCase();
       case 'cost':    return r.cost    ?? -Infinity;
       case 'phys':    return r.phys    ?? -Infinity;
       case 'sales':   return r.sales   ?? -Infinity;
@@ -7134,73 +7162,64 @@ function saaSort(col, noToggle) {
       case 'onorder': return r.onOrder ?? 0;
       case 'proj':    return r.proj    ?? -Infinity;
       case 'status':  return r.status;
-      default:        return '';
+      default: return '';
     }
   };
-
-  saaFiltered.sort((a, b) => {
+  rows.sort((a,b) => {
     const va = colVal(a), vb = colVal(b);
     if (va < vb) return -saaSortDir;
     if (va > vb) return  saaSortDir;
-    // secondary: code asc
-    return (a.code || '').localeCompare(b.code || '');
+    return (a.code||'').localeCompare(b.code||'');
   });
+  saaFiltered = rows;
 
-  saaRenderTable();
+  // Render thead
+  const ths = [
+    ['brand','Brand'],['code','Code'],['desc','Description'],
+    ['cost','Cost'],['phys','Physical'],['sales','Sales Ord'],
+    ['free','Free Stock'],['onorder','On Order'],['proj','Projected'],['status','Status']
+  ];
+  const arrowFor = k => k === saaSortCol ? (saaSortDir===1 ? ' ▲' : ' ▼') : '';
+  const thAlign  = k => ['cost','phys','sales','free','onorder','proj','status'].includes(k) ? 'right' : 'left';
+
+  const STICKY_TH = `position:sticky;top:0;z-index:10;background:var(--light);
+    padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+    border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;`;
+
+  document.getElementById('saaTableHead').innerHTML =
+    '<tr>' + ths.map(([k,label]) =>
+      `<th onclick="saaSort('${k}')" style="${STICKY_TH}text-align:${thAlign(k)};${k==='free'?'background:#e8f5e9;':''}">${label}${arrowFor(k)}</th>`
+    ).join('') + '</tr>';
+
+  // Render tbody
+  const STATUS_LIGHT = ['🔴','🟡','🟢'];
+  const STATUS_BG    = ['#fdf0ef','#fffbe6','',''];
+  const fmt = v => v != null ? v.toLocaleString('en-IE',{minimumFractionDigits:0,maximumFractionDigits:2}) : '—';
+  const fmtInt = v => v != null ? Math.round(v).toLocaleString('en-IE') : '—';
+
+  document.getElementById('saaTableBody').innerHTML = rows.map(r => {
+    const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700' : (r.free===0 ? 'color:#d68910;font-weight:600' : '');
+    const projStyle = r.proj != null && r.proj < 0 ? 'color:#c0392b;font-weight:700' : '';
+    const bg = STATUS_BG[r.status] || '';
+    return `<tr style="background:${bg};border-bottom:1px solid var(--border);">
+      <td style="padding:5px 10px;font-size:11px;color:var(--muted);white-space:nowrap">${escHtml(r.brand)}</td>
+      <td style="padding:5px 10px;font-family:monospace;font-weight:700;white-space:nowrap">${escHtml(r.code)}</td>
+      <td style="padding:5px 10px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${escHtml(r.desc)}</td>
+      <td style="padding:5px 10px;text-align:right;color:var(--orange);white-space:nowrap">${r.cost!=null?'€'+r.cost.toFixed(2):'—'}</td>
+      <td style="padding:5px 10px;text-align:right;white-space:nowrap">${fmtInt(r.phys)}</td>
+      <td style="padding:5px 10px;text-align:right;white-space:nowrap">${fmtInt(r.sales)}</td>
+      <td style="padding:5px 10px;text-align:right;background:#e8f5e9;white-space:nowrap;${freeStyle}">${fmtInt(r.free)}</td>
+      <td style="padding:5px 10px;text-align:right;color:#1a6ea8;white-space:nowrap">${r.onOrder>0?fmtInt(r.onOrder):'—'}</td>
+      <td style="padding:5px 10px;text-align:right;white-space:nowrap;${projStyle}">${fmtInt(r.proj)}</td>
+      <td style="padding:5px 10px;text-align:center;font-size:16px;white-space:nowrap">${STATUS_LIGHT[r.status]||'⚪'}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted)">No results for this view.</td></tr>`;
 }
 
-function saaRenderTable() {
-  const tbody = document.getElementById('saaTableBody');
-  if (!tbody) return;
-
-  const STATUS_LIGHT = ['🔴','🟡','🟢','⚪'];
-  const STATUS_LABEL = ['Oversold','Zero stock','In stock','Unknown'];
-  const STATUS_BG    = ['#fdf0ef','#fffbe6','#f0fdf4','#f8f8f8'];
-
-  let redCount = 0, yellowCount = 0, onOrderCount = 0;
-  let shortfallValue = 0;
-
-  // Count totals from ALL data (not just filtered)
-  saaData.forEach(r => {
-    if (r.status === 0) redCount++;
-    if (r.status === 1) yellowCount++;
-    if (r.onOrder > 0)  onOrderCount++;
-    if (r.free !== null && r.free < 0 && r.cost != null) {
-      shortfallValue += Math.abs(r.free) * r.cost;
-    }
-  });
-
-  // Summary bar
-  const el = id => document.getElementById(id);
-  if (el('saaSumTotal'))     el('saaSumTotal').textContent    = saaData.length + ' SKUs total';
-  if (el('saaSumRed'))       el('saaSumRed').textContent      = redCount    ? ('🔴 ' + redCount + ' oversold') : '';
-  if (el('saaSumYellow'))    el('saaSumYellow').textContent   = yellowCount ? ('🟡 ' + yellowCount + ' zero stock') : '';
-  if (el('saaSumOnOrder'))   el('saaSumOnOrder').textContent  = onOrderCount ? ('📦 ' + onOrderCount + ' on order') : '';
-  if (el('saaSumShortfall')) el('saaSumShortfall').textContent = shortfallValue > 0
-    ? ('⚠ Shortfall cost: €' + shortfallValue.toFixed(2)) : '';
-  if (el('saaSumFiltered'))  el('saaSumFiltered').textContent = saaFiltered.length < saaData.length
-    ? ('Showing ' + saaFiltered.length + ' of ' + saaData.length) : '';
-
-  // Render rows
-  tbody.innerHTML = saaFiltered.map(r => {
-    const bg = STATUS_BG[r.status] || '';
-    const fmt = v => v != null ? v.toLocaleString('en-IE', {minimumFractionDigits: 0, maximumFractionDigits: 2}) : '—';
-    const fmtInt = v => v != null ? Math.round(v).toLocaleString('en-IE') : '—';
-    const freeStyle = r.free != null && r.free < 0 ? 'color:#c0392b;font-weight:700' : (r.free === 0 ? 'color:#d68910;font-weight:600' : '');
-    const projStyle = r.proj != null && r.proj < 0 ? 'color:#c0392b;font-weight:700' : '';
-    return `<tr style="background:${bg};border-bottom:1px solid var(--border);" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-      <td style="padding:6px 10px;white-space:nowrap;font-size:11px;color:var(--muted)">${escHtml(r.brand)}</td>
-      <td style="padding:6px 10px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:700">${escHtml(r.code)}</td>
-      <td style="padding:6px 10px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${escHtml(r.desc)}</td>
-      <td style="padding:6px 10px;text-align:right;white-space:nowrap;color:var(--orange)">${r.cost != null ? '€' + r.cost.toFixed(2) : '—'}</td>
-      <td style="padding:6px 10px;text-align:right;white-space:nowrap">${fmtInt(r.phys)}</td>
-      <td style="padding:6px 10px;text-align:right;white-space:nowrap">${fmtInt(r.sales)}</td>
-      <td style="padding:6px 10px;text-align:right;white-space:nowrap;background:#e8f5e9;${freeStyle}">${fmtInt(r.free)}</td>
-      <td style="padding:6px 10px;text-align:right;white-space:nowrap;color:#1a6ea8">${r.onOrder > 0 ? fmtInt(r.onOrder) : '—'}</td>
-      <td style="padding:6px 10px;text-align:right;white-space:nowrap;${projStyle}">${fmtInt(r.proj)}</td>
-      <td style="padding:6px 8px;text-align:center;white-space:nowrap;font-size:16px" title="${STATUS_LABEL[r.status]}">${STATUS_LIGHT[r.status]}</td>
-    </tr>`;
-  }).join('');
+function saaSort(col) {
+  if (saaSortCol === col) saaSortDir = -saaSortDir;
+  else { saaSortCol = col; saaSortDir = col === 'status' ? 1 : ['brand','code','desc'].includes(col) ? 1 : -1; }
+  saaRenderTable();
 }
 
 // ── End Stock Analysis ──────────────────────────────────────────────────────
@@ -11273,13 +11292,33 @@ function wiUpdateSweepStatus(phase, done, total, notFound) {
     html2 += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
       + '<button onclick="wiSaveCatalog()" style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer">'
       + '💾 Export Enriched Catalog</button>'
+      + '<button onclick="wiPushToGitHub()" style="background:#1f6b3e;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
+      + '🚀 Push to GitHub</button>'
       + '<button onclick="wiAutoSweep(true)" style="background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
       + '🔄 Force Refresh All</button>'
+      + (nf ? '<button onclick="wiToggleNotFound(this)" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
+        + '👁 Show Not Found (' + nf + ')</button>' : '')
       + '</div>'
-      + '<p style="font-size:11px;color:var(--muted);margin-top:8px">Downloads full catalog .xlsx with web content in columns N–U. Force Refresh re-fetches all products from CRM regardless of existing data.</p>';
+      + '<div id="wiNotFoundPanel" style="display:none;margin-top:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;font-size:12px"></div>'
+      + '<p style="font-size:11px;color:var(--muted);margin-top:8px">Export downloads full catalog .xlsx with web content. Push to GitHub overwrites the stored catalog. Force Refresh re-fetches all from CRM.</p>';
     resultsEl.style.display = 'block';
     resultsEl.innerHTML = html2;
   }
+}
+
+function wiStripHtml(str) {
+  if (!str) return '';
+  // Remove tags, decode common entities, collapse whitespace
+  return str
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 async function wiAutoSweep(forceAll) {
@@ -11322,8 +11361,8 @@ async function wiAutoSweep(forceAll) {
           if (!entry) return;
           foundInBatch.add(code);
           const ver = item.ImageVersion || 1;
-          entry.webDesc      = item.WebDescription || '';
-          entry.longDescFull = [item.WebExtendedDescription, item.Specification].filter(Boolean).join('\n\n');
+          entry.webDesc      = wiStripHtml(item.WebDescription || '');
+          entry.longDescFull = wiStripHtml([item.WebExtendedDescription, item.Specification].filter(Boolean).join('\n\n'));
           entry.searchTerms  = item.SearchTerms || '';
           entry.imgAltText   = item.ImageAltText || '';
           entry.webImgVer    = ver;
@@ -11382,7 +11421,68 @@ async function wiAutoSweep(forceAll) {
   }
 
   wiSweepRunning = false;
+  _wiNotFoundList = notFound || [];
   wiUpdateSweepStatus('done', synced, total, notFound);
+}
+
+
+async function wiPushToGitHub() {
+  if (!state.catalogRows || !state.catalogRows.length) { showToast('⚠ No catalog loaded.'); return; }
+  const tok = localStorage.getItem('peats_gh_pat');
+  if (!tok) { showToast('⚠ No GitHub PAT saved — add it in Settings.'); return; }
+  showToast('⏳ Pushing enriched catalog to GitHub…');
+  try {
+    // Build the same workbook as wiSaveCatalog but as a blob for GitHub
+    var hdrIdx   = (state.catalogCols  ? state.catalogCols.header  : 1) - 1;
+    var cCodeIdx = (state.catalogColIdx ? state.catalogColIdx.code  : 1);
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet('Product Catalog');
+    state.catalogRows.forEach(function(origRow, rowIdx) {
+      var row = (origRow || []).slice();
+      while (row.length < 21) row.push(null);
+      if (rowIdx === hdrIdx) {
+        row[13]='Web Description'; row[14]='Long Description';
+        row[15]='Image URL 1'; row[16]='Image URL 2'; row[17]='Image URL 3'; row[18]='Image URL 4';
+        row[19]='Barcode'; row[20]='Search Terms';
+      } else if (rowIdx > hdrIdx) {
+        var rawCode = row[cCodeIdx] != null ? String(row[cCodeIdx]).replace(/[\s ]+/g,' ').trim().toUpperCase() : null;
+        var entry = rawCode ? state.catalog[rawCode] : null;
+        if (entry) {
+          row[13]=entry.webDesc||''; row[14]=entry.longDescFull||'';
+          row[15]=entry.imgUrl1||''; row[16]=entry.imgUrl2||'';
+          row[17]=entry.imgUrl3||''; row[18]=entry.imgUrl4||'';
+          row[19]=entry.ean||''; row[20]=entry.searchTerms||'';
+        }
+      }
+      ws.addRow(row.map(function(v){ return v==null?'':v; }));
+    });
+    var buf  = await wb.xlsx.writeBuffer();
+    var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    await githubPushCatalog(blob);
+    showToast('✓ Enriched catalog pushed to GitHub successfully.');
+  } catch(e) {
+    showToast('✗ GitHub push failed: ' + (e.message || e));
+  }
+}
+
+let _wiNotFoundList = [];
+function wiToggleNotFound(btn) {
+  const panel = document.getElementById('wiNotFoundPanel');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  if (open) {
+    panel.style.display = 'none';
+    btn.textContent = btn.textContent.replace('Hide','Show');
+  } else {
+    panel.style.display = 'block';
+    btn.textContent = btn.textContent.replace('Show','Hide');
+    if (!panel.innerHTML) {
+      panel.innerHTML = _wiNotFoundList.length
+        ? '<strong style="color:#92400e">Products not found in CRM (' + _wiNotFoundList.length + '):</strong><br><br>'
+          + _wiNotFoundList.map(function(c){ return '<code style="background:#fef3c7;padding:2px 6px;border-radius:4px;margin:2px;display:inline-block">' + c + '</code>'; }).join(' ')
+        : '<em style="color:#b45309">No not-found list available — run a sync first.</em>';
+    }
+  }
 }
 
 async function wiSyncFromCrm() {
@@ -11433,8 +11533,8 @@ async function wiSyncFromCrm() {
           const entry = state.catalog[code];
           if (!entry) return;
           const ver = item.ImageVersion || 1;
-          entry.webDesc      = item.WebDescription         || '';
-          entry.longDescFull = [item.WebExtendedDescription, item.Specification].filter(Boolean).join('\n\n');
+          entry.webDesc      = wiStripHtml(item.WebDescription         || '');
+          entry.longDescFull = wiStripHtml([item.WebExtendedDescription, item.Specification].filter(Boolean).join('\n\n'));
           entry.searchTerms  = item.SearchTerms            || '';
           entry.imgAltText   = item.ImageAltText           || '';
           entry.webImgVer    = ver;
