@@ -11957,6 +11957,7 @@ async function wiAutoSweep(forceAll) {
       const e = state.catalog[k];
       // Only flag brands that were included in this sync run
       const brand = (e.brand || '').toUpperCase();
+      if (!brand) return false; // skip unbranded/legit codes
       if (wiExcludedBrands.has(brand)) return false;
       // Gap = not found in CRM at all, OR found but WebDescription is empty
       return _notFoundSet.has(k) || !e.webDesc;
@@ -16789,7 +16790,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v71 · 15 Sep 2026 · gap-detection-by-webdesc';
+const TOOL_BUILD = 'v72 · 15 Sep 2026 · gap-detection-excludes-unbranded';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
