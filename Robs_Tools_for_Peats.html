@@ -11699,9 +11699,12 @@ function wiUpdateSweepStatus(phase, done, total, notFound) {
       + '<button onclick="wiAutoSweep(true)" style="background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
       + '🔄 Force Refresh All</button>'
       + (nf ? '<button onclick="wiToggleNotFound(this)" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
-        + '👁 Show Not Found (' + nf + ')</button>' : '')
+        + '👁 Not in CRM (' + nf + ')</button>' : '')
+      + ((_wiGapsList && _wiGapsList.length) ? '<button onclick="wiToggleGaps(this)" style="background:#eff6ff;color:#1e40af;border:1px solid #93c5fd;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
+        + '🌐 Website Gaps (' + _wiGapsList.length + ')</button>' : '<span style="font-size:12px;color:#166534;padding:9px 4px;font-weight:600">✓ All catalog products are on the website</span>')
       + '</div>'
       + '<div id="wiNotFoundPanel" style="display:none;margin-top:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;font-size:12px"></div>'
+      + '<div id="wiGapsPanel" style="display:none;margin-top:12px;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:12px 16px;font-size:12px"></div>'
       + '<p style="font-size:11px;color:var(--muted);margin-top:8px">Export downloads full catalog .xlsx with web content. Push to GitHub overwrites the stored catalog. Force Refresh re-fetches all from CRM.</p>';
     resultsEl.style.display = 'block';
     resultsEl.innerHTML = html2;
@@ -11768,6 +11771,7 @@ async function wiAutoSweep(forceAll) {
           entry.searchTerms  = item.SearchTerms || '';
           entry.imgAltText   = item.ImageAltText || '';
           entry.webImgVer    = ver;
+          entry.webCatalog   = (item.WebCatalog === true || item.WebCatalog === 'true' || item.WebCatalog === 1);
           if (!entry.ean && item.Barcode) entry.ean = String(item.Barcode);
           const imgName = item.ImageName || code;
           entry.imgUrl1 = WI_IMAGE_BASE + '?ref=' + encodeURIComponent(imgName) + '&ver=' + ver;
@@ -11822,6 +11826,20 @@ async function wiAutoSweep(forceAll) {
     } catch(e) {}
   }
 
+  // Compute website gaps: catalog products not published to the Peats website
+  const _notFoundSet = new Set(notFound);
+  _wiGapsList = Object.keys(state.catalog)
+    .filter(function(k) {
+      const e = state.catalog[k];
+      // Gap = not found in CRM at all, OR found but WebCatalog flag is false
+      return _notFoundSet.has(k) || e.webCatalog === false;
+    })
+    .map(function(k) {
+      const e = state.catalog[k];
+      return { code: k, brand: e.brand || '', setup: e.setup || '' };
+    })
+    .sort(function(a, b) { return (a.brand + a.code).localeCompare(b.brand + b.code); });
+
   wiSweepRunning = false;
   _wiNotFoundList = notFound || [];
   wiUpdateSweepStatus('done', synced, total, notFound);
@@ -11868,6 +11886,55 @@ async function wiPushToGitHub() {
 }
 
 let _wiNotFoundList = [];
+let _wiGapsList = [];
+
+function wiToggleGaps(btn) {
+  const panel = document.getElementById('wiGapsPanel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen
+    ? '🌐 Website Gaps (' + _wiGapsList.length + ')'
+    : '🌐 Hide Gaps';
+  if (!isOpen) {
+    if (!_wiGapsList.length) {
+      panel.innerHTML = '<span style="color:#1e40af">No gaps — all catalog products are published on the website.</span>';
+      return;
+    }
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      + '<strong style="color:#1e40af;font-size:13px">Products in catalog but not on the Peats website (' + _wiGapsList.length + ')</strong>'
+      + '<button onclick="wiExportGaps()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer">📥 Export to CSV</button>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:5px;max-height:320px;overflow-y:auto;padding-right:4px">'
+      + _wiGapsList.map(function(g) {
+          return '<div style="background:#fff;border:1px solid #bfdbfe;border-radius:5px;padding:5px 8px">'
+            + '<div><span style="color:#1e40af;font-weight:700;font-size:12px">' + g.code + '</span>'
+            + (g.brand ? '<span style="color:#64748b;font-size:10px;margin-left:5px">(' + g.brand + ')</span>' : '')
+            + '</div>'
+            + '<div style="color:#374151;font-size:10px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + g.setup.replace(/"/g,'&quot;') + '">' + g.setup + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+}
+
+function wiExportGaps() {
+  if (!_wiGapsList.length) return;
+  var lines = ['Brand,Code,Description'];
+  _wiGapsList.forEach(function(g) {
+    var esc = function(s) { return '"' + String(s||'').replace(/"/g,'""') + '"'; };
+    lines.push(esc(g.brand) + ',' + esc(g.code) + ',' + esc(g.setup));
+  });
+  var csv = lines.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Peats_Website_Gaps_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 3000);
+}
+
 function wiToggleNotFound(btn) {
   const panel = document.getElementById('wiNotFoundPanel');
   if (!panel) return;
@@ -16565,7 +16632,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v67 · 15 Sep 2026 · thumbnail-wider-barcode-text';
+const TOOL_BUILD = 'v68 · 15 Sep 2026 · website-gaps-in-websync';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
