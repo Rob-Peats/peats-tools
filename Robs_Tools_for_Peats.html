@@ -7304,10 +7304,10 @@ async function saaLoadForSelectedBrands() {
       });
     } catch(e) { /* non-fatal — crmName stays undefined */ }
 
-    // Sales history — last 3 months of invoiced lines per SKU
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    const dateFilter = threeMonthsAgo.toISOString().slice(0, 10) + 'T00:00:00Z';
+    // Sales history — invoiced lines for the selected period (saaSalesPeriod months)
+    const periodStart = new Date();
+    periodStart.setMonth(periodStart.getMonth() - saaSalesPeriod);
+    const dateFilter = periodStart.toISOString().slice(0, 10) + 'T00:00:00Z';
     const SALES_BATCH = 15;
     const salesTotals = new Map(); // SKU → total units invoiced in last 3 months
     for (let i = 0; i < skusToFetch.length; i += SALES_BATCH) {
@@ -7421,14 +7421,14 @@ function saaRenderSummaryCards() {
       val: currentItems.length,
       sub: 'active — not TBD or EOL',
       col:'#0891b2', onclick:"saaSetView('current')" },
-    { label:'GOING EOL',
+    { label:'TBD',
       val: tbdItems.length,
-      sub: 'descriptions to be confirmed',
+      sub: 'Going EOL',
       col:'#b45309', onclick:"saaSetView('tbd')" },
     { label:'END OF LINE',
       val: eolItems.length,
       sub: 'EOL — consider removing',
-      col:'#7c3aed', onclick:"saaSetView('eol')" },
+      col:'#dc2626', onclick:"saaSetView('eol')" },
   ];
 
   const viewKey = { "saaSetView('all')":'all',"saaSetView('red')":'red',"saaSetView('yellow')":'yellow',"saaSetView('onorder')":'onorder',"saaSetView('nosales')":'nosales',"saaSetView('healthy')":'healthy',"saaSetView('recentsales')":'recentsales',"saaSetView('current')":'current',"saaSetView('tbd')":'tbd',"saaSetView('eol')":'eol' };
@@ -7507,7 +7507,7 @@ function saaRenderTable() {
 
   // Headers
   const ths = [
-    ['brand','Brand'],['code','Code'],['desc','Description'],['type','Type'],
+    ['brand','Brand'],['code','Code'],['desc','Description'],['type','State'],
     ['cost','Cost'],['phys','Physical'],['sales','Sales Ord'],
     ['free','Free Stock'],['onorder','On Order'],['proj','Projected'],
     ['avg','Avg/Mo'],['cover','Wks Cover'],
@@ -7542,8 +7542,8 @@ function saaRenderTable() {
       <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
       <td style="${TD}padding:4px 8px;">
         ${(()=>{const t=(r.crmName||r.desc).toUpperCase();
-          if(t.startsWith('EOL'))  return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;white-space:nowrap;">EOL</span>';
-          if(t.startsWith('TBD'))  return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;white-space:nowrap;">GOING EOL</span>';
+          if(t.startsWith('EOL'))  return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;white-space:nowrap;">EOL</span>';
+          if(t.startsWith('TBD'))  return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;white-space:nowrap;">TBD</span>';
           return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;white-space:nowrap;">Current</span>';
         })()}
       </td>
@@ -7570,8 +7570,15 @@ function saaSort(col) {
 function saaUpdateSalesPeriod() {
   const inp = document.getElementById('saaSalesPeriodInput');
   const v = parseInt(inp ? inp.value : '3');
-  saaSalesPeriod = (v >= 1 && v <= 24) ? v : 3;
-  if (saaData.length) { saaRebuildData(); saaRenderAll(); }
+  const newPeriod = (v >= 1 && v <= 24) ? v : 3;
+  if (newPeriod === saaSalesPeriod) return; // no actual change
+  saaSalesPeriod = newPeriod;
+  if (saaSelBrands.size > 0) {
+    // Period changed — clear cached sales data and re-fetch from CRM with new date window
+    saaStockMap.clear();
+    saaLoadedBrands.clear();
+    saaLoadForSelectedBrands();
+  }
 }
 
 function saaToggleExclude(type) {
@@ -7590,9 +7597,9 @@ function _saaRefreshExcludePills() {
     tbdBtn.style.borderColor = saaExcludeTBD ? '#b45309' : 'var(--border)';
   }
   if (eolBtn) {
-    eolBtn.style.background  = saaExcludeEOL ? '#7c3aed' : 'var(--light)';
+    eolBtn.style.background  = saaExcludeEOL ? '#dc2626' : 'var(--light)';
     eolBtn.style.color       = saaExcludeEOL ? '#fff' : 'var(--text)';
-    eolBtn.style.borderColor = saaExcludeEOL ? '#7c3aed' : 'var(--border)';
+    eolBtn.style.borderColor = saaExcludeEOL ? '#dc2626' : 'var(--border)';
   }
 }
 
@@ -7603,7 +7610,7 @@ function _saaRefreshExcludePills() {
 const AVSL_BRANDS = new Set([
   '3INONE','ADASTRA','CHERUB','CITRONIC','DLINE','DURACELL','ENERGISER',
   'GPBATTERY','KONTAKT','ACTIONCAN','AMBERSIL','AVLINK','CHORD','ENERGENIE',
-  'LYYT','MERCURY','MERIDA','ULTRATAPE','NEUTRIK','NUX','QTX','SEVINA','WD40'
+  'LYYT','MERCURY','MERIDA','ULTRATAPE','NEUTRIK','NUX','QTX','SEVINA','SEVINIA','GP','ENERGIZER','WD40'
 ]);
 
 /**
@@ -16558,7 +16565,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v60 · 15 Sep 2026 · saa-ux-overhaul';
+const TOOL_BUILD = 'v62 · 15 Sep 2026 · avsl-brands';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
