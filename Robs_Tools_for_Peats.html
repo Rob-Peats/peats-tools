@@ -7168,7 +7168,7 @@ function saaRebuildData() {
     if (status === 3) return;
     rows.push({ code, brand: e.brand||'', desc: e.desc||'', cost: (e.cost>0 ? e.cost : null),
                 phys, sales, free, onOrder, proj, avgPerMonth, weeksCover, status,
-                soldLast3Mo: s.soldLast3Mo || 0 });
+                soldLast3Mo: s.soldLast3Mo || 0, crmName: s.crmName || null });
   });
   saaData = rows;
 }
@@ -7315,8 +7315,8 @@ function saaRenderSummaryCards() {
   const healthy      = saaData.filter(r => r.status === 2);
   const healthyPct   = saaData.length ? Math.round(healthy.length / saaData.length * 100) : 0;
 
-  const tbdItems     = saaData.filter(r => r.desc.toUpperCase().startsWith('TBD'));
-  const eolItems     = saaData.filter(r => r.desc.toUpperCase().startsWith('EOL'));
+  const tbdItems     = saaData.filter(r => (r.crmName||r.desc).toUpperCase().startsWith('TBD'));
+  const eolItems     = saaData.filter(r => (r.crmName||r.desc).toUpperCase().startsWith('EOL'));
   const recentSales  = saaData.filter(r => (r.soldLast3Mo || 0) > 0);
   const totalSold3Mo = recentSales.reduce((a,r) => a + (r.soldLast3Mo||0), 0);
 
@@ -7382,8 +7382,8 @@ function saaRenderTable() {
 
   // Filter by view tab
   let rows = saaData.filter(r => {
-    if (saaExcludeTBD && r.desc.toUpperCase().startsWith('TBD')) return false;
-    if (saaExcludeEOL && r.desc.toUpperCase().startsWith('EOL')) return false;
+    if (saaExcludeTBD && (r.crmName||r.desc).toUpperCase().startsWith('TBD')) return false;
+    if (saaExcludeEOL && (r.crmName||r.desc).toUpperCase().startsWith('EOL')) return false;
     switch(saaView) {
       case 'red':         return r.status === 0;
       case 'yellow':      return r.status === 1;
@@ -7391,8 +7391,8 @@ function saaRenderTable() {
       case 'healthy':     return r.status === 2 && r.onOrder === 0;
       case 'nosales':     return r.avgPerMonth != null && r.avgPerMonth === 0;
       case 'recentsales': return (r.soldLast3Mo || 0) > 0;
-      case 'tbd':         return r.desc.toUpperCase().startsWith('TBD');
-      case 'eol':         return r.desc.toUpperCase().startsWith('EOL');
+      case 'tbd':         return (r.crmName||r.desc).toUpperCase().startsWith('TBD');
+      case 'eol':         return (r.crmName||r.desc).toUpperCase().startsWith('EOL');
       default: return true;
     }
   });
@@ -7465,7 +7465,7 @@ function saaRenderTable() {
     return `<tr style="background:${bg};border-bottom:1px solid var(--border);">
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
       <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
-      <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.desc.toUpperCase().startsWith('EOL')?'color:#7c3aed;font-weight:600;':r.desc.toUpperCase().startsWith('TBD')?'color:#b45309;font-weight:600;':''}" title="${escHtml(r.desc)}">${escHtml(r.desc)}</td>
+      <td style="padding:5px 10px;text-align:left;max-width:280px;vertical-align:top;" title="${escHtml(r.crmName ? r.crmName+' | '+r.desc : r.desc)}"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.desc)}</div>${r.crmName && r.crmName !== r.desc ? `<div style="border-top:1px solid var(--border);margin-top:3px;padding-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:${r.crmName.toUpperCase().startsWith('EOL')?'#7c3aed':r.crmName.toUpperCase().startsWith('TBD')?'#b45309':'#2563eb'};">${escHtml(r.crmName)}</div>` : ''}</td>
       <td style="${TD}color:var(--orange);">${r.cost!=null?'€'+r.cost.toFixed(2):'—'}</td>
       <td style="${TD}">${fmtInt(r.phys)}</td>
       <td style="${TD}">${fmtInt(r.sales)}</td>
@@ -16470,7 +16470,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v55 · 1 Sep 2026 · briscoes+fixes';
+const TOOL_BUILD = 'v58 · 15 Sep 2026 · dual-desc-display';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -18305,7 +18305,7 @@ async function fetchConvStockLevels(skus) {
     const batch = unique.slice(i, i + BATCH);
     const filter = batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ');
     const url = CRM_ODATA_BASE + '/ProductItems?$filter=' + encodeURIComponent(filter)
-      + '&$select=ProductItemId,QuantityAvailable,DateNextAvailable,DecimalTotalAvailable,QuantityOvercommitted';
+      + '&$select=ProductItemId,QuantityAvailable,DateNextAvailable,DecimalTotalAvailable,QuantityOvercommitted,Name';
     const resp = await fetch(url, {
       headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
     });
@@ -18321,6 +18321,7 @@ async function fetchConvStockLevels(skus) {
         physStock:  item.DecimalTotalAvailable   != null ? item.DecimalTotalAvailable   : null,
         salesOrders: item.QuantityOvercommitted  != null ? item.QuantityOvercommitted   : null,
         onOrder:    0,
+        crmName:    item.Name                   || null,
       });
     });
   }
