@@ -11850,41 +11850,71 @@ async function wiPushToGitHub() {
   if (!state.catalogRows || !state.catalogRows.length) { showToast('⚠ No catalog loaded.'); return; }
   const tok = localStorage.getItem('peats_gh_pat');
   if (!tok) { showToast('⚠ No GitHub PAT saved — add it in Settings.'); return; }
-  showToast('⏳ Pushing enriched catalog to GitHub…');
+
   try {
-    // Build the same workbook as wiSaveCatalog but as a blob for GitHub
-    var hdrIdx   = (state.catalogCols  ? state.catalogCols.header  : 1) - 1;
-    var cCodeIdx = (state.catalogColIdx ? state.catalogColIdx.code  : 1);
-    var wb = new ExcelJS.Workbook();
-    var ws = wb.addWorksheet('Product Catalog');
-    state.catalogRows.forEach(function(origRow, rowIdx) {
-      var row = (origRow || []).slice();
-      while (row.length < 21) row.push(null);
-      if (rowIdx === hdrIdx) {
-        row[13]='Web Description'; row[14]='Long Description';
-        row[15]='Image URL 1'; row[16]='Image URL 2'; row[17]='Image URL 3'; row[18]='Image URL 4';
-        row[19]='Barcode'; row[20]='Search Terms';
-      } else if (rowIdx > hdrIdx) {
-        var rawCode = row[cCodeIdx] != null ? String(row[cCodeIdx]).replace(/[\s ]+/g,' ').trim().toUpperCase() : null;
-        var entry = rawCode ? state.catalog[rawCode] : null;
-        if (entry) {
-          row[13]=entry.webDesc||''; row[14]=entry.longDescFull||'';
-          row[15]=entry.imgUrl1||''; row[16]=entry.imgUrl2||'';
-          row[17]=entry.imgUrl3||''; row[18]=entry.imgUrl4||'';
-          row[19]=entry.ean||''; row[20]=entry.searchTerms||'';
-        }
+    // ── Step 1: Fetch the CURRENT file from GitHub so all sheets are preserved ──
+    showToast('⏳ Fetching current catalog from GitHub…');
+    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.catalogPath}`;
+    const fetchResp = await fetch(rawUrl, { cache: 'no-store' });
+    if (!fetchResp.ok) throw new Error(`Could not fetch current catalog from GitHub (${fetchResp.status})`);
+    const arrayBuf = await fetchResp.arrayBuffer();
+
+    // ── Step 2: Load with ExcelJS — all sheets (Alt Codes, Discontinued, etc.) intact ──
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(arrayBuf);
+
+    // ── Step 3: Find the Product Catalog sheet ──
+    const ws = wb.getWorksheet('Product Catalog') || wb.worksheets[0];
+    if (!ws) throw new Error('Product Catalog sheet not found in the GitHub file');
+
+    // ── Step 4: Walk rows and update only the web data cells (columns N–U) ──
+    // Column positions (1-based, ExcelJS): N=14 O=15 P=16 Q=17 R=18 S=19 T=20 U=21
+    const hdrRowNum = state.catalogCols  ? state.catalogCols.header  : 1; // 1-based row number
+    const cCodeIdx  = state.catalogColIdx ? state.catalogColIdx.code  : 1; // 0-based array index
+    const codeCol   = cCodeIdx + 1; // ExcelJS 1-based column for Peats Code
+
+    let updatedCount = 0;
+    ws.eachRow(function(row, rowNum) {
+      if (rowNum < hdrRowNum) return;
+      if (rowNum === hdrRowNum) {
+        row.getCell(14).value = 'Web Description';
+        row.getCell(15).value = 'Long Description';
+        row.getCell(16).value = 'Image URL 1';
+        row.getCell(17).value = 'Image URL 2';
+        row.getCell(18).value = 'Image URL 3';
+        row.getCell(19).value = 'Image URL 4';
+        row.getCell(20).value = 'Barcode';
+        row.getCell(21).value = 'Search Terms';
+        row.commit();
+        return;
       }
-      ws.addRow(row.map(function(v){ return v==null?'':v; }));
+      const rawCode = row.getCell(codeCol).value;
+      if (!rawCode) return;
+      const code  = String(rawCode).replace(/[\s\u00a0]+/g, ' ').trim().toUpperCase();
+      const entry = state.catalog[code];
+      if (!entry) return;
+      row.getCell(14).value = entry.webDesc      || '';
+      row.getCell(15).value = entry.longDescFull || '';
+      row.getCell(16).value = entry.imgUrl1      || '';
+      row.getCell(17).value = entry.imgUrl2      || '';
+      row.getCell(18).value = entry.imgUrl3      || '';
+      row.getCell(19).value = entry.imgUrl4      || '';
+      row.getCell(20).value = entry.ean          || '';
+      row.getCell(21).value = entry.searchTerms  || '';
+      row.commit();
+      updatedCount++;
     });
-    var buf  = await wb.xlsx.writeBuffer();
-    var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    // ── Step 5: Write buffer and push ──
+    showToast('⏳ Pushing updated catalog to GitHub…');
+    const buf  = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     await githubPushCatalog(blob);
-    showToast('✓ Enriched catalog pushed to GitHub successfully.');
+    showToast(`✓ Catalog pushed to GitHub — ${updatedCount} products updated. All other sheets preserved.`);
   } catch(e) {
     showToast('✗ GitHub push failed: ' + (e.message || e));
   }
 }
-
 let _wiNotFoundList = [];
 let _wiGapsList = [];
 
@@ -16632,7 +16662,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v68 · 15 Sep 2026 · website-gaps-in-websync';
+const TOOL_BUILD = 'v69 · 15 Sep 2026 · push-preserves-all-sheets';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
