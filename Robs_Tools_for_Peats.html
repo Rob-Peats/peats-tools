@@ -1089,8 +1089,28 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     </div>
 
     <!-- Intro -->
-    <div style="margin-bottom:20px">
-      <p style="font-size:13px;color:var(--muted);margin:0">Web content syncs automatically from CRM each time a catalog is loaded — only products with missing data are fetched. Columns N–U (Web Description, Long Description, Image URLs 1–4, Barcode, Search Terms) are populated in memory and included in the enriched catalog export.</p>
+    <div style="margin-bottom:16px">
+      <p style="font-size:13px;color:var(--muted);margin:0">Select the brands you want to sync, then press <strong>Sync Web Data</strong>. Columns N–U (Web Description, Long Description, Image URLs 1–4, Barcode, Search Terms) are pulled from the CRM and stored in memory. Only products with missing data are fetched unless you use Force Refresh.</p>
+    </div>
+
+    <!-- Brand filter panel -->
+    <div id="wiBrandPanel" style="display:none;margin-bottom:18px;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:var(--text)">Brands to sync</span>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <button onclick="wiSetAllBrands(true)"  style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--text)">Check all</button>
+          <button onclick="wiSetAllBrands(false)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--text)">Uncheck all</button>
+          <button onclick="wiUncheckAvsl()"       style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:#92400e">Uncheck AVSL</button>
+        </div>
+      </div>
+      <div id="wiBrandChecks" style="display:flex;flex-wrap:wrap;gap:6px 14px;max-height:180px;overflow-y:auto;padding-right:4px"></div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button onclick="wiStartSync(false)" id="wiSyncBtn"
+          style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;cursor:pointer">
+          🔄 Sync Web Data
+        </button>
+        <span id="wiBrandSummary" style="font-size:12px;color:var(--muted)"></span>
+      </div>
     </div>
 
     <!-- Hidden stubs kept for compat -->
@@ -2615,8 +2635,8 @@ function parseCatalog(rows, name, wb, rawBuf) {
   // Sync conv tool catalog UI and brand filter whenever catalog is loaded from either section
   if (typeof updateConvCatalogUI === 'function') updateConvCatalogUI();
   if (typeof updateBrandFilterUIs === 'function') updateBrandFilterUIs();
-  // Auto-sweep CRM for any products with missing web data (runs in background after UI settles)
-  if (count) setTimeout(() => wiAutoSweep(false), 800);
+  // Populate the brand filter in the Web Data Sync panel (sync is now manual)
+  if (count) setTimeout(() => wiRenderBrandFilter(), 200);
 }
 
 function clearCatalog() {
@@ -6950,7 +6970,7 @@ function launchTool(tool) {
     const wiR = document.getElementById('wiResults');
     if (wiR && !wiR.innerHTML && Object.keys(state.catalog || {}).length && !wiSweepRunning) {
       wiR.style.display = 'block';
-      wiR.innerHTML = '<p style="font-size:13px;color:var(--muted)">Web data sync will run automatically when a catalog is loaded. <a href="#" onclick="wiAutoSweep(false);return false;" style="color:var(--brand)">Run now →</a></p>';
+      wiR.innerHTML = '<p style="font-size:13px;color:var(--muted)">Select brands above and press <strong>Sync Web Data</strong> to begin.</p>';
     }
     // Show banner if catalog not loaded
     const banner = document.getElementById('wiCatalogBanner');
@@ -11632,6 +11652,105 @@ document.addEventListener('DOMContentLoaded', () => {
 // ════════════════════════════════════════════════════
 //  WEB ASSETS IMPORTER
 // ════════════════════════════════════════════════════
+
+// Brands the user has chosen to EXCLUDE from sync (populated by brand filter UI)
+let wiExcludedBrands = new Set();
+
+function wiRenderBrandFilter() {
+  const panel  = document.getElementById('wiBrandPanel');
+  const checks = document.getElementById('wiBrandChecks');
+  if (!panel || !checks || !state.catalog) return;
+
+  // Gather unique brands from catalog
+  const brandSet = new Set();
+  Object.values(state.catalog).forEach(function(e) {
+    if (e.brand) brandSet.add(String(e.brand).toUpperCase());
+  });
+  const brands = [...brandSet].sort();
+  if (!brands.length) return;
+
+  // Split: AVSL sub-brands vs everything else
+  const avslBrands = brands.filter(b => AVSL_BRANDS.has(b));
+  const otherBrands = brands.filter(b => !AVSL_BRANDS.has(b));
+
+  // Default: exclude AVSL brands
+  wiExcludedBrands = new Set(avslBrands);
+
+  function buildCheckbox(brand) {
+    const checked = !wiExcludedBrands.has(brand);
+    const isAvsl  = AVSL_BRANDS.has(brand);
+    return '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;white-space:nowrap;'
+      + (isAvsl ? 'color:#b45309;' : 'color:var(--text);') + '">'
+      + '<input type="checkbox" data-wi-brand="' + brand + '" ' + (checked ? 'checked' : '')
+      + ' onchange="wiToggleBrand(this)" style="cursor:pointer;accent-color:var(--brand)">'
+      + brand + '</label>';
+  }
+
+  let html = '';
+  // Non-AVSL brands first
+  otherBrands.forEach(function(b) { html += buildCheckbox(b); });
+  // AVSL brands grouped with a divider
+  if (avslBrands.length) {
+    if (otherBrands.length) {
+      html += '<div style="width:100%;border-top:1px dashed var(--border);margin:4px 0;flex-basis:100%"></div>';
+      html += '<div style="width:100%;font-size:10px;font-weight:700;color:#b45309;letter-spacing:.05em;flex-basis:100%;margin-bottom:2px">AVSL BRANDS (unchecked by default)</div>';
+    }
+    avslBrands.forEach(function(b) { html += buildCheckbox(b); });
+  }
+
+  checks.innerHTML = html;
+  panel.style.display = 'block';
+  wiUpdateBrandSummary();
+}
+
+function wiToggleBrand(cb) {
+  const brand = cb.dataset.wiBrand;
+  if (cb.checked) { wiExcludedBrands.delete(brand); }
+  else            { wiExcludedBrands.add(brand); }
+  wiUpdateBrandSummary();
+}
+
+function wiSetAllBrands(checked) {
+  document.querySelectorAll('[data-wi-brand]').forEach(function(cb) {
+    cb.checked = checked;
+    const brand = cb.dataset.wiBrand;
+    if (checked) { wiExcludedBrands.delete(brand); }
+    else         { wiExcludedBrands.add(brand); }
+  });
+  wiUpdateBrandSummary();
+}
+
+function wiUncheckAvsl() {
+  document.querySelectorAll('[data-wi-brand]').forEach(function(cb) {
+    const brand = cb.dataset.wiBrand;
+    if (AVSL_BRANDS.has(brand)) {
+      cb.checked = false;
+      wiExcludedBrands.add(brand);
+    }
+  });
+  wiUpdateBrandSummary();
+}
+
+function wiUpdateBrandSummary() {
+  const summary = document.getElementById('wiBrandSummary');
+  if (!summary || !state.catalog) return;
+  const totalSkus = Object.keys(state.catalog).length;
+  const inclSkus  = Object.keys(state.catalog).filter(function(k) {
+    const brand = (state.catalog[k].brand || '').toUpperCase();
+    return !wiExcludedBrands.has(brand);
+  }).length;
+  summary.textContent = inclSkus.toLocaleString() + ' of ' + totalSkus.toLocaleString() + ' products will be synced';
+}
+
+function wiStartSync(forceAll) {
+  // Disable button during sync to prevent double-click
+  const btn = document.getElementById('wiSyncBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⧗ Syncing…'; }
+  wiAutoSweep(forceAll).finally(function() {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Web Data'; }
+  });
+}
+
 function wiReset() {
   // Clear sweep results panel
   const resultsEl = document.getElementById('wiResults');
@@ -11696,7 +11815,7 @@ function wiUpdateSweepStatus(phase, done, total, notFound) {
       + '💾 Export Enriched Catalog</button>'
       + '<button onclick="wiPushToGitHub()" style="background:#1f6b3e;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
       + '🚀 Push to GitHub</button>'
-      + '<button onclick="wiAutoSweep(true)" style="background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
+      + '<button onclick="wiStartSync(true)" style="background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
       + '🔄 Force Refresh All</button>'
       + (nf ? '<button onclick="wiToggleNotFound(this)" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">'
         + '👁 Not in CRM (' + nf + ')</button>' : '')
@@ -11732,8 +11851,12 @@ async function wiAutoSweep(forceAll) {
   if (!pat) return; // no PAT — skip silently
   if (!state.catalog || !Object.keys(state.catalog).length) return;
 
-  // Decide which SKUs need fetching
-  const allSkus = Object.keys(state.catalog);
+  // Decide which SKUs need fetching, respecting the brand filter
+  const allSkus = Object.keys(state.catalog)
+    .filter(function(k) {
+      const brand = (state.catalog[k].brand || '').toUpperCase();
+      return !wiExcludedBrands.has(brand);
+    });
   const skus = forceAll ? allSkus : allSkus.filter(k => !state.catalog[k].webDesc);
   if (!skus.length) {
     wiUpdateSweepStatus('skip', 0, 0, []);
@@ -16662,7 +16785,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v69 · 15 Sep 2026 · push-preserves-all-sheets';
+const TOOL_BUILD = 'v70 · 15 Sep 2026 · manual-sync-brand-filter';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
