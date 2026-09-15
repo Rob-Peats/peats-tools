@@ -7173,6 +7173,46 @@ function saaRebuildData() {
   saaData = rows;
 }
 
+/**
+ * Fetch CRM product short descriptions for SAA TBD/EOL detection.
+ * Tries ShortDescription then Description on ProductItems — 400s are silently swallowed.
+ * Returns Map<sku, string> of CRM descriptions.
+ */
+async function fetchSaaCrmNames(skus) {
+  const pat = getCrmPat();
+  if (!pat || !skus.length) return new Map();
+  const result = new Map();
+  const BATCH = 20;
+  // Try fields in order until one succeeds
+  const fields = ['ShortDescription', 'Description'];
+  for (const field of fields) {
+    let allOk = true;
+    const tmpMap = new Map();
+    for (let i = 0; i < skus.length; i += BATCH) {
+      const batch = skus.slice(i, i + BATCH);
+      const filter = batch.map(s => `ProductItemId eq '${s.replace(/'/g,"''")}'`).join(' or ');
+      try {
+        const url = CRM_ODATA_BASE + '/ProductItems?$filter=' + encodeURIComponent(filter)
+          + '&$select=ProductItemId,' + field;
+        const resp = await fetch(url, {
+          headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+        });
+        if (!resp.ok) { allOk = false; break; }
+        const data = await resp.json();
+        (data.value || []).forEach(item => {
+          const v = item[field];
+          if (v) tmpMap.set(item.ProductItemId, v);
+        });
+      } catch(e) { allOk = false; break; }
+    }
+    if (allOk && tmpMap.size > 0) {
+      tmpMap.forEach((v,k) => result.set(k, v));
+      break; // found a working field
+    }
+  }
+  return result;
+}
+
 async function saaLoadForSelectedBrands() {
   if (saaSelBrands.size === 0) { saaShowPickPrompt(); return; }
   if (saaFetching) return;
@@ -7243,6 +7283,14 @@ async function saaLoadForSelectedBrands() {
   try {
     const newStockMap = await fetchConvStockLevels(skusToFetch);
     newStockMap.forEach((v, k) => saaStockMap.set(k, v));
+    // Fetch CRM product descriptions for TBD/EOL detection (graceful — 400s silently ignored)
+    try {
+      const crmNames = await fetchSaaCrmNames(skusToFetch);
+      crmNames.forEach((name, sku) => {
+        const entry = saaStockMap.get(sku);
+        if (entry) entry.crmName = name;
+      });
+    } catch(e) { /* non-fatal — crmName stays undefined */ }
 
     // Sales history — last 3 months of invoiced lines per SKU
     const threeMonthsAgo = new Date();
@@ -16470,7 +16518,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v58 · 15 Sep 2026 · dual-desc-display';
+const TOOL_BUILD = 'v59 · 15 Sep 2026 · fix-400-crm-names';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -18305,7 +18353,7 @@ async function fetchConvStockLevels(skus) {
     const batch = unique.slice(i, i + BATCH);
     const filter = batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ');
     const url = CRM_ODATA_BASE + '/ProductItems?$filter=' + encodeURIComponent(filter)
-      + '&$select=ProductItemId,QuantityAvailable,DateNextAvailable,DecimalTotalAvailable,QuantityOvercommitted,Name';
+      + '&$select=ProductItemId,QuantityAvailable,DateNextAvailable,DecimalTotalAvailable,QuantityOvercommitted';
     const resp = await fetch(url, {
       headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
     });
@@ -18321,7 +18369,6 @@ async function fetchConvStockLevels(skus) {
         physStock:  item.DecimalTotalAvailable   != null ? item.DecimalTotalAvailable   : null,
         salesOrders: item.QuantityOvercommitted  != null ? item.QuantityOvercommitted   : null,
         onOrder:    0,
-        crmName:    item.Name                   || null,
       });
     });
   }
