@@ -1739,6 +1739,16 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </button>
     </div>
 
+    <!-- Sales period selector -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <div style="background:var(--light);border:1px solid var(--border);border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;">
+        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap;">📊 Sales Period</span>
+        <input type="number" id="saaSalesPeriodInput" value="3" min="1" max="24" onchange="saaUpdateSalesPeriod()"
+          style="width:38px;border:1px solid var(--border);border-radius:5px;padding:3px 5px;font-size:14px;font-weight:800;text-align:center;font-family:inherit;background:var(--white);color:var(--text);">
+        <span style="font-size:12px;color:var(--muted);font-weight:700">mths</span>
+      </div>
+    </div>
+
     <div id="saaLoadingIndicator" style="display:none;font-size:12px;color:var(--muted);">⏳ Loading…</div>
     <div style="flex:1"></div>
     <div id="saaErrorMsg" style="display:none;font-size:12px;color:#c0392b;"></div>
@@ -6828,6 +6838,7 @@ function saaReset() {
   saaView         = 'all';
   saaExcludeTBD   = false;
   saaExcludeEOL   = false;
+  saaSalesPeriod  = 3;
   _saaRefreshExcludePills();
   saaSortCol      = 'status';
   saaSortDir      = 1;
@@ -6990,6 +7001,7 @@ let saaSelBrands    = new Set();    // selected brands — empty = none selected
 let saaView         = 'all';
 let saaExcludeTBD   = false;
 let saaExcludeEOL   = false;
+let saaSalesPeriod  = 3;           // months denominator for avg/month
 let saaStockMap     = new Map();    // SKU → stock data (accumulated incrementally)
 let saaLoadedBrands = new Set();    // brands whose stock has been fetched
 let saaFetching     = false;
@@ -7148,7 +7160,7 @@ function saaRebuildData() {
     const onOrder = s.onOrder    != null ? s.onOrder    : 0;
     const proj    = free != null ? (free + onOrder) : null;
     // Sales velocity
-    const avgPerMonth = s.hasSalesData ? (s.soldLast3Mo || 0) / 3 : null;
+    const avgPerMonth = s.hasSalesData ? (s.soldLast3Mo || 0) / saaSalesPeriod : null;
     const weeksCover  = (proj != null && avgPerMonth != null && avgPerMonth > 0)
       ? parseFloat((proj / (avgPerMonth / 4.33)).toFixed(1)) : null;
     // Status: prefer weeks-cover-based; fall back to stock-level logic
@@ -7354,23 +7366,31 @@ function saaRenderAll() {
 
 function saaRenderSummaryCards() {
   const critWks      = saaCritWks(), lowWks = saaLowWks();
-  const critical     = saaData.filter(r => r.status === 0);
+  // effData: apply exclude toggles so cards update live
+  const effData = saaData.filter(r => {
+    if (saaExcludeTBD && (r.crmName||r.desc).toUpperCase().startsWith('TBD')) return false;
+    if (saaExcludeEOL && (r.crmName||r.desc).toUpperCase().startsWith('EOL')) return false;
+    return true;
+  });
+
+  const critical     = effData.filter(r => r.status === 0);
   const shortfallVal = critical.reduce((a,r) => a + (Math.abs(r.free||0) * (r.cost||0)), 0);
-  const lowCover     = saaData.filter(r => r.status === 1);
-  const onOrderSKUs  = saaData.filter(r => r.onOrder > 0);
-  const onOrderUnits = saaData.reduce((a,r) => a + (r.onOrder||0), 0);
-  const noSales      = saaData.filter(r => r.avgPerMonth != null && r.avgPerMonth === 0);
-  const healthy      = saaData.filter(r => r.status === 2);
-  const healthyPct   = saaData.length ? Math.round(healthy.length / saaData.length * 100) : 0;
+  const lowCover     = effData.filter(r => r.status === 1);
+  const onOrderSKUs  = effData.filter(r => r.onOrder > 0);
+  const onOrderUnits = effData.reduce((a,r) => a + (r.onOrder||0), 0);
+  const noSales      = effData.filter(r => r.avgPerMonth != null && r.avgPerMonth === 0);
+  const healthy      = effData.filter(r => r.status === 2);
+  const healthyPct   = effData.length ? Math.round(healthy.length / effData.length * 100) : 0;
 
   const tbdItems     = saaData.filter(r => (r.crmName||r.desc).toUpperCase().startsWith('TBD'));
   const eolItems     = saaData.filter(r => (r.crmName||r.desc).toUpperCase().startsWith('EOL'));
-  const recentSales  = saaData.filter(r => (r.soldLast3Mo || 0) > 0);
+  const currentItems = saaData.filter(r => !(r.crmName||r.desc).toUpperCase().startsWith('TBD') && !(r.crmName||r.desc).toUpperCase().startsWith('EOL'));
+  const recentSales  = effData.filter(r => (r.soldLast3Mo || 0) > 0);
   const totalSold3Mo = recentSales.reduce((a,r) => a + (r.soldLast3Mo||0), 0);
 
   const cards = [
     { label:'TOTAL SKUS',
-      val: saaData.length,
+      val: effData.length,
       sub: [...saaSelBrands].length + ' brand' + (saaSelBrands.size===1?'':'s') + ' loaded',
       col:'#1a3c6e', onclick:"saaSetView('all')" },
     { label:'CRITICAL (<' + critWks + ' WKS)',
@@ -7387,19 +7407,23 @@ function saaRenderSummaryCards() {
       col:'#1a6ea8', onclick:"saaSetView('onorder')" },
     { label:'RECENT SALES',
       val: recentSales.length,
-      sub: Math.round(totalSold3Mo).toLocaleString('en-IE') + ' units in 3 months',
+      sub: Math.round(totalSold3Mo).toLocaleString('en-IE') + ' units in ' + saaSalesPeriod + ' months',
       col:'#0f766e', onclick:"saaSetView('recentsales')" },
     { label:'NO RECENT SALES',
       val: noSales.length,
-      sub: 'nil sold in 3 months',
+      sub: 'nil sold in ' + saaSalesPeriod + ' months',
       col:'#6b7280', onclick:"saaSetView('nosales')" },
     { label:'HEALTHY',
       val: healthyPct + '%',
       sub: healthy.length + ' SKUs · 8+ wks cover',
       col:'#1f6b3e', onclick:"saaSetView('healthy')" },
-    { label:'TBD',
+    { label:'CURRENT',
+      val: currentItems.length,
+      sub: 'active — not TBD or EOL',
+      col:'#0891b2', onclick:"saaSetView('current')" },
+    { label:'GOING EOL',
       val: tbdItems.length,
-      sub: 'descriptions to be defined',
+      sub: 'descriptions to be confirmed',
       col:'#b45309', onclick:"saaSetView('tbd')" },
     { label:'END OF LINE',
       val: eolItems.length,
@@ -7407,15 +7431,15 @@ function saaRenderSummaryCards() {
       col:'#7c3aed', onclick:"saaSetView('eol')" },
   ];
 
-  const viewKey = { "saaSetView('all')":'all',"saaSetView('red')":'red',"saaSetView('yellow')":'yellow',"saaSetView('onorder')":'onorder',"saaSetView('nosales')":'nosales',"saaSetView('healthy')":'healthy',"saaSetView('recentsales')":'recentsales',"saaSetView('tbd')":'tbd',"saaSetView('eol')":'eol' };
+  const viewKey = { "saaSetView('all')":'all',"saaSetView('red')":'red',"saaSetView('yellow')":'yellow',"saaSetView('onorder')":'onorder',"saaSetView('nosales')":'nosales',"saaSetView('healthy')":'healthy',"saaSetView('recentsales')":'recentsales',"saaSetView('current')":'current',"saaSetView('tbd')":'tbd',"saaSetView('eol')":'eol' };
   document.getElementById('saaSummaryCards').innerHTML = cards.map(c => {
     const active = viewKey[c.onclick] === saaView;
     return `<div onclick="${c.onclick}" style="background:${active ? c.col : 'var(--white)'};border-radius:10px;padding:14px 20px;
-       border-bottom:3px solid ${c.col};box-shadow:${active?'0 4px 16px rgba(0,0,0,.18)':'var(--shadow)'};min-width:130px;flex:1;
+       border-bottom:3px solid ${c.col};box-shadow:${active?'0 4px 16px rgba(0,0,0,.18)':'var(--shadow)'};min-width:115px;flex:1;
        cursor:pointer;transition:all .15s;"
        onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.13)'"
        onmouseout="this.style.boxShadow='${active?'0 4px 16px rgba(0,0,0,.18)':'var(--shadow)'}'">
-       <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:${active?'rgba(255,255,255,.8)':'var(--muted)'};margin-bottom:5px">${c.label}</div>
+       <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:${active?'rgba(255,255,255,.85)':c.col};margin-bottom:5px">${c.label}</div>
        <div style="font-size:28px;font-weight:800;color:${active?'#fff':c.col};line-height:1.05">${c.val}</div>
        <div style="font-size:11px;color:${active?'rgba(255,255,255,.75)':'var(--muted)'};margin-top:4px">${c.sub}</div>
      </div>`;
@@ -7439,6 +7463,7 @@ function saaRenderTable() {
       case 'healthy':     return r.status === 2 && r.onOrder === 0;
       case 'nosales':     return r.avgPerMonth != null && r.avgPerMonth === 0;
       case 'recentsales': return (r.soldLast3Mo || 0) > 0;
+      case 'current':     return !(r.crmName||r.desc).toUpperCase().startsWith('TBD') && !(r.crmName||r.desc).toUpperCase().startsWith('EOL');
       case 'tbd':         return (r.crmName||r.desc).toUpperCase().startsWith('TBD');
       case 'eol':         return (r.crmName||r.desc).toUpperCase().startsWith('EOL');
       default: return true;
@@ -7468,6 +7493,7 @@ function saaRenderTable() {
       case 'cover':   return r.weeksCover  ?? Infinity;
       case 'sales3mo': return r.soldLast3Mo ?? 0;
       case 'status':  return r.status;
+      case 'type': { const t=(r.crmName||r.desc).toUpperCase(); return t.startsWith('EOL')?2:t.startsWith('TBD')?1:0; }
       default: return '';
     }
   };
@@ -7481,7 +7507,7 @@ function saaRenderTable() {
 
   // Headers
   const ths = [
-    ['brand','Brand'],['code','Code'],['desc','Description'],
+    ['brand','Brand'],['code','Code'],['desc','Description'],['type','Type'],
     ['cost','Cost'],['phys','Physical'],['sales','Sales Ord'],
     ['free','Free Stock'],['onorder','On Order'],['proj','Projected'],
     ['avg','Avg/Mo'],['cover','Wks Cover'],
@@ -7510,10 +7536,17 @@ function saaRenderTable() {
     const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700;' : (r.free===0 ? 'color:#d68910;font-weight:600;' : '');
     const projStyle = r.proj != null && r.proj < 0 ? 'color:#c0392b;font-weight:700;' : '';
     const bg = STATUS_BG[r.status] || '';
-    return `<tr style="background:${bg};border-bottom:1px solid var(--border);">
+    return `<tr style="background:${bg};border-bottom:1px solid #d1d5db;">
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
       <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
-      <td style="padding:5px 10px;text-align:left;max-width:280px;vertical-align:top;" title="${escHtml(r.crmName ? r.crmName+' | '+r.desc : r.desc)}"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.desc)}</div>${r.crmName && r.crmName !== r.desc ? `<div style="border-top:1px solid var(--border);margin-top:3px;padding-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:${r.crmName.toUpperCase().startsWith('EOL')?'#7c3aed':r.crmName.toUpperCase().startsWith('TBD')?'#b45309':'#2563eb'};">${escHtml(r.crmName)}</div>` : ''}</td>
+      <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
+      <td style="${TD}padding:4px 8px;">
+        ${(()=>{const t=(r.crmName||r.desc).toUpperCase();
+          if(t.startsWith('EOL'))  return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;white-space:nowrap;">EOL</span>';
+          if(t.startsWith('TBD'))  return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;white-space:nowrap;">GOING EOL</span>';
+          return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;white-space:nowrap;">Current</span>';
+        })()}
+      </td>
       <td style="${TD}color:var(--orange);">${r.cost!=null?'€'+r.cost.toFixed(2):'—'}</td>
       <td style="${TD}">${fmtInt(r.phys)}</td>
       <td style="${TD}">${fmtInt(r.sales)}</td>
@@ -7525,13 +7558,20 @@ function saaRenderTable() {
       ${saaView === 'recentsales' ? `<td style="${TD}font-weight:700;color:#0f766e;">${fmtInt(r.soldLast3Mo)}</td>` : ''}
       <td style="${TD}font-size:16px;">${STATUS_LIGHT[r.status]||'⚪'}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="${saaView === 'recentsales' ? 13 : 12}" style="padding:30px;text-align:center;color:var(--muted)">No results for this view.</td></tr>`;
+  }).join('') || `<tr><td colspan="${saaView === 'recentsales' ? 14 : 13}" style="padding:30px;text-align:center;color:var(--muted)">No results for this view.</td></tr>`;
 }
 
 function saaSort(col) {
   if (saaSortCol === col) saaSortDir = -saaSortDir;
   else { saaSortCol = col; saaSortDir = col === 'status' ? 1 : ['brand','code','desc'].includes(col) ? 1 : -1; }
   saaRenderTable();
+}
+
+function saaUpdateSalesPeriod() {
+  const inp = document.getElementById('saaSalesPeriodInput');
+  const v = parseInt(inp ? inp.value : '3');
+  saaSalesPeriod = (v >= 1 && v <= 24) ? v : 3;
+  if (saaData.length) { saaRebuildData(); saaRenderAll(); }
 }
 
 function saaToggleExclude(type) {
@@ -16518,7 +16558,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v59 · 15 Sep 2026 · fix-400-crm-names';
+const TOOL_BUILD = 'v60 · 15 Sep 2026 · saa-ux-overhaul';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
