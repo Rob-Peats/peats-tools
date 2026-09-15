@@ -11949,13 +11949,17 @@ async function wiAutoSweep(forceAll) {
     } catch(e) {}
   }
 
-  // Compute website gaps: catalog products not published to the Peats website
+  // Compute website gaps: catalog products (in synced brands) with no web description after sync.
+  // An empty webDesc means no WebDescription in the CRM — product is not live on the website.
   const _notFoundSet = new Set(notFound);
   _wiGapsList = Object.keys(state.catalog)
     .filter(function(k) {
       const e = state.catalog[k];
-      // Gap = not found in CRM at all, OR found but WebCatalog flag is false
-      return _notFoundSet.has(k) || e.webCatalog === false;
+      // Only flag brands that were included in this sync run
+      const brand = (e.brand || '').toUpperCase();
+      if (wiExcludedBrands.has(brand)) return false;
+      // Gap = not found in CRM at all, OR found but WebDescription is empty
+      return _notFoundSet.has(k) || !e.webDesc;
     })
     .map(function(k) {
       const e = state.catalog[k];
@@ -16785,7 +16789,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v70 · 15 Sep 2026 · manual-sync-brand-filter';
+const TOOL_BUILD = 'v71 · 15 Sep 2026 · gap-detection-by-webdesc';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
