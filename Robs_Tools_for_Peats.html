@@ -950,22 +950,34 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <span class="hub-card-launch">Open →</span>
     </div>
 
-    <!-- Aged Stock -->
-    <div class="hub-card" onclick="launchTool('agedstock')">
+    <!-- Aged Stock — hidden until PIN unlocked -->
+    <div class="hub-card" id="hubCardAgedStock" style="display:none;" onclick="launchTool('agedstock')">
       <div class="hub-card-icon">📦</div>
       <h3>Aged Stock</h3>
       <p>Find products with free stock but no sales in the last 12 months — apply discounts and export a clearance list.</p>
       <span class="hub-card-launch">Open →</span>
     </div>
 
-    <!-- Admin — PIN required -->
-    <div class="hub-card" id="crmSettingsCard" onclick="showAdminPin()">
+    <!-- Admin — hidden until PIN unlocked -->
+    <div class="hub-card" id="hubCardAdmin" style="display:none;" onclick="launchTool('crmsettings')">
       <div class="hub-card-icon">⚙️</div>
       <h3>Admin</h3>
       <p>Configure your CRM API token and explore the OData API. PIN protected.</p>
       <span class="hub-card-launch">Open Admin →</span>
     </div>
 
+  </div>
+
+  <!-- Unlock footer — hidden once PIN is entered -->
+  <div id="hubAdminUnlockRow" style="margin-top:18px;display:flex;justify-content:center;">
+    <button onclick="showHubUnlockPin()"
+      style="display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--border);
+             border-radius:99px;padding:7px 18px;font-size:12px;font-weight:600;color:var(--muted);
+             cursor:pointer;font-family:inherit;transition:all .15s;"
+      onmouseover="this.style.borderColor='var(--brand)';this.style.color='var(--brand)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      <span style="font-size:14px;">🔒</span> Admin Tools
+    </button>
   </div>
 </div>
 
@@ -9007,22 +9019,48 @@ function brandSelMatch(brand, selectedSet) {
 
 // ── Admin PIN ──────────────────────────────────────────────
 const ADMIN_PIN = '2012'; // change this to your preferred PIN
+let hubAdminUnlocked = false;    // true once correct PIN entered this session
+let _pinLaunchTool   = null;     // if set, launch this tool on PIN success; else just unlock hub tiles
 
+// Show PIN prompt triggered by the hub unlock button (just reveals tiles)
+function showHubUnlockPin() {
+  _pinLaunchTool = null;
+  _showAdminPinDialog();
+}
+
+// Legacy entry point kept for any remaining call sites
 function showAdminPin() {
+  _pinLaunchTool = 'crmsettings';
+  _showAdminPinDialog();
+}
+
+function _showAdminPinDialog() {
   const overlay = document.getElementById('adminPinOverlay');
   overlay.style.display = 'flex';
   document.getElementById('adminPinInput').value = '';
   document.getElementById('adminPinError').textContent = '';
   setTimeout(() => document.getElementById('adminPinInput').focus(), 80);
 }
+
 function closeAdminPin() {
   document.getElementById('adminPinOverlay').style.display = 'none';
 }
+
 function checkAdminPin() {
   const entered = document.getElementById('adminPinInput').value.trim();
   if (entered === ADMIN_PIN) {
     closeAdminPin();
-    launchTool('crmsettings');
+    hubAdminUnlocked = true;
+    // Reveal the two gated tiles
+    const agedCard  = document.getElementById('hubCardAgedStock');
+    const adminCard = document.getElementById('hubCardAdmin');
+    const lockRow   = document.getElementById('hubAdminUnlockRow');
+    if (agedCard)  agedCard.style.display  = '';
+    if (adminCard) adminCard.style.display = '';
+    if (lockRow)   lockRow.style.display   = 'none';
+    // If triggered by a direct card click, also launch the tool
+    if (_pinLaunchTool) launchTool(_pinLaunchTool);
+    _pinLaunchTool = null;
   } else {
     const err = document.getElementById('adminPinError');
     const inp = document.getElementById('adminPinInput');
@@ -9030,6 +9068,7 @@ function checkAdminPin() {
     inp.value = '';
     inp.style.borderColor = '#dc2626';
     setTimeout(() => { inp.style.borderColor = ''; }, 1200);
+    inp.focus();
   }
 }
 // ── End Admin PIN ───────────────────────────────────────────
@@ -18151,7 +18190,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v91 · 17 Sep 2026 · Aged Stock: Band A/C/F columns; Admin: Customer Sales probe for lapsed-customer feature';
+const TOOL_BUILD = 'v93 · 17 Sep 2026 · Hub: PIN-gated tiles; Probe: Divisions entity sweep + Account FK fix';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -24055,10 +24094,18 @@ async function crmProbeCustomerSales() {
           out += '\n';
         });
 
-        customerFkField = acctCandidates[0] || null;
-        dateFkField     = dateCandidates[0] || null;
-        valueFkField    = valueCandidates[0] || null;
-        productFkField  = prodCandidates[0] || null;
+        // Prefer the 'Account' field (Exchequer debtor code like 'BROW02') over AccountsKey (often null)
+        // AccountsId / AccountsKey are CRM link fields that may be unpopulated
+        const preferredAcctFields = ['Account', 'Ledger', 'AccountCode', 'CustomerCode'];
+        customerFkField = preferredAcctFields.find(f => keys.includes(f) && txRec[f]) ||
+                          acctCandidates.find(f => txRec[f] != null) || acctCandidates[0] || null;
+        // Prefer Calculated* value fields (already decimal-adjusted)
+        const preferredValueFields = ['CalculatedLineValue', 'CalculatedLineGrossValue', 'LineValue'];
+        valueFkField    = preferredValueFields.find(f => keys.includes(f)) || valueCandidates[0] || null;
+        // Prefer TransactionDate or InvoiceDate
+        const preferredDateFields  = ['TransactionDate', 'InvoiceDate', 'OrderDate'];
+        dateFkField     = preferredDateFields.find(f => keys.includes(f)) || dateCandidates[0] || null;
+        productFkField  = keys.includes('ProductItemId') ? 'ProductItemId' : prodCandidates[0] || null;
       } else {
         out += '⚠ SalesTransactions — EXISTS but no records returned (empty or access restricted)\n';
       }
@@ -24074,16 +24121,22 @@ async function crmProbeCustomerSales() {
   out += '\n── Step 2: Customer entity candidates ─────────────────────\n';
   crmApiLog(out);
 
+  // Prospect365 uses "Divisions" for company/account records (Contacts belong to Divisions)
+  // Also try Exchequer sales ledger account entities
   const customerEntities = [
+    'Divisions',          // Prospect365 standard — company / account record
+    'Division',
     'Accounts',
     'SalesLedgerAccounts',
-    'Contacts',
+    'SalesLedgerAccount',
+    'ExchequerAccounts',
     'Customers',
     'AccountContacts',
     'CRMAccounts',
     'SalesAccounts',
     'Debtors',
     'SalesLedger',
+    'Contacts',           // already found — keep for reference
   ];
 
   const foundCustomerEntities = [];
@@ -24139,20 +24192,25 @@ async function crmProbeCustomerSales() {
   out += '\n── Step 3: Follow customer FK from a sample transaction ───\n';
   crmApiLog(out);
 
-  if (txRec && customerFkField && txRec[customerFkField]) {
-    const fkValue = txRec[customerFkField];
-    out += 'SalesTransaction customer FK: ' + customerFkField + ' = "' + fkValue + '"\n\n';
+  // Use Account field (Exchequer debtor code) as the primary FK — known to be populated
+  const accountCode = txRec ? (txRec['Account'] || txRec['Ledger'] || (customerFkField && txRec[customerFkField])) : null;
+  if (txRec && accountCode) {
+    out += 'Using Account code from transaction: "' + accountCode + '"\n';
+    out += '(This is the Exchequer debtor code — looking for it in customer entities)\n\n';
 
-    // Try to find this value in each found customer entity
+    // For each found customer entity, try several field names that might hold this code
+    const filterFieldsToTry = [
+      'Code', 'AccountCode', 'AccountsCode', 'Reference', 'ExternalRef',
+      'AlternateReference', 'SpokeCode', 'LedgerCode', 'AccountNumber', 'Id'
+    ];
+
     for (const { entity, rec } of foundCustomerEntities) {
       const recKeys = Object.keys(rec);
-      // Look for a key in the customer entity that could match the FK
-      const matchCandidates = recKeys.filter(k => /id|code|ref|number|account/i.test(k));
-      for (const mk of matchCandidates) {
+      let matched = false;
+      for (const fk of filterFieldsToTry) {
+        if (!recKeys.includes(fk)) continue;
         try {
-          const filterStr = typeof fkValue === 'string'
-            ? `${mk} eq '${fkValue.replace(/'/g, "''")}'`
-            : `${mk} eq ${fkValue}`;
+          const filterStr = `${fk} eq '${accountCode.replace(/'/g, "''")}'`;
           const r = await fetch(
             CRM + '/' + entity + '?$filter=' + encodeURIComponent(filterStr) + '&$top=1',
             { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
@@ -24160,33 +24218,44 @@ async function crmProbeCustomerSales() {
           if (r.ok) {
             const d = await r.json();
             if (d.value && d.value.length > 0) {
-              const matched = d.value[0];
-              out += '🎯 ' + entity + ' matched on ' + mk + ':\n';
-              Object.entries(matched).forEach(([k, v]) => { if (v != null && v !== '') out += '   ' + k + ': ' + v + '\n'; });
+              const hit = d.value[0];
+              out += '🎯 ' + entity + '.' + fk + ' eq "' + accountCode + '" → MATCH!\n';
+              Object.entries(hit).forEach(([k, v]) => { if (v != null && v !== '') out += '   ' + k + ': ' + v + '\n'; });
               out += '\n';
+              matched = true;
+              break;
             }
           }
         } catch(e) { /* skip */ }
         crmApiLog(out);
-        await new Promise(resolve => setTimeout(resolve, 80));
+        await new Promise(resolve => setTimeout(resolve, 60));
       }
+      if (!matched) out += '  ' + entity + ' — no match for "' + accountCode + '" on any tried field\n';
+      crmApiLog(out);
+    }
+
+    // Also try a direct Divisions fetch (Prospect365's company entity)
+    if (!foundCustomerEntities.find(e => e.entity === 'Divisions')) {
+      out += '\n(Divisions not found in Step 2 sweep — already tried)\n';
     }
   } else {
     out += 'Could not follow FK — ';
     if (!txRec) out += 'no SalesTransactions record available.\n';
-    else if (!customerFkField) out += 'no customer FK field identified in SalesTransactions.\n';
-    else out += 'FK field "' + customerFkField + '" is null in the sample record.\n';
+    else out += 'no populated account field found in sample records.\n';
   }
 
   // ── Summary ────────────────────────────────────────────────────────────
   out += '\n' + '═'.repeat(54) + '\n';
   out += '📋 Summary for lapsed-customer-by-brand feature:\n\n';
-  out += '  Sales entity:    SalesTransactions\n';
-  out += '  Customer FK:     ' + (customerFkField || '⚠ not identified') + '\n';
-  out += '  Date field:      ' + (dateFkField     || '⚠ not identified') + '\n';
-  out += '  Value field:     ' + (valueFkField    || '⚠ not identified') + '\n';
-  out += '  Product FK:      ' + (productFkField  || '⚠ not identified') + '\n';
+  out += '  Sales entity:        SalesTransactions\n';
+  out += '  Customer code field: Account  (Exchequer debtor code e.g. "BROW02")\n';
+  out += '  Date field:          ' + (dateFkField  || '⚠ not identified') + '\n';
+  out += '  Value field:         ' + (valueFkField || '⚠ not identified') + ' (Calculated* = decimal-adjusted)\n';
+  out += '  Quantity field:      CalculatedInvoiceQuantity\n';
+  out += '  Product FK:          ProductItemId\n';
   out += '  Customer entities found: ' + (foundCustomerEntities.map(e => e.entity).join(', ') || 'none') + '\n\n';
+  out += 'Key next step: confirm which entity holds customer name + phone\n';
+  out += 'and which field in that entity matches the "Account" code from transactions.\n';
   out += 'Share this output to build the brand engagement feature.\n';
 
   crmApiLog(out);
