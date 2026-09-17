@@ -18065,7 +18065,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v88 · 17 Sep 2026 · Aged Stock: CRM cache (7-day localStorage); Retail→Trade; Admin: price band probe';
+const TOOL_BUILD = 'v89 · 17 Sep 2026 · Admin: Exchequer Special Prices entity probe (finds price band table by name)';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -23774,7 +23774,9 @@ async function crmLookupSku() {
   btn.disabled = false; btn.textContent = '🔍 Lookup SKU';
 }
 
-// ── Price Band Probe: discover A–F price fields on ProductItems ────────────
+// ── Price Band Probe: find the Exchequer Special Prices entity ────────────
+// The CRM shows a related tab "Exchequer Special Prices" with Band + Price rows.
+// We need to find the OData entity name for that tab.
 async function crmProbePriceBands() {
   const btn = document.getElementById('crmPriceBandProbeBtn');
   btn.disabled = true; btn.textContent = '⏳ Probing…';
@@ -23786,80 +23788,102 @@ async function crmProbePriceBands() {
   }
 
   const CRM = CRM_ODATA_BASE;
-  let out = '💷 Price Band Discovery — ProductItems\n' + '═'.repeat(54) + '\n\n';
-  out += 'Fetching a sample ProductItems record to identify all price-related fields…\n\n';
+  const sku = (document.getElementById('crmSkuInput')?.value || '').trim();
+  let out = '💷 Exchequer Special Prices — Entity Discovery\n' + '═'.repeat(54) + '\n\n';
+  out += 'Looking for the OData entity behind the "Exchequer Special Prices" tab…\n';
+  if (sku) out += 'Will filter results for SKU: ' + sku + '\n';
+  out += '\n';
   crmApiLog(out);
 
-  try {
-    // Use top=1 to get field list, then also fetch a known SKU if input is filled
-    const sku = (document.getElementById('crmSkuInput')?.value || '').trim();
-    let url = sku
-      ? CRM + '/ProductItems?$filter=' + encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g,"''")}'`) + '&$top=1'
-      : CRM + '/ProductItems?$top=1';
+  // Candidate entity names for the Exchequer price band table
+  const candidates = [
+    'ExchequerSpecialPrices',
+    'ExchequerPrices',
+    'SpecialPrices',
+    'ProductSpecialPrices',
+    'ProductPriceBands',
+    'PriceBands',
+    'PriceLists',
+    'PriceList',
+    'ProductPrices',
+    'ItemPrices',
+    'ItemPriceBands',
+  ];
 
-    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + resp.statusText);
-    const data  = await resp.json();
-    const items = data.value || [];
+  // FK field names to try when filtering by SKU
+  const fkCandidates = ['ProductItemId', 'ItemId', 'ProductId', 'ItemCode', 'Sku', 'Code'];
 
-    if (!items.length) {
-      out += sku
-        ? '⚠ No record found for SKU "' + sku + '". Try with a different SKU, or clear the SKU input to probe any record.\n'
-        : '⚠ No ProductItems records returned.\n';
-      crmApiLog(out);
-      btn.disabled = false; btn.textContent = '💷 Probe Price Bands';
-      return;
-    }
+  let found = null;
 
-    const item    = items[0];
-    const entries = Object.entries(item);
-    out += '✓ Record: ' + (item.ProductItemId || '?') + ' — ' + entries.length + ' fields total\n\n';
-
-    // Match anything that looks like a price / band / list price field
-    const priceRx  = /price|cost|band|sell|rrp|list|margin|rate|tariff/i;
-    const bandRx   = /[A-Fa-f]$/;   // ends in a single letter A–F (band suffix)
-    const decRx    = /^Decimal/;
-
-    const priceFields = entries.filter(([k]) => priceRx.test(k));
-    const bandFields  = priceFields.filter(([k]) => bandRx.test(k) || /band/i.test(k));
-    const otherPrices = priceFields.filter(([k]) => !bandRx.test(k) && !/band/i.test(k));
-
-    const fmtVal = v => v == null ? '(null)' : String(v);
-
-    if (bandFields.length) {
-      out += '🏷 Likely price BAND fields (A–F candidates):\n';
-      bandFields.forEach(([k, v]) => {
-        const suffix = k.match(/([A-Fa-f])$/)?.[1]?.toUpperCase() || '';
-        out += '  ' + k.padEnd(44) + fmtVal(v) + (suffix ? '  ← Band ' + suffix : '') + '\n';
+  for (const entity of candidates) {
+    try {
+      const r = await fetch(CRM + '/' + entity + '?$top=1', {
+        headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
       });
-      out += '\n';
-    } else {
-      out += '⚠ No fields with an A–F suffix found. Price bands may use a different naming convention.\n\n';
+      if (r.ok) {
+        const d   = await r.json();
+        const rec = (d.value || [])[0];
+        out += '✅ ' + entity + ' — EXISTS';
+        if (rec) {
+          out += ' (' + Object.keys(rec).length + ' fields)\n';
+          out += '   Fields: ' + Object.keys(rec).join(', ') + '\n';
+
+          // If we have a SKU, try to filter
+          if (sku) {
+            for (const fk of fkCandidates) {
+              if (!(fk in rec) && !Object.keys(rec).some(k => k.toLowerCase() === fk.toLowerCase())) continue;
+              try {
+                const fr = await fetch(
+                  CRM + '/' + entity + '?$filter=' + encodeURIComponent(`${fk} eq '${sku.replace(/'/g,"''")}'`),
+                  { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+                );
+                if (fr.ok) {
+                  const fd = await fr.json();
+                  const rows = fd.value || [];
+                  if (rows.length) {
+                    out += '\n   🎯 Filtered by ' + fk + ' eq "' + sku + '" → ' + rows.length + ' row(s):\n';
+                    rows.forEach(row => {
+                      out += '      ';
+                      Object.entries(row).forEach(([k, v]) => { out += k + '=' + (v ?? 'null') + '  '; });
+                      out += '\n';
+                    });
+                    found = { entity, fk, rows };
+                    break;
+                  } else {
+                    out += '\n   Filter ' + fk + ' eq "' + sku + '" → 0 rows (field exists, different FK name?)\n';
+                  }
+                }
+              } catch(ef) { /* skip */ }
+            }
+          }
+        } else {
+          out += ' (empty table)\n';
+        }
+        out += '\n';
+      } else if (r.status === 404 || r.status === 400) {
+        out += '  ' + entity + ' — not found (' + r.status + ')\n';
+      } else {
+        out += '  ' + entity + ' — HTTP ' + r.status + '\n';
+      }
+    } catch(e) {
+      out += '  ' + entity + ' — error: ' + e.message + '\n';
     }
+    crmApiLog(out);
+  }
 
-    if (otherPrices.length) {
-      out += '💰 Other price-related fields:\n';
-      otherPrices.forEach(([k, v]) => { out += '  ' + k.padEnd(44) + fmtVal(v) + '\n'; });
-      out += '\n';
-    }
-
-    out += '─'.repeat(54) + '\n';
-    out += '📋 All fields matching price/cost/band/sell/rrp/list:\n';
-    priceFields.forEach(([k, v]) => { out += '  ' + k.padEnd(44) + fmtVal(v) + '\n'; });
-
-    if (!priceFields.length) {
-      out += '  (none found — check All Fields below)\n\n';
-      out += '📋 All ' + entries.length + ' fields:\n';
-      entries.forEach(([k, v]) => { out += '  ' + k.padEnd(44) + fmtVal(v) + '\n'; });
-    }
-
-    out += '\n' + '═'.repeat(54) + '\n';
-    out += '✅ Share these findings to implement C and F price band display.\n';
-    out += '   Once we know the field names we can add Band C and Band F\n';
-    out += '   columns to the aged stock table alongside Trade price.\n';
-
-  } catch(e) {
-    out += '✗ Error: ' + e.message + '\n';
+  out += '\n' + '═'.repeat(54) + '\n';
+  if (found) {
+    out += '✅ FOUND: Entity = ' + found.entity + ', FK field = ' + found.fk + '\n';
+    out += '   Band rows for ' + sku + ':\n';
+    found.rows.forEach(r => {
+      const band  = r.Band || r.BandCode || r.PriceBand || r.Code || '?';
+      const price = r.DecimalPrice ?? r.Price ?? r.DecimalSellingPrice ?? r.SellPrice ?? '?';
+      out += '     Band ' + band + ' → ' + price + '\n';
+    });
+    out += '\nShare this output to wire the price bands into the aged stock table.\n';
+  } else {
+    out += '⚠ No matching entity found with data for SKU "' + sku + '".\n';
+    out += 'Try a different SKU, or paste the full output above into chat.\n';
   }
 
   crmApiLog(out);
@@ -23869,7 +23893,7 @@ async function crmProbePriceBands() {
 // Price band probe using the SKU from the input box (convenience wrapper)
 async function crmProbePriceBandsForSku() {
   const sku = (document.getElementById('crmSkuInput')?.value || '').trim();
-  if (!sku) { crmApiLog('✗ Enter a SKU in the box above first.'); return; }
+  if (!sku) { crmApiLog('✗ Enter a SKU in the box above first, then click Price Bands for SKU.'); return; }
   await crmProbePriceBands();
 }
 
