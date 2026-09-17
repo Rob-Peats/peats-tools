@@ -8834,6 +8834,23 @@ async function asLoadForSelectedBrands() {
     const BANDS_BATCH = 15;
     const bandMap = new Map();  // SKU → { A, B, C, D, E, F } (decimal prices)
     try {
+      // First: read $metadata to find the exact entity name — logs all entities containing
+      // "exchequer", "band", "special", or "price" so we can identify the correct one.
+      try {
+        const metaResp = await crmFetch(
+          CRM_ODATA_BASE + '/$metadata',
+          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/xml' } }
+        );
+        if (metaResp.ok) {
+          const xml = await metaResp.text();
+          // Extract all EntityType names from the metadata XML
+          const entityNames = [...xml.matchAll(/EntityType[^>]+Name="([^"]+)"/g)].map(m => m[1]);
+          const interesting = entityNames.filter(n => /exchequer|band|special|price/i.test(n));
+          console.log('[Bands $metadata] All price/band/special/exchequer entity names:', interesting);
+          console.log('[Bands $metadata] Total entities in schema:', entityNames.length);
+        }
+      } catch(e) { console.warn('[Bands $metadata] Could not fetch metadata:', e.message); }
+
       // Probe to discover the correct entity name and field layout.
       // The CRM UI calls this section "Exchequer Special Prices" — try most likely OData names.
       const BAND_ENTITY_CANDIDATES = [
@@ -8841,6 +8858,12 @@ async function asLoadForSelectedBrands() {
         'ProductExchequerSpecialPrices',
         'ExchequerPrices',
         'SpecialPrices',
+        'ExchequerSpecialPriceband',
+        'ExchequerSpecialPricebands',
+        'ExchequerPriceband',
+        'ProductPriceBands',
+        'PriceBands',
+        'BandPrices',
       ];
       let bandEntity      = null;
       let bandSkuField    = null;   // field that holds our product code (e.g. ProductItemId)
@@ -19153,7 +19176,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v108 · 17 Sep 2026 · Band fetch switched to ExchequerSpecialPrices entity (self-discovering)';
+const TOOL_BUILD = 'v109 · 17 Sep 2026 · Band entity discovery via $metadata + expanded candidate list';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
