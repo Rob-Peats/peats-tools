@@ -8835,6 +8835,46 @@ async function asLoadForSelectedBrands() {
         });
       };
 
+      // ── DIAGNOSTIC: fetch 3 unfiltered rows to reveal the entity's real field names ──
+      try {
+        const diagResp = await crmFetch(
+          CRM_ODATA_BASE + '/PriceLists?$top=3',
+          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+        );
+        if (diagResp.ok) {
+          const diagData = await diagResp.json();
+          const sample = (diagData.value || []);
+          console.log('[PriceLists STRUCTURE SAMPLE — all fields on first row]', sample[0] || 'EMPTY — entity may need navigation or a different name');
+          console.log('[PriceLists STRUCTURE SAMPLE — all 3 rows]', sample);
+          // Log just the field names for easy reading
+          if (sample[0]) console.log('[PriceLists FIELD NAMES]', Object.keys(sample[0]));
+        } else {
+          console.warn('[PriceLists DIAGNOSTIC] HTTP', diagResp.status, diagResp.statusText);
+        }
+      } catch(e) { console.warn('[PriceLists DIAGNOSTIC] Error:', e); }
+
+      // Also probe alternative entity names that Prospect365 sometimes uses
+      for (const altEntity of ['PriceListItems', 'ProductPriceBands', 'PriceBands', 'ProductPrices']) {
+        try {
+          const altResp = await crmFetch(
+            CRM_ODATA_BASE + '/' + altEntity + '?$top=2',
+            { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+          );
+          if (altResp.ok) {
+            const altData = await altResp.json();
+            const altSample = (altData.value || []);
+            if (altSample.length > 0) {
+              console.log('[' + altEntity + ' EXISTS — fields]', Object.keys(altSample[0]));
+              console.log('[' + altEntity + ' SAMPLE]', altSample);
+            } else {
+              console.log('[' + altEntity + '] Reachable but 0 rows.');
+            }
+          }
+          // 404 / 400 = entity doesn't exist, silently skip
+        } catch(e) { /* entity not present */ }
+      }
+      // ── END DIAGNOSTIC ──
+
       for (let i = 0; i < skusToFetch.length; i += BANDS_BATCH) {
         const batch = skusToFetch.slice(i, i + BANDS_BATCH);
 
@@ -19083,7 +19123,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v103 · 17 Sep 2026 · Aged Stock: slow moving tab, progress animation, toolbar redesign, band C/F fix';
+const TOOL_BUILD = 'v104 · 17 Sep 2026 · PriceLists diagnostic: entity structure + alt entity probe';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
