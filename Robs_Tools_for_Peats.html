@@ -18190,7 +18190,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v93 · 17 Sep 2026 · Hub: PIN-gated tiles; Probe: Divisions entity sweep + Account FK fix';
+const TOOL_BUILD = 'v94 · 17 Sep 2026 · Probe: SalesLedgerId FK fix + Step 4 Activity/Notes entity sweep';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -24199,7 +24199,9 @@ async function crmProbeCustomerSales() {
     out += '(This is the Exchequer debtor code — looking for it in customer entities)\n\n';
 
     // For each found customer entity, try several field names that might hold this code
+    // SalesLedgerId is Prospect365's Divisions field for the Exchequer account code
     const filterFieldsToTry = [
+      'SalesLedgerId', 'SalesLedgerCode', 'ExchequerCode', 'Ledger',
       'Code', 'AccountCode', 'AccountsCode', 'Reference', 'ExternalRef',
       'AlternateReference', 'SpokeCode', 'LedgerCode', 'AccountNumber', 'Id'
     ];
@@ -24244,19 +24246,107 @@ async function crmProbeCustomerSales() {
     else out += 'no populated account field found in sample records.\n';
   }
 
+  // ── Step 4: Activity / Notes entity sweep ─────────────────────────────
+  out += '\n── Step 4: Activity / Notes entities (for CRM write-back) ────\n';
+  crmApiLog(out);
+
+  const activityCandidates = [
+    'Activities', 'DivisionActivities', 'ContactActivities',
+    'ActivityNotes', 'Notes', 'DivisionNotes', 'CRMNotes',
+    'Tasks', 'DivisionTasks', 'Interactions', 'Timeline',
+    'ActivityLog', 'CRMActivities', 'Engagements',
+    'ActivitySummaries', 'Appointments', 'Calls'
+  ];
+
+  const foundActivityEntities = [];
+  for (const entity of activityCandidates) {
+    try {
+      const r = await fetch(CRM + '/' + entity + '?$top=1', {
+        headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.value !== undefined) {
+          const allFields = d.value.length > 0 ? Object.keys(d.value[0]) : [];
+          out += '✅ ' + entity + ' — ' + (allFields.length || '?') + ' fields\n';
+          if (allFields.length > 0) {
+            // Classify interesting fields
+            const noteFields = allFields.filter(f => /note|comment|text|body|description|message|content/i.test(f));
+            const linkFields = allFields.filter(f => /division|company|contact|account|customer/i.test(f));
+            const dateFields = allFields.filter(f => /date|created|timestamp/i.test(f));
+            if (noteFields.length) out += '   📝 Note/text fields: ' + noteFields.join(', ') + '\n';
+            if (linkFields.length) out += '   🔗 Link fields:      ' + linkFields.join(', ') + '\n';
+            if (dateFields.length) out += '   📅 Date fields:      ' + dateFields.join(', ') + '\n';
+            // Show sample record
+            if (d.value.length > 0) {
+              const rec = d.value[0];
+              out += '   Sample: ';
+              Object.entries(rec).forEach(([k, v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+              out += '\n';
+            }
+          }
+          foundActivityEntities.push({ entity, fields: allFields, sample: d.value[0] || null });
+        }
+      } else if (r.status === 404 || r.status === 400) {
+        // not found — silent skip
+      } else {
+        out += '  ' + entity + ' — HTTP ' + r.status + '\n';
+      }
+    } catch(e) { /* skip */ }
+    crmApiLog(out);
+    await new Promise(resolve => setTimeout(resolve, 80));
+  }
+
+  if (foundActivityEntities.length === 0) {
+    out += '  No activity/notes entities found under those names.\n';
+    out += '  Try /Activities?$top=1 manually or check $metadata for entity list.\n';
+  } else {
+    // Test if any found entity supports POST (for write-back)
+    out += '\n  Testing POST capability on found activity entities…\n';
+    for (const { entity, fields } of foundActivityEntities) {
+      try {
+        // Minimal POST with no body — expect 400/405/422 not 403/401
+        const r = await fetch(CRM + '/' + entity, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + pat,
+            'Accept':        'application/json',
+            'Content-Type':  'application/json'
+          },
+          body: JSON.stringify({})
+        });
+        if (r.status === 401 || r.status === 403) {
+          out += '  ' + entity + ' POST → ' + r.status + ' (no write permission)\n';
+        } else if (r.status === 405) {
+          out += '  ' + entity + ' POST → 405 Method Not Allowed (read-only entity)\n';
+        } else if (r.status === 400 || r.status === 422) {
+          out += '  ✅ ' + entity + ' POST → ' + r.status + ' (endpoint accepts POST — needs valid payload)\n';
+        } else if (r.status === 201 || r.status === 200) {
+          out += '  🎯 ' + entity + ' POST → ' + r.status + ' (created! check for test record)\n';
+        } else {
+          const body = await r.text().catch(() => '');
+          out += '  ' + entity + ' POST → ' + r.status + (body ? ' — ' + body.slice(0, 120) : '') + '\n';
+        }
+      } catch(e) { out += '  ' + entity + ' POST → error: ' + e.message + '\n'; }
+      crmApiLog(out);
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+  }
+
   // ── Summary ────────────────────────────────────────────────────────────
   out += '\n' + '═'.repeat(54) + '\n';
   out += '📋 Summary for lapsed-customer-by-brand feature:\n\n';
   out += '  Sales entity:        SalesTransactions\n';
-  out += '  Customer code field: Account  (Exchequer debtor code e.g. "BROW02")\n';
+  out += '  Customer code field: Account  (Exchequer debtor code, e.g. "BROW02")\n';
+  out += '  Link to Divisions:   SalesLedgerId (Prospect365 Exchequer account code)\n';
   out += '  Date field:          ' + (dateFkField  || '⚠ not identified') + '\n';
   out += '  Value field:         ' + (valueFkField || '⚠ not identified') + ' (Calculated* = decimal-adjusted)\n';
   out += '  Quantity field:      CalculatedInvoiceQuantity\n';
   out += '  Product FK:          ProductItemId\n';
-  out += '  Customer entities found: ' + (foundCustomerEntities.map(e => e.entity).join(', ') || 'none') + '\n\n';
-  out += 'Key next step: confirm which entity holds customer name + phone\n';
-  out += 'and which field in that entity matches the "Account" code from transactions.\n';
-  out += 'Share this output to build the brand engagement feature.\n';
+  out += '  Customer entities found: ' + (foundCustomerEntities.map(e => e.entity).join(', ') || 'none') + '\n';
+  out += '  Activity entities found: ' + (foundActivityEntities.map(e => e.entity).join(', ') || 'none') + '\n\n';
+  out += 'Divisions.SalesLedgerId should match SalesTransactions.Account.\n';
+  out += 'Share this output to build the brand engagement + CRM write-back features.\n';
 
   crmApiLog(out);
   btn.disabled = false; btn.textContent = '👥 Probe Customer Sales';
