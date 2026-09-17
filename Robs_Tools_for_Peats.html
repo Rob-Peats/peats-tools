@@ -1028,6 +1028,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
               style="background:#92400e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔎 Probe Aged Stock Fields</button>
             <button onclick="crmProbePriceBands()" id="crmPriceBandProbeBtn"
               style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">💷 Probe Price Bands</button>
+            <button onclick="crmProbeCustomerSales()" id="crmCustomerSalesProbeBtn"
+              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">👥 Probe Customer Sales</button>
           </div>
           <div id="crmApiOutput" style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:var(--text);white-space:pre-wrap;min-height:80px;max-height:400px;overflow-y:auto;line-height:1.6">
             <span style="color:var(--muted)">Output will appear here…</span>
@@ -8186,6 +8188,66 @@ async function asLoadForSelectedBrands() {
       if (entry && createdMap.has(sku)) entry.createdDate = createdMap.get(sku);
     });
 
+    // ── Step 6: Exchequer price bands from PriceLists ────
+    // Entity: PriceLists | Band: Type field (A–F) | Price: SellingPrice / 10^SellDecimals
+    // FK field still being confirmed: currently tries ProductItemId then Code
+    const BANDS_BATCH = 15;
+    const bandMap     = new Map();  // SKU → { A, B, C, D, E, F }  (decimal prices)
+    try {
+      // Helper: process a PriceLists response and store into bandMap keyed by fkValue
+      const processBandRows = (rows, fkField) => {
+        rows.forEach(row => {
+          const sku   = row[fkField];
+          const band  = (row.Type || '').toUpperCase().trim();
+          const dec   = row.SellDecimals ?? 2;
+          const price = row.SellingPrice != null ? row.SellingPrice / Math.pow(10, dec) : null;
+          if (!sku || !band || price == null) return;
+          if (!bandMap.has(sku)) bandMap.set(sku, {});
+          bandMap.get(sku)[band] = price;
+        });
+      };
+
+      for (let i = 0; i < skusToFetch.length; i += BANDS_BATCH) {
+        const batch = skusToFetch.slice(i, i + BANDS_BATCH);
+
+        // Try ProductItemId first
+        const skuFbyId = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+        const respId = await fetch(
+          CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyId) +
+          '&$select=ProductItemId,Type,SellingPrice,SellDecimals',
+          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+        );
+        if (respId.ok) {
+          const d = await respId.json();
+          const rows = d.value || [];
+          if (rows.length) {
+            processBandRows(rows, 'ProductItemId');
+            continue;  // got results — skip Code fallback for this batch
+          }
+        }
+
+        // Fallback: try Code field (may hold the product code string)
+        const skuFbyCode = '(' + batch.map(s => `Code eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+        const respCode = await fetch(
+          CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyCode) +
+          '&$select=ProductItemId,Code,Type,SellingPrice,SellDecimals',
+          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+        );
+        if (respCode.ok) {
+          const d = await respCode.json();
+          const rows = d.value || [];
+          if (rows.length) {
+            // Use Code as the SKU key since that matched
+            processBandRows(rows, 'Code');
+          }
+        }
+      }
+    } catch(e) { /* best effort — price bands degrade gracefully */ }
+    skusToFetch.forEach(sku => {
+      const entry = asStockMap.get(sku);
+      if (entry && bandMap.has(sku)) entry.bands = bandMap.get(sku);
+    });
+
     brandsToFetch.forEach(b => asLoadedBrands.add(b));
     if (asSelBrands.has('AVSL') && [...AVSL_BRANDS].every(b => asLoadedBrands.has(b))) {
       asLoadedBrands.add('AVSL');
@@ -8243,13 +8305,18 @@ function asRebuildData() {
 
     const cost   = (e.cost   && Number(e.cost)   > 0) ? Number(e.cost)   : null;
     const retail = (e.retail && Number(e.retail) > 0) ? Number(e.retail) : null;
+    const bands  = s.bands || {};
+    const bandC  = bands['C'] ?? null;
+    const bandF  = bands['F'] ?? null;
 
     const lastSoldDate  = s.lastSoldDate || null;
     const dormantMonths = asMonthsAgo(lastSoldDate);
 
     const discount   = savedDiscounts.get(code) || 0;
     const stockValue = cost   != null ? cost * qty : null;
-    const clearance  = retail != null ? retail * (1 - discount / 100) : null;
+    // Clearance is based on Band C (trade price) when available, else Band A (retail)
+    const basePrice  = bandC  != null ? bandC : retail;
+    const clearance  = basePrice != null ? basePrice * (1 - discount / 100) : null;
 
     rows.push({
       code,
@@ -8259,7 +8326,7 @@ function asRebuildData() {
       free:        qty,
       phys:        s.physStock   != null ? s.physStock   : null,
       salesOrders: s.salesOrders != null ? s.salesOrders : null,
-      cost, retail, stockValue,
+      cost, retail, bandC, bandF, stockValue,
       lastSoldDate, dormantMonths,
       createdDate: s.createdDate || null,
       discount, clearance
@@ -8295,13 +8362,18 @@ function asRebuildData() {
 
       const cost   = (crmEntry.cost   && Number(crmEntry.cost)   > 0) ? Number(crmEntry.cost)   : null;
       const retail = (crmEntry.retail && Number(crmEntry.retail) > 0) ? Number(crmEntry.retail) : null;
+      const crmBands = s.bands || {};
+      const crmBandC = crmBands['C'] ?? null;
+      const crmBandF = crmBands['F'] ?? null;
 
       const lastSoldDate  = s.lastSoldDate || null;
       const dormantMonths = asMonthsAgo(lastSoldDate);
 
       const discount   = savedDiscounts.get(sku) || 0;
       const stockValue = cost   != null ? cost * qty : null;
-      const clearance  = retail != null ? retail * (1 - discount / 100) : null;
+      // Clearance from Band C when available, else Band A
+      const crmBasePrice = crmBandC != null ? crmBandC : retail;
+      const clearance  = crmBasePrice != null ? crmBasePrice * (1 - discount / 100) : null;
 
       rows.push({
         code:        sku,
@@ -8312,7 +8384,7 @@ function asRebuildData() {
         free:        qty,
         phys:        s.physStock   != null ? s.physStock   : null,
         salesOrders: s.salesOrders != null ? s.salesOrders : null,
-        cost, retail, stockValue,
+        cost, retail, bandC: crmBandC, bandF: crmBandF, stockValue,
         lastSoldDate, dormantMonths,
         createdDate,
         discount, clearance
@@ -8424,6 +8496,8 @@ function asRenderTable() {
       case 'lastSold':   return r.lastSoldDate ? r.lastSoldDate.getTime() : -Infinity;
       case 'dormant':    return r.dormantMonths ?? Infinity;
       case 'retail':     return r.retail    ?? -Infinity;
+      case 'bandC':      return r.bandC     ?? -Infinity;
+      case 'bandF':      return r.bandF     ?? -Infinity;
       case 'discount':   return r.discount  || 0;
       case 'clearance':  return r.clearance ?? -Infinity;
       default: return '';
@@ -8445,7 +8519,9 @@ function asRenderTable() {
     ['stockValue', 'Stock Value (€)'],
     ['lastSold',   'Last Sold'],
     ['dormant',    'Dormant'],
-    ['retail',     'Trade (€)'],
+    ['retail',     'Band A (€)'],
+    ['bandC',      'Band C (€)'],
+    ['bandF',      'Band F (€)'],
     ['discount',   'Discount %'],
     ['clearance',  'Clearance (€)'],
   ];
@@ -8515,6 +8591,8 @@ function asRenderTable() {
       <td style="${TD}font-size:11px;">${fmtLastSold(r.lastSoldDate)}</td>
       <td style="${TD}">${fmtDormant(r.dormantMonths)}</td>
       <td style="${TD}color:var(--brand);">${r.retail != null ? '€' + r.retail.toFixed(2) : '—'}</td>
+      <td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>
+      <td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>
       <td style="${TD}padding:3px 6px;">
         <input type="number" min="0" max="99" step="0.5" value="${r.discount || 0}"
           style="width:55px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;
@@ -8526,7 +8604,7 @@ function asRenderTable() {
       <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="13" style="padding:30px;text-align:center;color:var(--muted);">
      No aged stock matches this filter.
    </td></tr>`;
 }
@@ -8683,7 +8761,9 @@ async function asExportExcel() {
       { header: 'Stock Value (€)', key: 'stockVal',   width: 16 },
       { header: 'Last Sold',       key: 'lastSold',   width: 15 },
       { header: 'Dormant',         key: 'dormant',    width: 15 },
-      { header: 'Trade (€)',       key: 'retail',     width: 13 },
+      { header: 'Band A (€)',       key: 'retail',     width: 13 },
+      { header: 'Band C (€)',       key: 'bandC',      width: 13 },
+      { header: 'Band F (€)',       key: 'bandF',      width: 13 },
       { header: 'Discount %',      key: 'discount',   width: 12 },
       { header: 'Clearance (€)',   key: 'clearance',  width: 15 },
     ];
@@ -8720,7 +8800,9 @@ async function asExportExcel() {
         stockVal:  r.stockValue != null ? r.stockValue : null,
         lastSold:  lastSoldStr,
         dormant:   dormantStr,
-        retail:    r.retail    != null ? r.retail    : null,
+        retail:    r.retail != null ? r.retail : null,
+        bandC:     r.bandC  != null ? r.bandC  : null,
+        bandF:     r.bandF  != null ? r.bandF  : null,
         discount:  r.discount  || 0,
         clearance: r.clearance != null ? r.clearance : null,
       };
@@ -8736,10 +8818,14 @@ async function asExportExcel() {
 
       const stockValCell  = exRow.getCell(imgOff + 5);
       const retailCell    = exRow.getCell(imgOff + 8);
-      const clearanceCell = exRow.getCell(imgOff + 10);
+      const bandCCell     = exRow.getCell(imgOff + 9);
+      const bandFCell     = exRow.getCell(imgOff + 10);
+      const clearanceCell = exRow.getCell(imgOff + 12);
 
       if (stockValCell.value  != null) stockValCell.numFmt  = '"€"#,##0.00';
       if (retailCell.value    != null) retailCell.numFmt    = '"€"#,##0.00';
+      if (bandCCell.value     != null) { bandCCell.numFmt   = '"€"#,##0.00'; bandCCell.font = { color: { argb: 'FF0891B2' } }; }
+      if (bandFCell.value     != null) { bandFCell.numFmt   = '"€"#,##0.00'; bandFCell.font = { color: { argb: 'FF7C3AED' } }; }
       if (clearanceCell.value != null) {
         clearanceCell.numFmt = '"€"#,##0.00';
         clearanceCell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E8' } };
@@ -18065,7 +18151,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v89 · 17 Sep 2026 · Admin: Exchequer Special Prices entity probe (finds price band table by name)';
+const TOOL_BUILD = 'v91 · 17 Sep 2026 · Aged Stock: Band A/C/F columns; Admin: Customer Sales probe for lapsed-customer feature';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -23817,19 +23903,29 @@ async function crmProbePriceBands() {
 
   for (const entity of candidates) {
     try {
-      const r = await fetch(CRM + '/' + entity + '?$top=1', {
+      const r = await fetch(CRM + '/' + entity + '?$top=6', {
         headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
       });
       if (r.ok) {
-        const d   = await r.json();
-        const rec = (d.value || [])[0];
+        const d    = await r.json();
+        const recs = d.value || [];
+        const rec  = recs[0];
         out += '✅ ' + entity + ' — EXISTS';
         if (rec) {
           out += ' (' + Object.keys(rec).length + ' fields)\n';
           out += '   Fields: ' + Object.keys(rec).join(', ') + '\n';
 
+          // Show up to 6 sample rows so we can see the band structure
+          out += '\n   Sample rows (up to 6):\n';
+          recs.slice(0, 6).forEach(row => {
+            out += '      ';
+            Object.entries(row).forEach(([k, v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+            out += '\n';
+          });
+
           // If we have a SKU, try to filter
           if (sku) {
+            out += '\n';
             for (const fk of fkCandidates) {
               if (!(fk in rec) && !Object.keys(rec).some(k => k.toLowerCase() === fk.toLowerCase())) continue;
               try {
@@ -23841,16 +23937,16 @@ async function crmProbePriceBands() {
                   const fd = await fr.json();
                   const rows = fd.value || [];
                   if (rows.length) {
-                    out += '\n   🎯 Filtered by ' + fk + ' eq "' + sku + '" → ' + rows.length + ' row(s):\n';
+                    out += '   🎯 Filtered by ' + fk + ' eq "' + sku + '" → ' + rows.length + ' band row(s):\n';
                     rows.forEach(row => {
                       out += '      ';
-                      Object.entries(row).forEach(([k, v]) => { out += k + '=' + (v ?? 'null') + '  '; });
+                      Object.entries(row).forEach(([k, v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
                       out += '\n';
                     });
                     found = { entity, fk, rows };
                     break;
                   } else {
-                    out += '\n   Filter ' + fk + ' eq "' + sku + '" → 0 rows (field exists, different FK name?)\n';
+                    out += '   Filter ' + fk + ' eq "' + sku + '" → 0 rows (this SKU may have no custom price list)\n';
                   }
                 }
               } catch(ef) { /* skip */ }
@@ -23895,6 +23991,206 @@ async function crmProbePriceBandsForSku() {
   const sku = (document.getElementById('crmSkuInput')?.value || '').trim();
   if (!sku) { crmApiLog('✗ Enter a SKU in the box above first, then click Price Bands for SKU.'); return; }
   await crmProbePriceBands();
+}
+
+// ── Customer Sales Probe ────────────────────────────────────────────────────
+// Maps the data path needed for a "lapsed customer by brand" feature:
+//   SalesTransactions → customer FK → customer entity (name, phone, account no.)
+async function crmProbeCustomerSales() {
+  const btn = document.getElementById('crmCustomerSalesProbeBtn');
+  btn.disabled = true; btn.textContent = '⏳ Probing…';
+  const pat = getCrmPat();
+  if (!pat) {
+    crmApiLog('✗ No PAT saved — enter your token in Settings first.');
+    btn.disabled = false; btn.textContent = '👥 Probe Customer Sales';
+    return;
+  }
+
+  const CRM = CRM_ODATA_BASE;
+  let out = '👥 Customer Sales Probe\n' + '═'.repeat(54) + '\n';
+  out += 'Goal: confirm the data path for lapsed-customer-by-brand analysis.\n';
+  out += 'Checking: SalesTransactions fields → customer FK → customer entity\n\n';
+  crmApiLog(out);
+
+  // ── Step 1: SalesTransactions field map ────────────────────────────────
+  out += '── Step 1: SalesTransactions ──────────────────────────────\n';
+  crmApiLog(out);
+  let txRec = null;
+  let customerFkField = null;   // will hold the field name that links to customer
+  let dateFkField     = null;
+  let valueFkField    = null;
+  let productFkField  = null;
+
+  try {
+    const r = await fetch(CRM + '/SalesTransactions?$top=3', {
+      headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      const recs = d.value || [];
+      if (recs.length > 0) {
+        txRec = recs[0];
+        const keys = Object.keys(txRec);
+        out += '✅ SalesTransactions — ' + keys.length + ' fields\n';
+        out += '   All fields: ' + keys.join(', ') + '\n\n';
+
+        // Classify fields by likely role
+        const acctCandidates = keys.filter(k => /account|customer|debtor|client/i.test(k));
+        const dateCandidates = keys.filter(k => /date|period|when/i.test(k));
+        const valueCandidates = keys.filter(k => /amount|value|net|gross|total|price|turnover/i.test(k));
+        const prodCandidates = keys.filter(k => /product|item|sku|code/i.test(k));
+        const qtyCandidates = keys.filter(k => /qty|quantity|units/i.test(k));
+
+        out += '🔑 Customer/Account fields: ' + (acctCandidates.join(', ') || 'none found') + '\n';
+        out += '📅 Date fields: ' + (dateCandidates.join(', ') || 'none found') + '\n';
+        out += '💰 Value fields: ' + (valueCandidates.join(', ') || 'none found') + '\n';
+        out += '📦 Product fields: ' + (prodCandidates.join(', ') || 'none found') + '\n';
+        out += '🔢 Quantity fields: ' + (qtyCandidates.join(', ') || 'none found') + '\n\n';
+
+        // Show 3 sample records (non-null fields only)
+        out += '   Sample records (non-null fields):\n';
+        recs.forEach((rec, i) => {
+          out += '   Record ' + (i+1) + ': ';
+          Object.entries(rec).forEach(([k, v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+          out += '\n';
+        });
+
+        customerFkField = acctCandidates[0] || null;
+        dateFkField     = dateCandidates[0] || null;
+        valueFkField    = valueCandidates[0] || null;
+        productFkField  = prodCandidates[0] || null;
+      } else {
+        out += '⚠ SalesTransactions — EXISTS but no records returned (empty or access restricted)\n';
+      }
+    } else {
+      out += '✗ SalesTransactions — HTTP ' + r.status + '\n';
+    }
+  } catch(e) {
+    out += '✗ SalesTransactions — ' + e.message + '\n';
+  }
+  crmApiLog(out);
+
+  // ── Step 2: Customer entity sweep ─────────────────────────────────────
+  out += '\n── Step 2: Customer entity candidates ─────────────────────\n';
+  crmApiLog(out);
+
+  const customerEntities = [
+    'Accounts',
+    'SalesLedgerAccounts',
+    'Contacts',
+    'Customers',
+    'AccountContacts',
+    'CRMAccounts',
+    'SalesAccounts',
+    'Debtors',
+    'SalesLedger',
+  ];
+
+  const foundCustomerEntities = [];
+
+  for (const entity of customerEntities) {
+    try {
+      const r = await fetch(CRM + '/' + entity + '?$top=2', {
+        headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const recs = d.value || [];
+        if (recs.length > 0) {
+          const rec = recs[0];
+          const keys = Object.keys(rec);
+          out += '✅ ' + entity + ' — ' + keys.length + ' fields\n';
+
+          // Look for the fields Rob needs
+          const nameCands  = keys.filter(k => /name|company|organisation|organization/i.test(k));
+          const phoneCands = keys.filter(k => /phone|tel|mobile|fax/i.test(k));
+          const acctCands  = keys.filter(k => /account.*code|code|reference|ref|number|ledger/i.test(k));
+
+          out += '   Name fields:    ' + (nameCands.join(', ') || '—') + '\n';
+          out += '   Phone fields:   ' + (phoneCands.join(', ') || '—') + '\n';
+          out += '   Account fields: ' + (acctCands.join(', ') || '—') + '\n';
+          out += '   All fields: ' + keys.join(', ') + '\n';
+
+          // Sample records
+          recs.forEach((rec2, i) => {
+            out += '   Sample ' + (i+1) + ': ';
+            Object.entries(rec2).forEach(([k, v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+            out += '\n';
+          });
+          out += '\n';
+
+          foundCustomerEntities.push({ entity, rec, nameCands, phoneCands, acctCands });
+        } else {
+          out += '⚠ ' + entity + ' — exists but empty\n';
+        }
+      } else if (r.status === 404 || r.status === 400) {
+        out += '  ' + entity + ' — not found\n';
+      } else {
+        out += '  ' + entity + ' — HTTP ' + r.status + '\n';
+      }
+    } catch(e) {
+      out += '  ' + entity + ' — error: ' + e.message + '\n';
+    }
+    crmApiLog(out);
+    await new Promise(resolve => setTimeout(resolve, 120));
+  }
+
+  // ── Step 3: Follow the FK from a sample transaction ───────────────────
+  out += '\n── Step 3: Follow customer FK from a sample transaction ───\n';
+  crmApiLog(out);
+
+  if (txRec && customerFkField && txRec[customerFkField]) {
+    const fkValue = txRec[customerFkField];
+    out += 'SalesTransaction customer FK: ' + customerFkField + ' = "' + fkValue + '"\n\n';
+
+    // Try to find this value in each found customer entity
+    for (const { entity, rec } of foundCustomerEntities) {
+      const recKeys = Object.keys(rec);
+      // Look for a key in the customer entity that could match the FK
+      const matchCandidates = recKeys.filter(k => /id|code|ref|number|account/i.test(k));
+      for (const mk of matchCandidates) {
+        try {
+          const filterStr = typeof fkValue === 'string'
+            ? `${mk} eq '${fkValue.replace(/'/g, "''")}'`
+            : `${mk} eq ${fkValue}`;
+          const r = await fetch(
+            CRM + '/' + entity + '?$filter=' + encodeURIComponent(filterStr) + '&$top=1',
+            { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+          );
+          if (r.ok) {
+            const d = await r.json();
+            if (d.value && d.value.length > 0) {
+              const matched = d.value[0];
+              out += '🎯 ' + entity + ' matched on ' + mk + ':\n';
+              Object.entries(matched).forEach(([k, v]) => { if (v != null && v !== '') out += '   ' + k + ': ' + v + '\n'; });
+              out += '\n';
+            }
+          }
+        } catch(e) { /* skip */ }
+        crmApiLog(out);
+        await new Promise(resolve => setTimeout(resolve, 80));
+      }
+    }
+  } else {
+    out += 'Could not follow FK — ';
+    if (!txRec) out += 'no SalesTransactions record available.\n';
+    else if (!customerFkField) out += 'no customer FK field identified in SalesTransactions.\n';
+    else out += 'FK field "' + customerFkField + '" is null in the sample record.\n';
+  }
+
+  // ── Summary ────────────────────────────────────────────────────────────
+  out += '\n' + '═'.repeat(54) + '\n';
+  out += '📋 Summary for lapsed-customer-by-brand feature:\n\n';
+  out += '  Sales entity:    SalesTransactions\n';
+  out += '  Customer FK:     ' + (customerFkField || '⚠ not identified') + '\n';
+  out += '  Date field:      ' + (dateFkField     || '⚠ not identified') + '\n';
+  out += '  Value field:     ' + (valueFkField    || '⚠ not identified') + '\n';
+  out += '  Product FK:      ' + (productFkField  || '⚠ not identified') + '\n';
+  out += '  Customer entities found: ' + (foundCustomerEntities.map(e => e.entity).join(', ') || 'none') + '\n\n';
+  out += 'Share this output to build the brand engagement feature.\n';
+
+  crmApiLog(out);
+  btn.disabled = false; btn.textContent = '👥 Probe Customer Sales';
 }
 
 async function crmTestSalesOrderPost() {
