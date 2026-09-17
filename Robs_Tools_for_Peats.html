@@ -2801,6 +2801,10 @@ function parseCatalog(rows, name, wb, rawBuf) {
   const cEan   = col(4, ['ean', 'barcode', 'upc', 'gtin'],                  ['ean', 'barcode']);
   const cCost  = col(5, ['current cost', 'cost', 'net cost', 'price', 'buy price'], ['cost']);
   const cRet          = col(6,  ['retail', 'rrp', 'srp', 'retail price'],                        ['retail', 'rrp']);
+  // Price band columns — optional; if present in catalog, used as fallback when CRM PriceLists has no entry
+  const BAND_NOT_FOUND = 999;
+  const cBandC = col(BAND_NOT_FOUND, ['band c', 'price c', 'trade c', 'band c price', 'bandc', 'price band c'], ['band c', 'price c', 'bandc']);
+  const cBandF = col(BAND_NOT_FOUND, ['band f', 'price f', 'trade f', 'band f price', 'bandf', 'price band f'], ['band f', 'price f', 'bandf']);
   // Legacy web asset columns (M–Q) — kept for backward compat when loading old catalog exports
   const cShortDesc    = col(12, ['short description', 'short desc'],                             ['short desc']);
   const cLongDesc     = col(13, ['long description', 'long desc'],                               ['long desc']);
@@ -2825,9 +2829,19 @@ function parseCatalog(rows, name, wb, rawBuf) {
     EAN:   HDR[cEan]   || `col ${cEan + 1}`,
     Cost:  HDR[cCost]  || `col ${cCost + 1}`,
     Retail: HDR[cRet]  || `col ${cRet + 1}`,
+    BandC: cBandC < BAND_NOT_FOUND ? (HDR[cBandC] || `col ${cBandC + 1}`) : null,
+    BandF: cBandF < BAND_NOT_FOUND ? (HDR[cBandF] || `col ${cBandF + 1}`) : null,
   };
   // Store numeric column indices for catalog save/export operations
-  state.catalogColIdx = { brand: cBrand, code: cCode, supp: cSupp, desc: cDesc, ean: cEan, cost: cCost, ret: cRet, shortDesc: cShortDesc, longDesc: cLongDesc, imgFolder: cImgFolder, lifestyleVid: cLifestyleVid, setupVid: cSetupVid, webDesc: cWebDesc, longDescFull: cLongDescFull, imgUrl1: cImgUrl1, imgUrl2: cImgUrl2, imgUrl3: cImgUrl3, imgUrl4: cImgUrl4, searchTerms: cSearchTerms };
+  state.catalogColIdx = { brand: cBrand, code: cCode, supp: cSupp, desc: cDesc, ean: cEan, cost: cCost, ret: cRet, bandC: cBandC, bandF: cBandF, shortDesc: cShortDesc, longDesc: cLongDesc, imgFolder: cImgFolder, lifestyleVid: cLifestyleVid, setupVid: cSetupVid, webDesc: cWebDesc, longDescFull: cLongDescFull, imgUrl1: cImgUrl1, imgUrl2: cImgUrl2, imgUrl3: cImgUrl3, imgUrl4: cImgUrl4, searchTerms: cSearchTerms };
+  // Log whether price band columns were detected in catalog
+  if (cBandC < BAND_NOT_FOUND || cBandF < BAND_NOT_FOUND) {
+    console.log('[Catalog] Price band columns detected —',
+      cBandC < BAND_NOT_FOUND ? `Band C: "${HDR[cBandC]}" (col ${cBandC+1})` : 'Band C: NOT FOUND', '|',
+      cBandF < BAND_NOT_FOUND ? `Band F: "${HDR[cBandF]}" (col ${cBandF+1})` : 'Band F: NOT FOUND');
+  } else {
+    console.log('[Catalog] No Band C/F columns found — add "Band C" and "Band F" headers to catalog Excel to use catalog pricing.');
+  }
 
   const brandSet = new Set();
   let count = 0;
@@ -2841,6 +2855,8 @@ function parseCatalog(rows, name, wb, rawBuf) {
     const ean    = String(row[cEan]   == null ? '' : row[cEan]).trim();
     const cost        = parseFloat(String(row[cCost] == null ? '' : row[cCost]).replace(/[^0-9.\-]/g, '')) || null;
     const retail      = parseFloat(String(row[cRet]  == null ? '' : row[cRet]).replace(/[^0-9.\-]/g, ''))  || null;
+    const bandC       = cBandC < BAND_NOT_FOUND ? (parseFloat(String(row[cBandC] == null ? '' : row[cBandC]).replace(/[^0-9.\-]/g, '')) || null) : null;
+    const bandF       = cBandF < BAND_NOT_FOUND ? (parseFloat(String(row[cBandF] == null ? '' : row[cBandF]).replace(/[^0-9.\-]/g, '')) || null) : null;
     const shortDesc   = String(row[cShortDesc]    == null ? '' : row[cShortDesc]).trim();
     const longDesc    = String(row[cLongDesc]     == null ? '' : row[cLongDesc]).trim();
     const imgFolder   = String(row[cImgFolder]    == null ? '' : row[cImgFolder]).trim();
@@ -2855,7 +2871,7 @@ function parseCatalog(rows, name, wb, rawBuf) {
     const imgUrl4      = String(row[cImgUrl4]      == null ? '' : row[cImgUrl4]).trim();
     const searchTerms  = String(row[cSearchTerms]  == null ? '' : row[cSearchTerms]).trim();
     if (code) {
-      state.catalog[code] = { cost, retail, brand, desc, supp, ean, shortDesc, longDesc, imgFolder, lifestyleVid, setupVid,
+      state.catalog[code] = { cost, retail, bandC, bandF, brand, desc, supp, ean, shortDesc, longDesc, imgFolder, lifestyleVid, setupVid,
         webDesc, longDescFull, imgUrl1, imgUrl2, imgUrl3, imgUrl4, searchTerms, webImgVer: null };
       if (brand) brandSet.add(brand);
       count++;
@@ -8956,8 +8972,9 @@ function asRebuildData() {
     const cost   = (e.cost   && Number(e.cost)   > 0) ? Number(e.cost)   : null;
     const retail = (e.retail && Number(e.retail) > 0) ? Number(e.retail) : null;
     const bands  = s.bands || {};
-    const bandC  = bands['C'] ?? null;
-    const bandF  = bands['F'] ?? null;
+    // Prefer CRM PriceLists bands; fall back to catalog Band C/F columns if present
+    const bandC  = bands['C'] ?? (e.bandC || null);
+    const bandF  = bands['F'] ?? (e.bandF || null);
 
     const lastSoldDate  = s.lastSoldDate || null;
     const dormantMonths = asMonthsAgo(lastSoldDate);
@@ -9051,7 +9068,7 @@ function asRebuildSlowData() {
   const rows = [];
   const EIGHT_WEEKS_AS_MONTHS = 2;  // 8 weeks ≈ 2 months
 
-  const processSlowEntry = (code, brandName, descStr, crmName, s, catRetail) => {
+  const processSlowEntry = (code, brandName, descStr, crmName, s, catRetail, catBandC, catBandF) => {
     const qty = (s.qty != null) ? s.qty : 0;
     if (qty <= 0) return;
     const sales3Mo = s.sales3Mo || 0;
@@ -9068,8 +9085,9 @@ function asRebuildSlowData() {
     }
 
     const bands = s.bands || {};
-    const bandC = bands['C'] ?? null;
-    const bandF = bands['F'] ?? null;
+    // Prefer CRM PriceLists bands; fall back to catalog Band C/F columns if present
+    const bandC = bands['C'] ?? (catBandC || null);
+    const bandF = bands['F'] ?? (catBandF || null);
     // Band A: prefer PriceLists 'A' band, fall back to catalog retail
     const retail = bands['A'] ?? (catRetail && Number(catRetail) > 0 ? Number(catRetail) : null);
     const weeksOfCoverage = monthsCoverage * 4.33;
@@ -9087,7 +9105,7 @@ function asRebuildSlowData() {
     if (!brandSelMatch(e.brand, asSelBrands)) return;
     const s = asStockMap.get(code);
     if (!s || !s.hasSales12Data) return;
-    processSlowEntry(code, e.brand || '', e.desc || '', s.crmName || null, s, e.retail);
+    processSlowEntry(code, e.brand || '', e.desc || '', s.crmName || null, s, e.retail, e.bandC || null, e.bandF || null);
   });
 
   // CRM-mode: off-catalog entries
@@ -9098,7 +9116,7 @@ function asRebuildSlowData() {
       if (!brandSelMatch(crmEntry.brand, asSelBrands)) return;
       const s = asStockMap.get(sku);
       if (!s || !s.hasSales12Data) return;
-      processSlowEntry(sku, crmEntry.brand || '', crmEntry.desc || sku, s.crmName || crmEntry.desc || null, s, crmEntry.retail);
+      processSlowEntry(sku, crmEntry.brand || '', crmEntry.desc || sku, s.crmName || crmEntry.desc || null, s, crmEntry.retail, null, null);
     });
   }
 
@@ -19104,7 +19122,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v106 · 17 Sep 2026 · Free Stock tab rename, mailto removed, Created date on slow moving, band probe';
+const TOOL_BUILD = 'v107 · 17 Sep 2026 · Band C/F from catalog columns (add "Band C"/"Band F" headers to Excel)';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
