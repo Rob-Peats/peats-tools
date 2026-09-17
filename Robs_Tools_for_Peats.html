@@ -8008,6 +8008,7 @@ let asSlowData     = [];          // slow-moving stock rows (>8 weeks coverage a
 let asShowAged     = true;        // v114: show aged stock section
 let asShowSlow     = true;        // v114: show slow moving section
 let asSelected     = new Set();   // v114: selected row SKUs for "Apply Selected"
+let asSlowSelected = new Set();   // v115: selected row SKUs in slow moving table
 let asSortCol      = 'stockValue';
 let asSortDir      = -1;          // -1 = descending
 let asBrands       = [];          // all available brand names from catalog
@@ -9201,7 +9202,8 @@ function asRebuildSlowData() {
       free: qty, sales3Mo, avgMonthly, weeksOfCoverage, monthsCoverage,
       retail, bandC, bandF,
       createdDate: s.createdDate || null,
-      stockValue: null
+      stockValue: null,
+      discount: 0, clearance: null
     });
   };
 
@@ -9276,13 +9278,13 @@ function asRenderSummaryCards() {
   const agedCards = [
     { label: 'AGED SKUs',      val: asData.length.toLocaleString('en-IE'), sub: asSelBrands.size + ' brand' + (asSelBrands.size === 1 ? '' : 's'), col: '#b45309', view: 'all' },
     { label: 'FREE STOCK',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',     col: '#1a3c6e', view: 'all' },
-    { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: hasAnyBandC ? 'at Band C price' : 'at cost price', col: '#1f6b3e', view: 'all' },
+    { label: 'AGED STOCK VALUE', val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: hasAnyBandC ? 'at Band C price' : 'at cost price', col: '#1f6b3e', view: 'all' },
     { label: 'NEVER SOLD',     val: neverSold.length,                      sub: 'no sales history',   col: '#6b7280', view: 'never' },
-    { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: 'most urgent',        col: '#7c3aed', view: 'over2yrs' },
+    { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: '',                   col: '#7c3aed', view: 'over2yrs' },
   ];
   const slowCards = [
-    { label: 'SLOW MOVING',    val: totalSlow.toLocaleString('en-IE'),     sub: '>8 weeks cover',     col: '#0891b2', view: null },
     { label: 'SLOW UNITS',     val: slowUnits.toLocaleString('en-IE'),     sub: 'units in stock',     col: '#1a3c6e', view: null },
+    { label: 'SLOW MOVING',    val: totalSlow.toLocaleString('en-IE'),     sub: '>8 weeks cover',     col: '#0891b2', view: null },
     { label: '>12 WKS COVER',  val: over12wks.length,                      sub: '3 months+',          col: '#b45309', view: null },
     { label: '>26 WKS COVER',  val: over26wks.length,                      sub: 'critical',           col: '#dc2626', view: null },
   ];
@@ -9400,15 +9402,19 @@ function asRenderAgedTable() {
   ];
   const arrowFor = k => k === asSortCol ? (asSortDir === 1 ? ' ▲' : ' ▼') : '';
   const STICKY_TH = `position:sticky;top:0;z-index:10;background:var(--light);` +
-    `padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;` +
+    `padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;` +
     `border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;text-align:center;`;
-  const CHK_TH = `position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;border-bottom:2px solid var(--border);text-align:center;`;
+  const AGED_COL_W = {state:'width:72px;',brand:'width:80px;',code:'width:110px;',
+    free:'width:80px;',stockValue:'width:100px;',lastSold:'width:80px;',dormant:'width:100px;',
+    createdDate:'width:100px;',bandC:'width:90px;',bandF:'width:90px;',discount:'width:90px;',clearance:'width:100px;'};
+  const CHK_TH = `position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;border-bottom:2px solid var(--border);text-align:center;width:32px;`;
 
   document.getElementById('asTableHead').innerHTML =
     '<tr>' +
     `<th style="${CHK_TH}"><input type="checkbox" title="Select all" onchange="asSelectAll(this.checked)" style="cursor:pointer;"></th>` +
     ths.map(([k, label]) =>
       `<th onclick="asSort('${k}')" style="${STICKY_TH}` +
+      (AGED_COL_W[k] || '') +
       (k === 'desc'       ? 'text-align:left;'      : '') +
       (k === 'free'       ? 'background:#e8f5e9;'   : '') +
       (k === 'clearance'  ? 'background:#fffbea;'   : '') +
@@ -9498,7 +9504,7 @@ function asRenderAgedTable() {
    </td></tr>`;
 }
 
-// ── Slow Moving table render (v114: writes to asSlowTableHead/Body) ─────────
+// ── Slow Moving table render (v115: aligned columns with aged table) ─────────
 
 function asRenderSlowTable() {
   const slowHead = document.getElementById('asSlowTableHead');
@@ -9515,26 +9521,35 @@ function asRenderSlowTable() {
     );
   }
 
-  const TD  = 'padding:5px 10px;white-space:nowrap;text-align:center;';
-
   const fmtWks = wks => {
     const rounded = Math.round(wks);
     const col = wks > 26 ? '#dc2626' : wks > 12 ? '#b45309' : '#0891b2';
     return `<span style="color:${col};font-weight:700;">${rounded} wks</span>`;
   };
 
-  const SLOW_TH = 'padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;background:var(--light);white-space:nowrap;position:sticky;top:0;z-index:10;border-bottom:2px solid var(--border);';
+  // Column widths match aged table exactly
+  const W = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center;';
+  const CHK_TH = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;border-bottom:2px solid var(--border);text-align:center;width:32px;';
+  const TD = 'padding:5px 8px;white-space:nowrap;text-align:center;';
+
+  const allChecked = rows.length > 0 && rows.every(r => asSlowSelected.has(r.code));
+  const colSpan = 10 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0) + 2;
+
   slowHead.innerHTML = `<tr>
-    <th style="${SLOW_TH}color:var(--muted);text-align:left;">Brand</th>
-    <th style="${SLOW_TH}color:var(--muted);">Code</th>
-    <th style="${SLOW_TH}color:var(--muted);text-align:left;">Description</th>
-    <th style="${SLOW_TH}color:#1f6b3e;background:#e8f5e9;">Free Stock</th>
-    <th style="${SLOW_TH}color:var(--muted);">3mo Sales</th>
-    <th style="${SLOW_TH}color:var(--muted);">Avg/Mo</th>
-    <th style="${SLOW_TH}color:#0891b2;">Weeks Cover</th>
-    <th style="${SLOW_TH}color:var(--muted);">Added to CRM</th>
-    ${asBandCVisible ? `<th style="${SLOW_TH}color:#0891b2;">Band C (€)</th>` : ''}
-    ${asBandFVisible ? `<th style="${SLOW_TH}color:#7c3aed;">Band F (€)</th>` : ''}
+    <th style="${CHK_TH}"><input type="checkbox" title="Select all" ${allChecked ? 'checked' : ''} onchange="asSelectAllSlow(this.checked)" style="cursor:pointer;"></th>
+    <th style="${W}color:var(--muted);width:72px;">State</th>
+    <th style="${W}color:var(--muted);text-align:left;width:80px;">Brand</th>
+    <th style="${W}color:var(--muted);width:110px;">Code</th>
+    <th style="${W}color:var(--muted);text-align:left;">Description</th>
+    <th style="${W}color:#1f6b3e;background:#e8f5e9;width:80px;">Free Stock</th>
+    <th style="${W}color:var(--muted);width:100px;">3mo Sales</th>
+    <th style="${W}color:var(--muted);width:80px;">Avg/Mo</th>
+    <th style="${W}color:#0891b2;width:100px;">Weeks Cover</th>
+    <th style="${W}color:var(--muted);width:100px;">Added to CRM</th>
+    ${asBandCVisible ? `<th style="${W}color:#0891b2;width:90px;">Band C (€)</th>` : ''}
+    ${asBandFVisible ? `<th style="${W}color:#7c3aed;width:90px;">Band F (€)</th>` : ''}
+    <th style="${W}color:#b45309;width:90px;">Discount %</th>
+    <th style="${W}color:#b45309;background:#fffbea;width:100px;">Clearance (€)</th>
   </tr>`;
 
   slowBody.innerHTML = rows.map((r, ri) => {
@@ -9546,23 +9561,75 @@ function asRenderSlowTable() {
       const col = months <= 6 ? '#0891b2' : 'var(--muted)';
       return `<span style="color:${col};">${dt.getDate()} ${AS_MONTHS[dt.getMonth()]} ${dt.getFullYear()}</span>`;
     })();
-    return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
+
+    const dn = (r.crmName || r.desc || '').toUpperCase();
+    const stateBadge = dn.startsWith('EOL')
+      ? '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">EOL</span>'
+      : dn.startsWith('TBD')
+      ? '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;">TBD</span>'
+      : '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">Current</span>';
+
+    const isSelected = asSlowSelected.has(r.code);
+    const disc = r.discount || 0;
+    const clearFmt = r.clearance != null
+      ? '<span style="color:#b45309;font-weight:700;">€' + r.clearance.toFixed(2) + '</span>'
+      : '<span style="color:var(--muted);">—</span>';
+
+    return `<tr style="border-bottom:1px solid #d1d5db;${isSelected ? 'background:#fffbea;' : ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
+      <td style="${TD}"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="asToggleSelectSlow('${r.code}')" style="cursor:pointer;"></td>
+      <td style="${TD}">${stateBadge}</td>
       <td style="${TD}font-size:11px;color:var(--muted);text-align:left;">${escHtml(r.brand)}</td>
       <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:11px;opacity:.75;">⚡</span>' : ''}</td>
-      <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+      <td style="padding:5px 8px;text-align:left;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
-      <td style="${TD}color:var(--muted);">${Math.round(r.sales3Mo).toLocaleString('en-IE')}</td>
-      <td style="${TD}color:var(--muted);">${r.avgMonthly.toFixed(1)}</td>
+      <td style="${TD}">${Math.round(r.sales3Mo).toLocaleString('en-IE')}</td>
+      <td style="${TD}">${r.avgMonthly.toFixed(1)}</td>
       <td style="${TD}">${fmtWks(r.weeksOfCoverage)}</td>
       <td style="${TD}font-size:11px;">${slowCreatedFmt}</td>
       ${asBandCVisible ? `<td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>` : ''}
       ${asBandFVisible ? `<td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>` : ''}
+      <td style="${TD}"><input type="number" min="0" max="99" step="0.5" value="${disc}"
+          onchange="asSetSlowRowDiscount(${ri},this.value)"
+          style="width:52px;text-align:center;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;"></td>
+      <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="${colSpan}" style="padding:30px;text-align:center;color:var(--muted);">
      No slow moving stock found — all products are within 8 weeks cover.
    </td></tr>`;
+}
+
+// ── Slow Moving row selection (v115) ─────────────────────────────────────────
+
+function asToggleSelectSlow(code) {
+  if (asSlowSelected.has(code)) asSlowSelected.delete(code);
+  else asSlowSelected.add(code);
+  asRenderSlowTable();
+}
+
+function asSelectAllSlow(checked) {
+  const q = (document.getElementById('asSearch')?.value || '').toLowerCase().trim();
+  let rows = asSlowData;
+  if (q) rows = rows.filter(r =>
+    r.code.toLowerCase().includes(q) ||
+    (r.desc    || '').toLowerCase().includes(q) ||
+    (r.crmName || '').toLowerCase().includes(q) ||
+    r.brand.toLowerCase().includes(q)
+  );
+  if (checked) { rows.forEach(r => asSlowSelected.add(r.code)); }
+  else { asSlowSelected.clear(); }
+  asRenderSlowTable();
+}
+
+function asSetSlowRowDiscount(idx, pct) {
+  const row = asSlowData[idx];
+  if (!row) return;
+  const p = Math.min(99, Math.max(0, parseFloat(pct) || 0));
+  const base = row.bandC ?? row.retail;
+  row.discount  = p;
+  row.clearance = base != null ? base * (1 - p / 100) : null;
+  asRenderSlowTable();
 }
 
 // ── Sort ───────────────────────────────────────────────
@@ -9695,8 +9762,9 @@ function asSetRowDiscount(idx, pct) {
   const row = asData[idx];
   if (!row) return;
   const p = Math.min(99, Math.max(0, parseFloat(pct) || 0));
+  const baseA = row.bandC ?? row.retail;
   row.discount  = p;
-  row.clearance = row.retail != null ? row.retail * (1 - p / 100) : null;
+  row.clearance = baseA != null ? baseA * (1 - p / 100) : null;
   asRenderAgedTable();
 }
 
@@ -9704,10 +9772,17 @@ function asApplyGlobalDiscount() {
   const inp = document.getElementById('asGlobalDiscountInput');
   const pct = Math.min(99, Math.max(0, parseFloat(inp ? inp.value : '0') || 0));
   asData.forEach(r => {
+    const base = r.bandC ?? r.retail;
     r.discount  = pct;
-    r.clearance = r.retail != null ? r.retail * (1 - pct / 100) : null;
+    r.clearance = base != null ? base * (1 - pct / 100) : null;
+  });
+  asSlowData.forEach(r => {
+    const base = r.bandC ?? r.retail;
+    r.discount  = pct;
+    r.clearance = base != null ? base * (1 - pct / 100) : null;
   });
   if (asData.length) asRenderAgedTable();
+  if (asSlowData.length) asRenderSlowTable();
 }
 
 // ── Row selection (v114) ──────────────────────────────
@@ -9725,16 +9800,25 @@ function asSelectAll(checked) {
 }
 
 function asApplySelectedDiscount() {
-  if (asSelected.size === 0) { showToast('No rows selected — tick checkboxes first.'); return; }
+  if (asSelected.size === 0 && asSlowSelected.size === 0) { showToast('No rows selected — tick checkboxes first.'); return; }
   const inp = document.getElementById('asGlobalDiscountInput');
   const pct = Math.min(99, Math.max(0, parseFloat(inp ? inp.value : '0') || 0));
   asData.forEach(r => {
     if (!asSelected.has(r.code)) return;
+    const base = r.bandC ?? r.retail;
     r.discount  = pct;
-    r.clearance = r.retail != null ? r.retail * (1 - pct / 100) : null;
+    r.clearance = base != null ? base * (1 - pct / 100) : null;
   });
+  asSlowData.forEach(r => {
+    if (!asSlowSelected.has(r.code)) return;
+    const base = r.bandC ?? r.retail;
+    r.discount  = pct;
+    r.clearance = base != null ? base * (1 - pct / 100) : null;
+  });
+  const total = asSelected.size + asSlowSelected.size;
   if (asData.length) asRenderAgedTable();
-  showToast('✓ Applied ' + pct + '% to ' + asSelected.size + ' selected row' + (asSelected.size === 1 ? '' : 's') + '.');
+  if (asSlowData.length) asRenderSlowTable();
+  showToast('✓ Applied ' + pct + '% to ' + total + ' selected row' + (total === 1 ? '' : 's') + '.');
 }
 
 // ── Export to Excel ───────────────────────────────────
@@ -19289,7 +19373,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v114b · 17 Sep 2026 · toolbar redesign · view bug fix · Load Stock pill';
+const TOOL_BUILD = 'v115 · 17 Sep 2026 · slow table cols aligned · checkbox+state+discount+clearance · Band C fix';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
