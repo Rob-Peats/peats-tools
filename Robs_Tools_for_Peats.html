@@ -952,6 +952,14 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <span class="hub-card-launch">Open →</span>
     </div>
 
+    <!-- Aged Stock -->
+    <div class="hub-card" onclick="launchTool('agedstock')">
+      <div class="hub-card-icon">📦</div>
+      <h3>Aged Stock</h3>
+      <p>Find products with free stock but no sales in the last 12 months — apply discounts and export a clearance list.</p>
+      <span class="hub-card-launch">Open →</span>
+    </div>
+
     <!-- Admin — PIN required -->
     <div class="hub-card" id="crmSettingsCard" onclick="showAdminPin()">
       <div class="hub-card-icon">⚙️</div>
@@ -1796,6 +1804,102 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     </table>
   </div>
 </div><!-- /tool-stockanalysis -->
+
+<!-- ════════════════════════════════════════════════════
+     AGED STOCK TOOL
+     Tool ID : tool-agedstock
+     Prefix  : as
+     ════════════════════════════════════════════════════ -->
+<div id="tool-agedstock" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
+
+  <!-- ── Toolbar ── -->
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
+
+    <!-- Brand filter dropdown -->
+    <div class="brand-filter-wrap" id="asBrandWrap">
+      <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)">
+        🏷 Brands
+        <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
+        <span style="font-size:10px;opacity:.6">▾</span>
+      </button>
+      <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:400px;max-width:480px;">
+        <input class="brand-search-inp" id="asBrandSearch" placeholder="Search brands…" oninput="asFilterBrandList(this.value)" autocomplete="off">
+        <div class="brand-list-scroll" id="asBrandList" style="max-height:420px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
+        <div id="asLoadBrandBtn" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <button onclick="asClosePanelAndLoad()" style="width:100%;background:var(--brand);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">▶ Load Aged Stock</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exclude TBD / EOL toggles -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <button id="asExcludeTBDBtn" onclick="asToggleExclude('tbd')"
+        style="height:40px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
+        ⊘ TBD
+      </button>
+      <button id="asExcludeEOLBtn" onclick="asToggleExclude('eol')"
+        style="height:40px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
+        ⊘ EOL
+      </button>
+    </div>
+
+    <!-- Bulk discount pill (amber border) -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <div style="background:var(--light);border:1px solid #f5e0b0;border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;">
+        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b45309;white-space:nowrap;">📉 Discount %</span>
+        <input type="number" id="asGlobalDiscountInput" min="0" max="100" step="0.5" value="0"
+          style="width:52px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;font-size:14px;font-weight:800;text-align:center;font-family:inherit;background:var(--white);color:#b45309;outline:none;">
+        <button onclick="asApplyGlobalDiscount()"
+          style="background:#b45309;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
+          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">Apply All</button>
+      </div>
+    </div>
+
+    <!-- Thumbnails toggle pill -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <label style="background:var(--light);border:1px solid var(--border);border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;cursor:pointer;user-select:none;">
+        <input type="checkbox" id="asThumbnailToggle" style="cursor:pointer;width:14px;height:14px;">
+        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap;">Thumbnails</span>
+      </label>
+    </div>
+
+    <!-- Export button -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <button id="asExportBtn" onclick="asExportExcel()" disabled
+        style="height:40px;padding:0 16px;background:#1a3c6e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:not-allowed;font-family:inherit;transition:opacity .15s;opacity:.45;white-space:nowrap;">
+        ⬇ Export to Excel
+      </button>
+    </div>
+
+    <!-- Flex spacer -->
+    <div style="flex:1;"></div>
+
+    <!-- Search box (hidden until data loaded) -->
+    <div class="search-x-wrap" id="asSearchWrap" style="display:none;">
+      <input type="search" id="asSearch" placeholder="Search code, description, brand…"
+             oninput="asRenderTable();_syncSearchX('asSearch','asSearchX')"
+             style="width:240px;">
+      <button class="search-x-btn" id="asSearchX"
+              onclick="_clearSearch('asSearch','asSearchX',asRenderTable)" title="Clear">✕</button>
+    </div>
+
+  </div><!-- /toolbar -->
+
+  <!-- ── Summary cards (hidden until data loaded) ── -->
+  <div id="asSummaryCards" style="display:none;flex-shrink:0;padding:14px 20px;gap:12px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
+
+  <!-- ── Table / content area ── -->
+  <div style="flex:1;overflow:auto;">
+    <div id="asContent" style="padding:40px;text-align:center;color:var(--muted);font-size:14px;">
+      Select brands to load aged stock.
+    </div>
+    <table id="asTable" style="display:none;width:100%;border-collapse:collapse;font-size:12px;">
+      <thead id="asTableHead"></thead>
+      <tbody id="asTableBody"></tbody>
+    </table>
+  </div>
+
+</div><!-- /tool-agedstock -->
 
 <div id="tool-export" style="display:none; flex-direction:column; height:calc(100vh - 64px);">
   <iframe id="exportFrame" style="flex:1; border:none; width:100%;" title="Export from Product Catalogue"></iframe>
@@ -6925,6 +7029,7 @@ function launchTool(tool) {
   document.getElementById('tool-backorder').style.display   = 'none';
   document.getElementById('tool-webimport').style.display    = 'none';
   document.getElementById('tool-stockanalysis').style.display = 'none';
+  document.getElementById('tool-agedstock').style.display     = 'none';
   document.getElementById('tool-crmsettings').style.display  = 'none';
 
   function setToolName(name) {
@@ -6979,6 +7084,10 @@ function launchTool(tool) {
     document.getElementById('tool-stockanalysis').style.display = 'flex';
     setToolName('Stock Analysis');
     saaOnOpen();
+  } else if (tool === 'agedstock') {
+    document.getElementById('tool-agedstock').style.display = 'flex';
+    setToolName('Aged Stock');
+    asOnOpen();
   } else if (tool === 'export') {
     document.getElementById('tool-export').style.display = 'flex';
     setToolName('Export from Product Catalogue');
@@ -7626,6 +7735,917 @@ function _saaRefreshExcludePills() {
 // ── End Stock Analysis ──────────────────────────────────────────────────────
 
 
+// ════════════════════════════════════════════════════
+//  AGED STOCK TOOL  (prefix: as)
+//
+//  Purpose: identify products where QuantityAvailable > 0
+//  (free stock) but no invoiced sales in the last 12 months.
+//  Allows per-row and bulk discount entry, then exports to Excel.
+// ════════════════════════════════════════════════════
+
+// ── State ─────────────────────────────────────────────
+let asData         = [];          // processed aged-stock rows (see asRebuildData)
+let asSortCol      = 'stockValue';
+let asSortDir      = -1;          // -1 = descending
+let asBrands       = [];          // all available brand names from catalog
+let asSelBrands    = new Set();   // brands the user has selected
+let asExcludeTBD   = false;
+let asExcludeEOL   = false;
+// SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, hasSales12Data, lastSoldDate}
+let asStockMap     = new Map();
+let asLoadedBrands = new Set();   // brands whose data has been fetched (cache key)
+let asFetching     = false;
+let asView         = 'all';       // 'all' | 'current' | 'tbd' | 'eol' | 'never' | 'over2yrs'
+
+// ── Format helpers ────────────────────────────────────
+
+const AS_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function asFormatDate(d) {
+  if (!d) return '';
+  const dt = d instanceof Date ? d : new Date(d);
+  return dt.getDate() + ' ' + AS_MONTHS[dt.getMonth()] + ' ' + dt.getFullYear();
+}
+
+function asFormatCurrency(v) {
+  if (v == null) return '—';
+  return '€' + Number(v).toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Compute whole months between a past date and now
+function asMonthsAgo(date) {
+  if (!date) return null;
+  const now  = new Date();
+  const past = date instanceof Date ? date : new Date(date);
+  const m = (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
+  return m < 0 ? 0 : m;
+}
+
+// ── Open / init ───────────────────────────────────────
+
+function asOnOpen() {
+  if (!state.catalog || !Object.keys(state.catalog).length) {
+    const c = document.getElementById('asContent');
+    c.style.display  = 'block';
+    c.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        height:100%;gap:14px;padding:40px;text-align:center;">
+      <div style="font-size:56px;line-height:1;">📋</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text);">Load a catalog first</div>
+      <div style="font-size:13px;color:var(--muted);max-width:360px;line-height:1.65;">
+        Return to the hub and open a product catalog before using Aged Stock.
+      </div>
+    </div>`;
+    return;
+  }
+  asBuildBrands();
+  if (asSelBrands.size > 0 && asData.length > 0) {
+    asRenderAll();
+  } else if (asSelBrands.size > 0) {
+    asLoadForSelectedBrands();
+  } else {
+    asShowPickPrompt();
+  }
+}
+
+// ── Brand management ──────────────────────────────────
+
+function asBuildBrands() {
+  const raw = new Set();
+  Object.values(state.catalog || {}).forEach(e => { if (e.brand) raw.add(e.brand); });
+  const display = [];
+  let hasAvsl = false;
+  raw.forEach(b => { if (AVSL_BRANDS.has(b)) hasAvsl = true; else display.push(b); });
+  if (hasAvsl) display.push('AVSL');
+  asBrands = display.sort((a, b) => a.localeCompare(b));
+  asRenderBrandList('');
+}
+
+function asRenderBrandList(filter) {
+  const list = document.getElementById('asBrandList');
+  if (!list) return;
+  const fl = filter.toLowerCase();
+  const visible    = asBrands.filter(b => !fl || b.toLowerCase().includes(fl));
+  const allChecked = asSelBrands.size === asBrands.length && asBrands.length > 0;
+  list.innerHTML =
+    `<label class="brand-chk-row brand-all-row" style="grid-column:1/-1;">
+       <input type="checkbox" ${allChecked ? 'checked' : ''} onchange="asToggleAllBrands(this)"> All brands
+     </label>` +
+    visible.map(b =>
+      `<label class="brand-chk-row">
+         <input type="checkbox" value="${escHtml(b)}" ${asSelBrands.has(b) ? 'checked' : ''} onchange="asToggleBrand(this)">
+         ${escHtml(b)}
+       </label>`
+    ).join('');
+}
+
+function asFilterBrandList(val) { asRenderBrandList(val); }
+
+function asToggleBrandPanel(e) {
+  e.stopPropagation();
+  const p = document.getElementById('asBrandPanel');
+  const wasOpen = p.style.display !== 'none';
+  p.style.display = wasOpen ? 'none' : 'block';
+  if (wasOpen) {
+    document.getElementById('asBrandSearch').value = '';
+    asLoadForSelectedBrands();
+  } else {
+    asRenderBrandList('');
+  }
+}
+
+function asToggleAllBrands(chk) {
+  if (chk.checked) { asBrands.forEach(b => asSelBrands.add(b)); }
+  else             { asSelBrands.clear(); }
+  asRenderBrandList(document.getElementById('asBrandSearch')?.value || '');
+  asUpdateBrandBtn();
+  asUpdateLoadBtn();
+}
+
+function asToggleBrand(chk) {
+  if (chk.checked) asSelBrands.add(chk.value); else asSelBrands.delete(chk.value);
+  asRenderBrandList(document.getElementById('asBrandSearch')?.value || '');
+  asUpdateBrandBtn();
+  asUpdateLoadBtn();
+}
+
+function asUpdateBrandBtn() {
+  const cnt = document.getElementById('asBrandCount');
+  if (!cnt) return;
+  if (asSelBrands.size === 0) { cnt.style.display = 'none'; }
+  else { cnt.textContent = asSelBrands.size; cnt.style.display = ''; }
+}
+
+function asUpdateLoadBtn() {
+  const btn = document.getElementById('asLoadBrandBtn');
+  if (!btn) return;
+  btn.style.display = asSelBrands.size > 0 ? '' : 'none';
+}
+
+function asClosePanelAndLoad() {
+  const p = document.getElementById('asBrandPanel');
+  if (p) p.style.display = 'none';
+  const s = document.getElementById('asBrandSearch');
+  if (s) s.value = '';
+  asLoadForSelectedBrands();
+}
+
+// Close brand panel when clicking outside it
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('asBrandWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const p = document.getElementById('asBrandPanel');
+    if (p && p.style.display !== 'none') {
+      p.style.display = 'none';
+      const bs = document.getElementById('asBrandSearch');
+      if (bs) bs.value = '';
+      asLoadForSelectedBrands();
+    }
+  }
+});
+
+// ── Data loading ──────────────────────────────────────
+
+async function asLoadForSelectedBrands() {
+  if (asSelBrands.size === 0) { asShowPickPrompt(); return; }
+  if (asFetching) return;
+
+  const pat = getCrmPat();
+  if (!pat) {
+    const c = document.getElementById('asContent');
+    c.style.display = 'block';
+    c.innerHTML = '<p style="color:#c0392b;font-size:13px;padding:40px;text-align:center;">⚠ No CRM token saved — configure it in Admin settings.</p>';
+    return;
+  }
+
+  const expandedSel = new Set();
+  asSelBrands.forEach(b => {
+    if (b === 'AVSL') { AVSL_BRANDS.forEach(sub => expandedSel.add(sub)); }
+    else { expandedSel.add(b); }
+  });
+
+  const brandsToFetch = [...expandedSel].filter(b => !asLoadedBrands.has(b));
+
+  if (brandsToFetch.length === 0) {
+    asRebuildData();
+    if (asData.length > 0) { asView = 'all'; asRenderAll(); }
+    else { asShowNoAgedStock(); }
+    return;
+  }
+
+  const cat = state.catalog || {};
+  const skusToFetch = Object.entries(cat)
+    .filter(([, e]) => brandsToFetch.includes(e.brand))
+    .map(([code]) => code);
+
+  if (!skusToFetch.length) {
+    brandsToFetch.forEach(b => asLoadedBrands.add(b));
+    if (asSelBrands.has('AVSL') && [...AVSL_BRANDS].every(b => asLoadedBrands.has(b))) {
+      asLoadedBrands.add('AVSL');
+    }
+    asRebuildData();
+    if (asData.length > 0) { asView = 'all'; asRenderAll(); }
+    else asShowPickPrompt();
+    return;
+  }
+
+  asFetching = true;
+  const content = document.getElementById('asContent');
+  content.style.display = 'block';
+  document.getElementById('asTable').style.display        = 'none';
+  document.getElementById('asSummaryCards').style.display = 'none';
+
+  const brandLabel = brandsToFetch.length === 1 ? brandsToFetch[0] : brandsToFetch.length + ' brands';
+
+  content.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;gap:14px;padding:40px;text-align:center;">
+    <div style="font-size:48px;line-height:1;animation:spin 1.2s linear infinite">⏳</div>
+    <div style="font-size:18px;font-weight:800;color:var(--text);">Analysing aged stock…</div>
+    <div style="font-size:13px;color:var(--muted);max-width:420px;line-height:1.65;">
+      Fetching <strong>${skusToFetch.length}</strong> products for <strong>${escHtml(brandLabel)}</strong><br>
+      Stock levels &amp; 12-month sales history
+    </div>
+  </div>`;
+
+  try {
+    // ── Step 1: Stock levels ─────────────────────────────
+    const newStockMap = await fetchConvStockLevels(skusToFetch);
+    newStockMap.forEach((v, k) => asStockMap.set(k, v));
+
+    // ── Step 2: CRM product names for TBD/EOL detection ──
+    try {
+      const crmNames = await fetchSaaCrmNames(skusToFetch);
+      crmNames.forEach((name, sku) => {
+        const entry = asStockMap.get(sku);
+        if (entry) entry.crmName = name;
+      });
+    } catch(e) { /* non-fatal */ }
+
+    // ── Step 3: 12-month invoiced sales per SKU ──────────
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const dateFilter  = twelveMonthsAgo.toISOString().slice(0, 10) + 'T00:00:00Z';
+    const SALES_BATCH = 15;
+    const sales12Map  = new Map();
+
+    for (let i = 0; i < skusToFetch.length; i += SALES_BATCH) {
+      const batch  = skusToFetch.slice(i, i + SALES_BATCH);
+      const skuF   = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+      const filter = skuF + ` and TransactionType eq 'I' and InvoiceDate ge ${dateFilter} and Obsolete eq 0`;
+      try {
+        let nextUrl = CRM_ODATA_BASE + '/SalesTransactions?$filter=' + encodeURIComponent(filter)
+          + '&$select=ProductItemId,CalculatedInvoiceQuantity';
+        while (nextUrl) {
+          const sr = await fetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+          if (!sr.ok) break;
+          const sd = await sr.json();
+          (sd.value || []).forEach(item => {
+            const qty = item.CalculatedInvoiceQuantity;
+            if (qty > 0) {
+              sales12Map.set(item.ProductItemId, (sales12Map.get(item.ProductItemId) || 0) + qty);
+            }
+          });
+          nextUrl = sd['@odata.nextLink'] || null;
+        }
+      } catch(e) { /* best effort */ }
+    }
+
+    skusToFetch.forEach(sku => {
+      const entry = asStockMap.get(sku);
+      if (entry) {
+        entry.soldLast12Mo   = sales12Map.get(sku) || 0;
+        entry.hasSales12Data = true;
+      }
+    });
+
+    // ── Step 4: Last sold date for aged SKUs only ─────────
+    const agedSkus = skusToFetch.filter(sku => {
+      const s = asStockMap.get(sku);
+      return s && s.hasSales12Data && (s.qty || 0) > 0 && s.soldLast12Mo === 0;
+    });
+
+    const LAST_SOLD_BATCH = 10;
+    const lastSoldMap     = new Map();
+
+    for (let i = 0; i < agedSkus.length; i += LAST_SOLD_BATCH) {
+      const batch     = agedSkus.slice(i, i + LAST_SOLD_BATCH);
+      const remaining = new Set(batch);
+      const skuF      = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+      const filter    = skuF + ` and TransactionType eq 'I' and Obsolete eq 0`;
+      try {
+        let nextUrl = CRM_ODATA_BASE + '/SalesTransactions?$filter=' + encodeURIComponent(filter)
+          + '&$select=ProductItemId,InvoiceDate&$orderby=InvoiceDate desc';
+        while (nextUrl && remaining.size > 0) {
+          const r = await fetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+          if (!r.ok) break;
+          const d = await r.json();
+          (d.value || []).forEach(item => {
+            const sku = item.ProductItemId;
+            if (remaining.has(sku) && item.InvoiceDate) {
+              lastSoldMap.set(sku, new Date(item.InvoiceDate));
+              remaining.delete(sku);
+            }
+          });
+          nextUrl = d['@odata.nextLink'] || null;
+        }
+      } catch(e) { /* best effort */ }
+    }
+
+    agedSkus.forEach(sku => {
+      const entry = asStockMap.get(sku);
+      if (entry) entry.lastSoldDate = lastSoldMap.get(sku) || null;
+    });
+
+    brandsToFetch.forEach(b => asLoadedBrands.add(b));
+    if (asSelBrands.has('AVSL') && [...AVSL_BRANDS].every(b => asLoadedBrands.has(b))) {
+      asLoadedBrands.add('AVSL');
+    }
+
+    asRebuildData();
+    asView = 'all';
+    if (asData.length > 0) {
+      asRenderAll();
+    } else {
+      asShowNoAgedStock();
+    }
+
+  } catch(err) {
+    content.innerHTML = `<div style="text-align:center;padding:40px;color:#c0392b;font-size:13px;">
+      ✗ Error loading aged stock: ${escHtml(err.message)}
+    </div>`;
+  } finally {
+    asFetching = false;
+  }
+}
+
+// ── Rebuild data from stock map ───────────────────────
+
+function asRebuildData() {
+  if (asSelBrands.size === 0) { asData = []; return; }
+
+  const cat = state.catalog || {};
+
+  const savedDiscounts = new Map();
+  asData.forEach(r => { if (r.discount) savedDiscounts.set(r.code, r.discount); });
+
+  const rows = [];
+  Object.entries(cat).forEach(([code, e]) => {
+    if (!brandSelMatch(e.brand, asSelBrands)) return;
+
+    const s = asStockMap.get(code);
+    if (!s || !s.hasSales12Data) return;
+
+    const qty = (s.qty != null) ? s.qty : 0;
+
+    if (qty <= 0) return;
+    if ((s.soldLast12Mo || 0) > 0) return;
+
+    const crmName     = s.crmName || null;
+    const displayName = (crmName || e.desc || '').toUpperCase();
+
+    if (asExcludeTBD && displayName.startsWith('TBD')) return;
+    if (asExcludeEOL && displayName.startsWith('EOL')) return;
+
+    const cost   = (e.cost   && Number(e.cost)   > 0) ? Number(e.cost)   : null;
+    const retail = (e.retail && Number(e.retail) > 0) ? Number(e.retail) : null;
+
+    const lastSoldDate  = s.lastSoldDate || null;
+    const dormantMonths = asMonthsAgo(lastSoldDate);
+
+    const discount   = savedDiscounts.get(code) || 0;
+    const stockValue = cost   != null ? cost * qty : null;
+    const clearance  = retail != null ? retail * (1 - discount / 100) : null;
+
+    rows.push({
+      code,
+      brand:       e.brand  || '',
+      desc:        e.desc   || '',
+      crmName,
+      free:        qty,
+      phys:        s.physStock   != null ? s.physStock   : null,
+      salesOrders: s.salesOrders != null ? s.salesOrders : null,
+      cost, retail, stockValue,
+      lastSoldDate, dormantMonths,
+      discount, clearance
+    });
+  });
+
+  asData = rows;
+}
+
+// ── Summary cards ──────────────────────────────────────
+
+function asSetView(v) { asView = v; asRenderTable(); }
+
+function asRenderSummaryCards() {
+  const totalValue   = asData.reduce((a, r) => a + (r.stockValue || 0), 0);
+  const totalUnits   = asData.reduce((a, r) => a + r.free, 0);
+  const tbdItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('TBD'));
+  const eolItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('EOL'));
+  const currentItems = asData.filter(r =>
+    !(r.crmName || r.desc || '').toUpperCase().startsWith('TBD') &&
+    !(r.crmName || r.desc || '').toUpperCase().startsWith('EOL')
+  );
+  const neverSold  = asData.filter(r => r.lastSoldDate === null);
+  const over2yrs   = asData.filter(r => r.dormantMonths != null && r.dormantMonths >= 24);
+
+  const cards = [
+    { label: 'AGED SKUS',      val: asData.length.toLocaleString('en-IE'), sub: asSelBrands.size + ' brand' + (asSelBrands.size === 1 ? '' : 's') + ' selected', col: '#b45309', view: 'all' },
+    { label: 'FREE UNITS',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',                 col: '#1a3c6e', view: 'all' },
+    { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: 'at cost price',  col: '#1f6b3e', view: 'all' },
+    { label: 'CURRENT',        val: currentItems.length,                   sub: 'not TBD or EOL',                 col: '#0891b2', view: 'current' },
+    { label: 'TBD',            val: tbdItems.length,                       sub: 'going end-of-line',              col: '#b45309', view: 'tbd' },
+    { label: 'END OF LINE',    val: eolItems.length,                       sub: 'EOL — clear first',              col: '#dc2626', view: 'eol' },
+    { label: 'NEVER SOLD',     val: neverSold.length,                      sub: 'no sales history',               col: '#6b7280', view: 'never' },
+    { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: 'most urgent to clear',           col: '#7c3aed', view: 'over2yrs' },
+  ];
+
+  document.getElementById('asSummaryCards').innerHTML = cards.map(c => {
+    const active = asView === c.view;
+    return `<div onclick="asSetView('${c.view}')"
+       style="background:${active ? c.col : 'var(--white)'};border-radius:10px;
+              padding:14px 20px;border-bottom:3px solid ${c.col};
+              box-shadow:${active ? '0 4px 16px rgba(0,0,0,.18)' : 'var(--shadow)'};
+              min-width:110px;flex:1;cursor:pointer;transition:all .15s;"
+       onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.13)'"
+       onmouseout="this.style.boxShadow='${active ? '0 4px 16px rgba(0,0,0,.18)' : 'var(--shadow)'}'">
+      <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+                  color:${active ? 'rgba(255,255,255,.85)' : c.col};margin-bottom:5px;">${c.label}</div>
+      <div style="font-size:28px;font-weight:800;color:${active ? '#fff' : c.col};line-height:1.05;">${c.val}</div>
+      <div style="font-size:11px;color:${active ? 'rgba(255,255,255,.75)' : 'var(--muted)'};margin-top:4px;">${c.sub}</div>
+    </div>`;
+  }).join('');
+}
+
+function asRenderAll() {
+  asRenderSummaryCards();
+  asRenderTable();
+  document.getElementById('asSummaryCards').style.display = 'flex';
+  document.getElementById('asSearchWrap').style.display   = 'flex';
+  document.getElementById('asContent').style.display      = 'none';
+  document.getElementById('asTable').style.display        = 'table';
+  const btn = document.getElementById('asExportBtn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+}
+
+// ── Table render ───────────────────────────────────────
+
+function asGetFilteredRows() {
+  const q = (document.getElementById('asSearch')?.value || '').toLowerCase().trim();
+  let rows = asData.filter(r => {
+    const dn = (r.crmName || r.desc || '').toUpperCase();
+    switch(asView) {
+      case 'current':  return !dn.startsWith('TBD') && !dn.startsWith('EOL');
+      case 'tbd':      return dn.startsWith('TBD');
+      case 'eol':      return dn.startsWith('EOL');
+      case 'never':    return r.lastSoldDate === null;
+      case 'over2yrs': return r.dormantMonths != null && r.dormantMonths >= 24;
+      default:         return true;
+    }
+  });
+  if (q) {
+    rows = rows.filter(r =>
+      r.code.toLowerCase().includes(q) ||
+      (r.desc    || '').toLowerCase().includes(q) ||
+      (r.crmName || '').toLowerCase().includes(q) ||
+      r.brand.toLowerCase().includes(q)
+    );
+  }
+  return rows;
+}
+
+function asRenderTable() {
+  if (!asData.length) return;
+  asRenderSummaryCards();
+
+  const rows = asGetFilteredRows();
+
+  const colVal = r => {
+    switch(asSortCol) {
+      case 'brand':      return (r.brand || '').toLowerCase();
+      case 'code':       return (r.code  || '').toLowerCase();
+      case 'desc':       return (r.crmName || r.desc || '').toLowerCase();
+      case 'state': {
+        const dn = (r.crmName || r.desc || '').toUpperCase();
+        return dn.startsWith('EOL') ? 2 : dn.startsWith('TBD') ? 1 : 0;
+      }
+      case 'free':       return r.free       ?? -Infinity;
+      case 'stockValue': return r.stockValue  ?? -Infinity;
+      case 'lastSold':   return r.lastSoldDate ? r.lastSoldDate.getTime() : -Infinity;
+      case 'dormant':    return r.dormantMonths ?? Infinity;
+      case 'retail':     return r.retail    ?? -Infinity;
+      case 'discount':   return r.discount  || 0;
+      case 'clearance':  return r.clearance ?? -Infinity;
+      default: return '';
+    }
+  };
+  rows.sort((a, b) => {
+    const va = colVal(a), vb = colVal(b);
+    if (va < vb) return -asSortDir;
+    if (va > vb) return  asSortDir;
+    return (a.code || '').localeCompare(b.code || '');
+  });
+
+  const ths = [
+    ['state',      'State'],
+    ['brand',      'Brand'],
+    ['code',       'Code'],
+    ['desc',       'Description'],
+    ['free',       'Free Stock'],
+    ['stockValue', 'Stock Value (€)'],
+    ['lastSold',   'Last Sold'],
+    ['dormant',    'Dormant'],
+    ['retail',     'Retail (€)'],
+    ['discount',   'Discount %'],
+    ['clearance',  'Clearance (€)'],
+  ];
+  const arrowFor = k => k === asSortCol ? (asSortDir === 1 ? ' ▲' : ' ▼') : '';
+  const STICKY_TH = `position:sticky;top:0;z-index:10;background:var(--light);` +
+    `padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;` +
+    `border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;text-align:center;`;
+
+  document.getElementById('asTableHead').innerHTML =
+    '<tr>' + ths.map(([k, label]) =>
+      `<th onclick="asSort('${k}')" style="${STICKY_TH}` +
+      (k === 'desc'       ? 'text-align:left;'      : '') +
+      (k === 'free'       ? 'background:#e8f5e9;'   : '') +
+      (k === 'clearance'  ? 'background:#fffbea;'   : '') +
+      `">${label}${arrowFor(k)}</th>`
+    ).join('') + '</tr>';
+
+  function fmtLastSold(d) {
+    if (!d) return '<span style="color:var(--muted);font-style:italic;">Never sold</span>';
+    const dt = d instanceof Date ? d : new Date(d);
+    return dt.getDate() + ' ' + AS_MONTHS[dt.getMonth()] + ' ' + dt.getFullYear();
+  }
+
+  function fmtDormant(months) {
+    if (months == null) {
+      return '<span style="color:#6b7280;font-style:italic;">Never</span>';
+    }
+    const label = months === 0 ? '< 1 month'
+      : months + ' month' + (months === 1 ? '' : 's');
+    const style = months >= 24 ? 'color:#dc2626;font-weight:700;'
+      : months >= 6            ? 'color:#b45309;font-weight:700;'
+      :                          'color:var(--muted);';
+    return `<span style="${style}">${label}</span>`;
+  }
+
+  const TD = 'padding:5px 10px;white-space:nowrap;text-align:center;';
+
+  document.getElementById('asTableBody').innerHTML = rows.map((r, ri) => {
+    const dataIdx = asData.indexOf(r);
+
+    const dn = (r.crmName || r.desc || '').toUpperCase();
+    const stateBadge = dn.startsWith('EOL')
+      ? '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">EOL</span>'
+      : dn.startsWith('TBD')
+      ? '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;">TBD</span>'
+      : '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">Current</span>';
+
+    const stockValFmt = r.stockValue != null
+      ? '€' + r.stockValue.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '—';
+    const clearFmt = r.clearance != null
+      ? '<span style="color:#b45309;font-weight:700;">€' + r.clearance.toFixed(2) + '</span>'
+      : '—';
+
+    return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
+      <td style="${TD}padding:4px 8px;">${stateBadge}</td>
+      <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+          title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
+      <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
+      <td style="${TD}color:var(--orange);font-weight:600;">${stockValFmt}</td>
+      <td style="${TD}font-size:11px;">${fmtLastSold(r.lastSoldDate)}</td>
+      <td style="${TD}">${fmtDormant(r.dormantMonths)}</td>
+      <td style="${TD}color:var(--brand);">${r.retail != null ? '€' + r.retail.toFixed(2) : '—'}</td>
+      <td style="${TD}padding:3px 6px;">
+        <input type="number" min="0" max="99" step="0.5" value="${r.discount || 0}"
+          style="width:55px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;
+                 font-size:12px;font-weight:700;text-align:center;font-family:inherit;
+                 background:var(--white);color:#b45309;outline:none;"
+          onchange="asSetRowDiscount(${dataIdx}, this.value)"
+          onfocus="this.select()">
+      </td>
+      <td style="${TD}background:#fffbea;">${clearFmt}</td>
+    </tr>`;
+  }).join('') ||
+  `<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted);">
+     No aged stock matches this filter.
+   </td></tr>`;
+}
+
+// ── Sort ───────────────────────────────────────────────
+
+function asSort(col) {
+  if (asSortCol === col) {
+    asSortDir = -asSortDir;
+  } else {
+    asSortCol = col;
+    asSortDir = ['brand', 'code', 'desc', 'state'].includes(col) ? 1 : -1;
+  }
+  asRenderTable();
+}
+
+// ── Exclude TBD / EOL ─────────────────────────────────
+
+function asToggleExclude(type) {
+  if (type === 'tbd') { asExcludeTBD = !asExcludeTBD; }
+  else                { asExcludeEOL = !asExcludeEOL; }
+  _asRefreshExcludePills();
+  asRebuildData();
+  if (asData.length > 0) {
+    asRenderAll();
+  } else if (asLoadedBrands.size > 0) {
+    asShowNoAgedStock();
+  } else {
+    asShowPickPrompt();
+  }
+}
+
+function _asRefreshExcludePills() {
+  const tbdBtn = document.getElementById('asExcludeTBDBtn');
+  const eolBtn = document.getElementById('asExcludeEOLBtn');
+  if (tbdBtn) {
+    tbdBtn.style.background  = asExcludeTBD ? '#b45309' : 'var(--light)';
+    tbdBtn.style.color       = asExcludeTBD ? '#fff'    : 'var(--text)';
+    tbdBtn.style.borderColor = asExcludeTBD ? '#b45309' : 'var(--border)';
+  }
+  if (eolBtn) {
+    eolBtn.style.background  = asExcludeEOL ? '#dc2626' : 'var(--light)';
+    eolBtn.style.color       = asExcludeEOL ? '#fff'    : 'var(--text)';
+    eolBtn.style.borderColor = asExcludeEOL ? '#dc2626' : 'var(--border)';
+  }
+}
+
+// ── Discount ───────────────────────────────────────────
+
+function asSetRowDiscount(idx, pct) {
+  const row = asData[idx];
+  if (!row) return;
+  const p = Math.min(99, Math.max(0, parseFloat(pct) || 0));
+  row.discount  = p;
+  row.clearance = row.retail != null ? row.retail * (1 - p / 100) : null;
+  asRenderTable();
+}
+
+function asApplyGlobalDiscount() {
+  const inp = document.getElementById('asGlobalDiscountInput');
+  const pct = Math.min(99, Math.max(0, parseFloat(inp ? inp.value : '0') || 0));
+  asData.forEach(r => {
+    r.discount  = pct;
+    r.clearance = r.retail != null ? r.retail * (1 - pct / 100) : null;
+  });
+  if (asData.length) asRenderTable();
+}
+
+// ── Export to Excel ───────────────────────────────────
+
+async function asExportExcel() {
+  if (!asData.length) { showToast('No data to export.'); return; }
+
+  const rows      = asGetFilteredRows();
+  const useThumbs = !!document.getElementById('asThumbnailToggle')?.checked;
+  const dateStr   = new Date().toISOString().slice(0, 10);
+  const filename  = 'Aged_Stock_' + dateStr + '.xlsx';
+  const btn       = document.getElementById('asExportBtn');
+
+  if (btn) { btn.textContent = '⏳ Exporting…'; btn.disabled = true; btn.style.opacity = '.65'; }
+
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Peats Tools';
+    wb.created = new Date();
+
+    const ws = wb.addWorksheet('Aged Stock', {
+      views: [{ state: 'frozen', ySplit: 1 }]
+    });
+
+    const cols = [
+      ...(useThumbs ? [{ header: 'Image',           key: 'img',       width: 12 }] : []),
+      { header: 'Brand',           key: 'brand',      width: 18 },
+      { header: 'Code',            key: 'code',       width: 14 },
+      { header: 'Description',     key: 'desc',       width: 44 },
+      { header: 'Free Stock',      key: 'free',       width: 12 },
+      { header: 'Stock Value (€)', key: 'stockVal',   width: 16 },
+      { header: 'Last Sold',       key: 'lastSold',   width: 15 },
+      { header: 'Dormant',         key: 'dormant',    width: 15 },
+      { header: 'Retail (€)',      key: 'retail',     width: 13 },
+      { header: 'Discount %',      key: 'discount',   width: 12 },
+      { header: 'Clearance (€)',   key: 'clearance',  width: 15 },
+    ];
+    ws.columns = cols;
+
+    ws.getRow(1).eachCell(cell => {
+      cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+      cell.border    = { bottom: { style: 'thin', color: { argb: 'FF3A6CB5' } } };
+    });
+    ws.getRow(1).height = 24;
+
+    const IMG_PROXY = 'https://peats-img-proxy.rob-noonan.workers.dev/?ref=';
+    const imgOff = useThumbs ? 1 : 0;
+
+    for (let ri = 0; ri < rows.length; ri++) {
+      const r         = rows[ri];
+      const rowHeight = useThumbs ? 56 : 20;
+
+      const lastSoldStr = r.lastSoldDate
+        ? (r.lastSoldDate.getDate() + ' ' + AS_MONTHS[r.lastSoldDate.getMonth()] + ' ' + r.lastSoldDate.getFullYear())
+        : 'Never sold';
+      const dormantStr = r.dormantMonths != null
+        ? (r.dormantMonths + ' month' + (r.dormantMonths === 1 ? '' : 's'))
+        : 'Never sold';
+
+      const rowValues = {
+        ...(useThumbs ? { img: '' } : {}),
+        brand:     r.brand,
+        code:      r.code,
+        desc:      r.crmName || r.desc,
+        free:      r.free,
+        stockVal:  r.stockValue != null ? r.stockValue : null,
+        lastSold:  lastSoldStr,
+        dormant:   dormantStr,
+        retail:    r.retail    != null ? r.retail    : null,
+        discount:  r.discount  || 0,
+        clearance: r.clearance != null ? r.clearance : null,
+      };
+
+      const exRow = ws.addRow(rowValues);
+      exRow.height = rowHeight;
+
+      if (ri % 2 === 1) {
+        exRow.eachCell(cell => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F9FC' } };
+        });
+      }
+
+      const stockValCell  = exRow.getCell(imgOff + 5);
+      const retailCell    = exRow.getCell(imgOff + 8);
+      const clearanceCell = exRow.getCell(imgOff + 10);
+
+      if (stockValCell.value  != null) stockValCell.numFmt  = '"€"#,##0.00';
+      if (retailCell.value    != null) retailCell.numFmt    = '"€"#,##0.00';
+      if (clearanceCell.value != null) {
+        clearanceCell.numFmt = '"€"#,##0.00';
+        clearanceCell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E8' } };
+        clearanceCell.font   = { bold: true, color: { argb: 'FFB45309' } };
+      }
+
+      exRow.eachCell(cell => {
+        if (!cell.alignment) cell.alignment = { vertical: 'middle' };
+        else cell.alignment = Object.assign({ vertical: 'middle' }, cell.alignment);
+      });
+
+      if (useThumbs) {
+        try {
+          const resp = await fetch(IMG_PROXY + encodeURIComponent(r.code));
+          if (resp.ok) {
+            const blob = await resp.blob();
+            if (blob.size > 100) {
+              const buf   = await blob.arrayBuffer();
+              const isPng = (blob.type || '').includes('png');
+              const imgId = wb.addImage({ buffer: buf, extension: isPng ? 'png' : 'jpeg' });
+              ws.addImage(imgId, {
+                tl: { col: 0, row: ri + 1 },
+                br: { col: 1, row: ri + 2 },
+                editAs: 'oneCell'
+              });
+            }
+          }
+        } catch(imgErr) { /* skip image on error */ }
+      }
+    }
+
+    ws.autoFilter = {
+      from: { row: 1, column: 1 },
+      to:   { row: 1, column: cols.length }
+    };
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob   = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const a  = document.createElement('a');
+    a.href   = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+
+    showToast('✓ Exported ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' → ' + filename);
+    asOpenEmailCompose(rows.length);
+
+  } catch(err) {
+    console.error('asExportExcel:', err);
+    showToast('✗ Export failed: ' + (err.message || String(err)));
+  } finally {
+    if (btn) {
+      btn.textContent   = '⬇ Export to Excel';
+      btn.disabled      = false;
+      btn.style.opacity = '1';
+    }
+  }
+}
+
+function asOpenEmailCompose(count) {
+  const subject = encodeURIComponent('Aged Stock Clearance List');
+  const body    = encodeURIComponent(
+    'Hi,\n\n' +
+    'Please find attached our aged stock clearance list (' + count + ' line' + (count === 1 ? '' : 's') + ').\n\n' +
+    'These products have free stock with no invoiced sales in the last 12 months ' +
+    'and are available for clearance at the prices shown.\n\n' +
+    'Please let us know if you would like to discuss quantities or pricing.\n\n' +
+    'Kind regards,\nPeats\n'
+  );
+  setTimeout(() => {
+    try { window.open('mailto:?subject=' + subject + '&body=' + body, '_blank'); } catch(e) {}
+  }, 600);
+}
+
+// ── Prompt / empty-state messages ─────────────────────
+
+function asShowPickPrompt() {
+  document.getElementById('asSummaryCards').style.display  = 'none';
+  document.getElementById('asSearchWrap').style.display    = 'none';
+  document.getElementById('asTable').style.display         = 'none';
+  const btn = document.getElementById('asExportBtn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; }
+
+  const content = document.getElementById('asContent');
+  content.style.display = 'block';
+  const total  = Object.keys(state.catalog || {}).length;
+  const bcount = asBrands.length;
+  content.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;gap:14px;padding:40px;text-align:center;">
+    <div style="font-size:56px;line-height:1;">📦</div>
+    <div style="font-size:20px;font-weight:800;color:var(--text);">Select brands to find aged stock</div>
+    <div style="font-size:13px;color:var(--muted);max-width:440px;line-height:1.65;">
+      ${total.toLocaleString('en-IE')} products across ${bcount} brands in catalog.<br>
+      <em>Aged stock</em> = free stock with <strong>no invoiced sales in the last 12 months</strong>.<br>
+      Use <strong>🏷 Brands</strong> above to pick which brands to check — data is fetched on demand.
+    </div>
+  </div>`;
+}
+
+function asShowNoAgedStock() {
+  document.getElementById('asTable').style.display         = 'none';
+  document.getElementById('asSummaryCards').style.display  = 'none';
+  document.getElementById('asSearchWrap').style.display    = 'none';
+  const btn = document.getElementById('asExportBtn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; }
+  const content = document.getElementById('asContent');
+  content.style.display = 'block';
+  content.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;gap:14px;padding:40px;text-align:center;">
+    <div style="font-size:56px;line-height:1;">✅</div>
+    <div style="font-size:20px;font-weight:800;color:var(--green);">No aged stock found!</div>
+    <div style="font-size:13px;color:var(--muted);max-width:400px;line-height:1.65;">
+      All products with free stock have had invoiced sales in the last 12 months. Great result!
+    </div>
+  </div>`;
+}
+
+function asReset() {
+  asData         = [];
+  asSelBrands    = new Set();
+  asStockMap     = new Map();
+  asLoadedBrands = new Set();
+  asView         = 'all';
+  asExcludeTBD   = false;
+  asExcludeEOL   = false;
+  asSortCol      = 'stockValue';
+  asSortDir      = -1;
+
+  _asRefreshExcludePills();
+
+  const panel = document.getElementById('asBrandPanel');
+  if (panel) panel.style.display = 'none';
+  const bSearch = document.getElementById('asBrandSearch');
+  if (bSearch) bSearch.value = '';
+  const tSearch = document.getElementById('asSearch');
+  if (tSearch) tSearch.value = '';
+  const discInp = document.getElementById('asGlobalDiscountInput');
+  if (discInp) discInp.value = '0';
+
+  asUpdateBrandBtn();
+  asUpdateLoadBtn();
+  asRenderBrandList('');
+
+  document.getElementById('asSummaryCards').style.display  = 'none';
+  document.getElementById('asSearchWrap').style.display    = 'none';
+  document.getElementById('asTable').style.display         = 'none';
+  const btn = document.getElementById('asExportBtn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; btn.textContent = '⬇ Export to Excel'; }
+
+  asShowPickPrompt();
+  showToast('↺ Aged stock cleared.');
+}
+
+// ── End Aged Stock Tool ───────────────────────────────
+
+
 // ── AVSL brand grouping ────────────────────────────────────────
 const AVSL_BRANDS = new Set([
   '3INONE','ADASTRA','CHERUB','CITRONIC','DLINE','DURACELL','ENERGISER',
@@ -7685,6 +8705,7 @@ function backToHub() {
   document.getElementById('tool-webimport').style.display    = 'none';
   document.getElementById('tool-crmsettings').style.display  = 'none';
   document.getElementById('tool-stockanalysis').style.display = 'none';
+  document.getElementById('tool-agedstock').style.display     = 'none';
   document.getElementById('headerTitle').textContent = '';
   document.getElementById('headerSep').style.display = 'none';
   setHeaderClearBtn(null);
@@ -16790,7 +17811,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v81 · 17 Sep 2026 · PDF removed · open Outlook after export';
+const TOOL_BUILD = 'v82 · 17 Sep 2026 · Aged Stock tool added';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
