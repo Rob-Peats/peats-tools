@@ -1934,6 +1934,20 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </label>
     </div>
 
+    <!-- Band C / Band F column toggles -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <button id="asBandCBtn" onclick="asToggleBandCol('C')"
+        title="Show / hide Band C price column"
+        style="height:36px;padding:0 12px;border:1px solid var(--border);border-radius:7px;background:#0891b2;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap;">
+        Band C
+      </button>
+      <button id="asBandFBtn" onclick="asToggleBandCol('F')"
+        title="Show / hide Band F price column"
+        style="height:36px;padding:0 12px;border:1px solid var(--border);border-radius:7px;background:#7c3aed;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap;">
+        Band F
+      </button>
+    </div>
+
     <!-- Export button -->
     <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
       <button id="asExportBtn" onclick="asExportExcel()" disabled
@@ -7945,7 +7959,9 @@ let asStockMap     = new Map();
 let asCrmProductData = new Map(); // CRM-only SKUs: SKU → {desc, brand, cost, retail, createdDate}
 let asLoadedBrands = new Set();   // brands whose data has been fetched (cache key)
 let asFetching     = false;
-let asView         = 'all';       // 'all' | 'current' | 'tbd' | 'eol' | 'never' | 'over2yrs'
+let asView         = 'all';       // 'all' | 'never' | 'over2yrs'
+let asBandCVisible = true;       // toggle Band C column
+let asBandFVisible = true;       // toggle Band F column
 
 // ── Format helpers ────────────────────────────────────
 
@@ -8958,7 +8974,7 @@ function asRebuildData() {
     const dormantMonths = asMonthsAgo(lastSoldDate);
 
     const discount   = savedDiscounts.get(code) || 0;
-    const stockValue = cost   != null ? cost * qty : null;
+    const stockValue = (bandC ?? cost) != null ? (bandC ?? cost) * qty : null;
     // Clearance is based on Band C (trade price) when available, else Band A (retail)
     const basePrice  = bandC  != null ? bandC : retail;
     const clearance  = basePrice != null ? basePrice * (1 - discount / 100) : null;
@@ -9012,7 +9028,7 @@ function asRebuildData() {
       const dormantMonths = asMonthsAgo(lastSoldDate);
 
       const discount   = savedDiscounts.get(sku) || 0;
-      const stockValue = cost   != null ? cost * qty : null;
+      const stockValue = (crmBandC ?? cost) != null ? (crmBandC ?? cost) * qty : null;
       // Clearance from Band C when available, else Band A
       const crmBasePrice = crmBandC != null ? crmBandC : retail;
       const clearance  = crmBasePrice != null ? crmBasePrice * (1 - discount / 100) : null;
@@ -9142,7 +9158,7 @@ function asRenderSummaryCards() {
     const totalUnits  = asSlowData.reduce((a, r) => a + r.free, 0);
     cards = [
       { label: 'SLOW MOVING',    val: totalSlow.toLocaleString('en-IE'),   sub: '>8 weeks stock cover',       col: '#0891b2', view: null },
-      { label: 'FREE UNITS',     val: totalUnits.toLocaleString('en-IE'),  sub: 'units in stock',             col: '#1a3c6e', view: null },
+      { label: 'FREE STOCK',     val: totalUnits.toLocaleString('en-IE'),  sub: 'units in stock',             col: '#1a3c6e', view: null },
       { label: '>12 WKS COVER',  val: over12wks.length,                    sub: 'very slow — 3 months+',      col: '#b45309', view: null },
       { label: '>26 WKS COVER',  val: over26wks.length,                    sub: 'critical — 6 months+',       col: '#dc2626', view: null },
     ];
@@ -9150,21 +9166,13 @@ function asRenderSummaryCards() {
     // ── Aged stock cards ──
     const totalValue   = asData.reduce((a, r) => a + (r.stockValue || 0), 0);
     const totalUnits   = asData.reduce((a, r) => a + r.free, 0);
-    const tbdItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('TBD'));
-    const eolItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('EOL'));
-    const currentItems = asData.filter(r =>
-      !(r.crmName || r.desc || '').toUpperCase().startsWith('TBD') &&
-      !(r.crmName || r.desc || '').toUpperCase().startsWith('EOL')
-    );
     const neverSold  = asData.filter(r => r.lastSoldDate === null);
     const over2yrs   = asData.filter(r => r.dormantMonths != null && r.dormantMonths >= 24);
+    const hasAnyBandC = asData.some(r => r.bandC != null);
     cards = [
       { label: 'AGED SKUS',      val: asData.length.toLocaleString('en-IE'), sub: asSelBrands.size + ' brand' + (asSelBrands.size === 1 ? '' : 's') + ' selected', col: '#b45309', view: 'all' },
-      { label: 'FREE UNITS',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',                 col: '#1a3c6e', view: 'all' },
-      { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: 'at cost price',  col: '#1f6b3e', view: 'all' },
-      { label: 'CURRENT',        val: currentItems.length,                   sub: 'not TBD or EOL',                 col: '#0891b2', view: 'current' },
-      { label: 'TBD',            val: tbdItems.length,                       sub: 'going end-of-line',              col: '#b45309', view: 'tbd' },
-      { label: 'END OF LINE',    val: eolItems.length,                       sub: 'EOL — clear first',              col: '#dc2626', view: 'eol' },
+      { label: 'FREE STOCK',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',                 col: '#1a3c6e', view: 'all' },
+      { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: hasAnyBandC ? 'at Band C price' : 'at cost price',  col: '#1f6b3e', view: 'all' },
       { label: 'NEVER SOLD',     val: neverSold.length,                      sub: 'no sales history',               col: '#6b7280', view: 'never' },
       { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: 'most urgent to clear',           col: '#7c3aed', view: 'over2yrs' },
     ];
@@ -9209,9 +9217,6 @@ function asGetFilteredRows() {
   let rows = asData.filter(r => {
     const dn = (r.crmName || r.desc || '').toUpperCase();
     switch(asView) {
-      case 'current':  return !dn.startsWith('TBD') && !dn.startsWith('EOL');
-      case 'tbd':      return dn.startsWith('TBD');
-      case 'eol':      return dn.startsWith('EOL');
       case 'never':    return r.lastSoldDate === null;
       case 'over2yrs': return r.dormantMonths != null && r.dormantMonths >= 24;
       default:         return true;
@@ -9274,9 +9279,8 @@ function asRenderTable() {
     ['lastSold',    'Last Sold'],
     ['dormant',     'Dormant'],
     ['createdDate', 'Added to CRM'],
-    ['retail',      'Band A (€)'],
-    ['bandC',       'Band C (€)'],
-    ['bandF',       'Band F (€)'],
+    ...(asBandCVisible ? [['bandC',  'Band C (€)']] : []),
+    ...(asBandFVisible ? [['bandF',  'Band F (€)']] : []),
     ['discount',    'Discount %'],
     ['clearance',   'Clearance (€)'],
   ];
@@ -9357,9 +9361,8 @@ function asRenderTable() {
       <td style="${TD}font-size:11px;">${fmtLastSold(r.lastSoldDate)}</td>
       <td style="${TD}">${fmtDormant(r.dormantMonths)}</td>
       <td style="${TD}font-size:11px;">${fmtCreated(r.createdDate)}</td>
-      <td style="${TD}color:var(--brand);">${r.retail != null ? '€' + r.retail.toFixed(2) : '—'}</td>
-      <td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>
-      <td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>
+      ${asBandCVisible ? `<td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>` : ''}
+      ${asBandFVisible ? `<td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>` : ''}
       <td style="${TD}padding:3px 6px;">
         <input type="number" min="0" max="99" step="0.5" value="${r.discount || 0}"
           style="width:55px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;
@@ -9371,7 +9374,7 @@ function asRenderTable() {
       <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="14" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="${9 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0)}" style="padding:30px;text-align:center;color:var(--muted);">
      No aged stock matches this filter.
    </td></tr>`;
 }
@@ -9409,9 +9412,8 @@ function asRenderSlowTable() {
     <th style="${SLOW_TH}color:var(--muted);">Avg/Mo</th>
     <th style="${SLOW_TH}color:#0891b2;">Weeks Cover</th>
     <th style="${SLOW_TH}color:var(--muted);">Added to CRM</th>
-    <th style="${SLOW_TH}color:var(--brand);">Band A (€)</th>
-    <th style="${SLOW_TH}color:#0891b2;">Band C (€)</th>
-    <th style="${SLOW_TH}color:#7c3aed;">Band F (€)</th>
+    ${asBandCVisible ? `<th style="${SLOW_TH}color:#0891b2;">Band C (€)</th>` : ''}
+    ${asBandFVisible ? `<th style="${SLOW_TH}color:#7c3aed;">Band F (€)</th>` : ''}
   </tr>`;
 
   document.getElementById('asTableBody').innerHTML = rows.map((r, ri) => {
@@ -9433,9 +9435,8 @@ function asRenderSlowTable() {
       <td style="${TD}color:var(--muted);">${r.avgMonthly.toFixed(1)}</td>
       <td style="${TD}">${fmtWks(r.weeksOfCoverage)}</td>
       <td style="${TD}font-size:11px;">${slowCreatedFmt}</td>
-      <td style="${TD}color:var(--brand);">${r.retail != null ? '€' + r.retail.toFixed(2) : '—'}</td>
-      <td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>
-      <td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>
+      ${asBandCVisible ? `<td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>` : ''}
+      ${asBandFVisible ? `<td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>` : ''}
     </tr>`;
   }).join('') ||
   `<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted);">
@@ -9456,6 +9457,24 @@ function asSort(col) {
 }
 
 // ── Exclude TBD / EOL ─────────────────────────────────
+
+// ── Band C / Band F column toggles ──────────────
+
+function asToggleBandCol(col) {
+  if (col === 'C') { asBandCVisible = !asBandCVisible; }
+  if (col === 'F') { asBandFVisible = !asBandFVisible; }
+  const btnC = document.getElementById('asBandCBtn');
+  const btnF = document.getElementById('asBandFBtn');
+  if (btnC) {
+    btnC.style.background = asBandCVisible ? '#0891b2' : 'var(--light)';
+    btnC.style.color      = asBandCVisible ? '#fff'    : 'var(--muted)';
+  }
+  if (btnF) {
+    btnF.style.background = asBandFVisible ? '#7c3aed' : 'var(--light)';
+    btnF.style.color      = asBandFVisible ? '#fff'    : 'var(--muted)';
+  }
+  if (asData.length > 0 || asSlowData.length > 0) asRenderTable();
+}
 
 function asToggleExclude(type) {
   if (type === 'new') { asExcludeNew = !asExcludeNew; }
@@ -9589,7 +9608,6 @@ async function asExportExcel() {
       { header: 'Stock Value (€)', key: 'stockVal',   width: 16 },
       { header: 'Last Sold',       key: 'lastSold',   width: 15 },
       { header: 'Dormant',         key: 'dormant',    width: 15 },
-      { header: 'Band A (€)',       key: 'retail',     width: 13 },
       { header: 'Band C (€)',       key: 'bandC',      width: 13 },
       { header: 'Band F (€)',       key: 'bandF',      width: 13 },
       { header: 'Discount %',      key: 'discount',   width: 12 },
@@ -9628,7 +9646,6 @@ async function asExportExcel() {
         stockVal:  r.stockValue != null ? r.stockValue : null,
         lastSold:  lastSoldStr,
         dormant:   dormantStr,
-        retail:    r.retail != null ? r.retail : null,
         bandC:     r.bandC  != null ? r.bandC  : null,
         bandF:     r.bandF  != null ? r.bandF  : null,
         discount:  r.discount  || 0,
@@ -19100,7 +19117,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v111 · 17 Sep 2026 · Band pricing hardcoded to ExchequerSpecialPricebands';
+const TOOL_BUILD = 'v112 · 17 Sep 2026 · Drop Band A · Stock Value=Band C×qty · FREE STOCK · Band C/F toggles';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
