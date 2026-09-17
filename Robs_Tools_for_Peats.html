@@ -1858,6 +1858,19 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   <!-- ── Toolbar ── -->
   <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
 
+    <!-- Aged / Slow Moving tab switcher — in toolbar -->
+    <div style="display:flex;align-items:stretch;gap:0;height:40px;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0;">
+      <button id="asTabAged" onclick="asSetMainTab('aged')"
+        style="padding:0 14px;border:none;background:#1a3c6e;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .15s;white-space:nowrap;">
+        📦 Aged Stock
+      </button>
+      <button id="asTabSlow" onclick="asSetMainTab('slow')"
+        style="padding:0 14px;border:none;border-left:1px solid var(--border);background:var(--light);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .15s;white-space:nowrap;">
+        ⏱ Slow Moving
+      </button>
+    </div>
+    <div style="width:1px;height:28px;background:var(--border);margin:0 4px;align-self:center;flex-shrink:0;"></div>
+
     <!-- Brand filter dropdown -->
     <div class="brand-filter-wrap" id="asBrandWrap">
       <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)">
@@ -1892,13 +1905,13 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- All SKUs / Current Pricelist toggle -->
+    <!-- All / Catalog Only toggle switch -->
     <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <button id="asCrmModeBtn" onclick="asToggleCrmMode()"
-        title="Also query the CRM to find stocked SKUs not listed in the catalog (slower)"
-        style="height:40px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;line-height:1.3;">
-        ☰ All SKUs<br>· Pricelist
-      </button>
+      <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
+        style="height:36px;display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;user-select:none;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-family:inherit;transition:all .15s;">
+        <span id="asCrmToggleAll" style="padding:0 12px;height:100%;display:flex;align-items:center;background:#7c3aed;color:#fff;transition:all .15s;">All</span>
+        <span id="asCrmToggleCat" style="padding:0 12px;height:100%;display:flex;align-items:center;background:var(--light);color:var(--muted);transition:all .15s;">Catalog Only</span>
+      </div>
     </div>
 
     <!-- Bulk discount pill (amber border) -->
@@ -1942,18 +1955,6 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     </div>
 
   </div><!-- /toolbar -->
-
-  <!-- ── Aged / Slow Moving tab bar (hidden until data loaded) ── -->
-  <div id="asTabBar" style="display:none;flex-shrink:0;background:var(--white);border-bottom:2px solid var(--border);padding:0 16px;gap:0;align-items:flex-end;">
-    <button id="asTabAged" onclick="asSetMainTab('aged')"
-      style="padding:10px 20px;border:none;border-bottom:3px solid var(--brand);background:transparent;color:var(--brand);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.02em;margin-bottom:-2px;">
-      📦 Aged Stock
-    </button>
-    <button id="asTabSlow" onclick="asSetMainTab('slow')"
-      style="padding:10px 20px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.02em;margin-bottom:-2px;">
-      🐢 Slow Moving
-    </button>
-  </div>
 
   <!-- ── Summary cards (hidden until data loaded) ── -->
   <div id="asSummaryCards" style="display:none;flex-shrink:0;padding:14px 20px;gap:12px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
@@ -7922,7 +7923,7 @@ let asBrands       = [];          // all available brand names from catalog
 let asSelBrands    = new Set();   // brands the user has selected
 let asExcludeNew   = false;
 let asNewMonths    = 6;        // products added within this many months are treated as "new"
-let asCrmMode      = false;    // if true: also query CRM by CategoryId to find SKUs not in catalog
+let asCrmMode      = true;     // default All: also query CRM by CategoryId to find SKUs not in catalog
 // SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, sales3Mo, hasSales12Data, lastSoldDate, createdDate, bands}
 let asStockMap     = new Map();
 let asCrmProductData = new Map(); // CRM-only SKUs: SKU → {desc, brand, cost, retail, createdDate}
@@ -8822,11 +8823,11 @@ async function asLoadForSelectedBrands() {
     const BANDS_BATCH = 15;
     const bandMap     = new Map();  // SKU → { A, B, C, D, E, F }  (decimal prices)
     try {
-      // Store rows into bandMap keyed by fkField
-      const processBandRows = (rows, fkField) => {
+      // Store rows into bandMap: Code = SKU, OperatingCompanyCode = band letter (A–F)
+      const processBandRows = (rows) => {
         rows.forEach(row => {
-          const sku   = row[fkField];
-          const band  = (row.Type || '').toUpperCase().trim();
+          const sku   = row.Code;
+          const band  = (row.OperatingCompanyCode || '').toUpperCase().trim();
           const dec   = row.SellDecimals ?? 2;
           const price = row.SellingPrice != null ? row.SellingPrice / Math.pow(10, dec) : null;
           if (!sku || !band || price == null) return;
@@ -8835,76 +8836,27 @@ async function asLoadForSelectedBrands() {
         });
       };
 
-      // ── DIAGNOSTIC: fetch 3 unfiltered rows to reveal the entity's real field names ──
-      try {
-        const diagResp = await crmFetch(
-          CRM_ODATA_BASE + '/PriceLists?$top=3',
-          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
-        );
-        if (diagResp.ok) {
-          const diagData = await diagResp.json();
-          const sample = (diagData.value || []);
-          console.log('[PriceLists STRUCTURE SAMPLE — all fields on first row]', sample[0] || 'EMPTY — entity may need navigation or a different name');
-          console.log('[PriceLists STRUCTURE SAMPLE — all 3 rows]', sample);
-          // Log just the field names for easy reading
-          if (sample[0]) console.log('[PriceLists FIELD NAMES]', Object.keys(sample[0]));
-        } else {
-          console.warn('[PriceLists DIAGNOSTIC] HTTP', diagResp.status, diagResp.statusText);
-        }
-      } catch(e) { console.warn('[PriceLists DIAGNOSTIC] Error:', e); }
-
-      // Also probe alternative entity names that Prospect365 sometimes uses
-      for (const altEntity of ['PriceListItems', 'ProductPriceBands', 'PriceBands', 'ProductPrices']) {
-        try {
-          const altResp = await crmFetch(
-            CRM_ODATA_BASE + '/' + altEntity + '?$top=2',
-            { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
-          );
-          if (altResp.ok) {
-            const altData = await altResp.json();
-            const altSample = (altData.value || []);
-            if (altSample.length > 0) {
-              console.log('[' + altEntity + ' EXISTS — fields]', Object.keys(altSample[0]));
-              console.log('[' + altEntity + ' SAMPLE]', altSample);
-            } else {
-              console.log('[' + altEntity + '] Reachable but 0 rows.');
-            }
-          }
-          // 404 / 400 = entity doesn't exist, silently skip
-        } catch(e) { /* entity not present */ }
-      }
-      // ── END DIAGNOSTIC ──
-
+        // Filter by Code (= our SKU), band letter is in OperatingCompanyCode (A/B/C/D/E/F)
       for (let i = 0; i < skusToFetch.length; i += BANDS_BATCH) {
         const batch = skusToFetch.slice(i, i + BANDS_BATCH);
-
-        // Pass 1: filter by Code (the product code string we use as SKU)
-        const skuFbyCode = '(' + batch.map(s => `Code eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+        const skuFilter = '(' + batch.map(s => `Code eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
         try {
-          const respCode = await crmFetch(
-            CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyCode) +
-            '&$select=Code,Type,SellingPrice,SellDecimals',
+          const resp = await crmFetch(
+            CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFilter) +
+            '&$select=Code,OperatingCompanyCode,SellingPrice,SellDecimals',
             { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
           );
-          if (respCode.ok) {
-            const d = await respCode.json();
-            if (i === 0) console.log('[PriceLists Code batch 0]', (d.value || []).slice(0, 5));
-            processBandRows(d.value || [], 'Code');
-          }
-        } catch(e) { /* best effort */ }
-
-        // Pass 2: also try ProductItemId in case the CRM links by that field
-        const skuFbyId = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
-        try {
-          const respId = await crmFetch(
-            CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyId) +
-            '&$select=ProductItemId,Type,SellingPrice,SellDecimals',
-            { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
-          );
-          if (respId.ok) {
-            const d = await respId.json();
-            if (i === 0) console.log('[PriceLists ProductItemId batch 0]', (d.value || []).slice(0, 5));
-            processBandRows(d.value || [], 'ProductItemId');
+          if (!resp.ok) continue;
+          let nextUrl = null;
+          const d = await resp.json();
+          processBandRows(d.value || []);
+          nextUrl = d['@odata.nextLink'] || null;
+          while (nextUrl) {
+            const r2 = await crmFetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+            if (!r2.ok) break;
+            const d2 = await r2.json();
+            processBandRows(d2.value || []);
+            nextUrl = d2['@odata.nextLink'] || null;
           }
         } catch(e) { /* best effort */ }
       }
@@ -9143,14 +9095,14 @@ function asSetMainTab(tab) {
   const agedBtn = document.getElementById('asTabAged');
   const slowBtn = document.getElementById('asTabSlow');
   if (agedBtn) {
-    agedBtn.style.borderBottomColor = tab === 'aged' ? 'var(--brand)' : 'transparent';
-    agedBtn.style.color             = tab === 'aged' ? 'var(--brand)' : 'var(--muted)';
-    agedBtn.style.fontWeight        = tab === 'aged' ? '800' : '700';
+    agedBtn.style.background = tab === 'aged' ? '#1a3c6e' : 'var(--light)';
+    agedBtn.style.color      = tab === 'aged' ? '#fff'    : 'var(--muted)';
+    agedBtn.style.fontWeight = tab === 'aged' ? '800' : '700';
   }
   if (slowBtn) {
-    slowBtn.style.borderBottomColor = tab === 'slow' ? '#0891b2' : 'transparent';
-    slowBtn.style.color             = tab === 'slow' ? '#0891b2' : 'var(--muted)';
-    slowBtn.style.fontWeight        = tab === 'slow' ? '800' : '700';
+    slowBtn.style.background = tab === 'slow' ? '#0891b2' : 'var(--light)';
+    slowBtn.style.color      = tab === 'slow' ? '#fff'    : 'var(--muted)';
+    slowBtn.style.fontWeight = tab === 'slow' ? '800' : '700';
   }
   // Update export button label
   const exportBtn = document.getElementById('asExportBtn');
@@ -9222,10 +9174,8 @@ function asRenderSummaryCards() {
 }
 
 function asRenderAll() {
-  // Show/hide tab bar and update active tab styling
-  const tabBar = document.getElementById('asTabBar');
-  if (tabBar) tabBar.style.display = 'flex';
-  asSetMainTab(asMainTab);  // refreshes tab button styles
+  // Update toolbar tab styling
+  asSetMainTab(asMainTab);
 
   asRenderSummaryCards();
   asRenderTable();
@@ -9282,8 +9232,9 @@ function asRenderTable() {
       case 'free':       return r.free       ?? -Infinity;
       case 'stockValue': return r.stockValue  ?? -Infinity;
       case 'lastSold':   return r.lastSoldDate ? r.lastSoldDate.getTime() : -Infinity;
-      case 'dormant':    return r.dormantMonths ?? Infinity;
-      case 'retail':     return r.retail    ?? -Infinity;
+      case 'dormant':     return r.dormantMonths ?? Infinity;
+      case 'createdDate': return r.createdDate ? r.createdDate.getTime() : -Infinity;
+      case 'retail':      return r.retail    ?? -Infinity;
       case 'bandC':      return r.bandC     ?? -Infinity;
       case 'bandF':      return r.bandF     ?? -Infinity;
       case 'discount':   return r.discount  || 0;
@@ -9299,19 +9250,20 @@ function asRenderTable() {
   });
 
   const ths = [
-    ['state',      'State'],
-    ['brand',      'Brand'],
-    ['code',       'Code'],
-    ['desc',       'Description'],
-    ['free',       'Free Stock'],
-    ['stockValue', 'Stock Value (€)'],
-    ['lastSold',   'Last Sold'],
-    ['dormant',    'Dormant'],
-    ['retail',     'Band A (€)'],
-    ['bandC',      'Band C (€)'],
-    ['bandF',      'Band F (€)'],
-    ['discount',   'Discount %'],
-    ['clearance',  'Clearance (€)'],
+    ['state',       'State'],
+    ['brand',       'Brand'],
+    ['code',        'Code'],
+    ['desc',        'Description'],
+    ['free',        'Free Stock'],
+    ['stockValue',  'Stock Value (€)'],
+    ['lastSold',    'Last Sold'],
+    ['dormant',     'Dormant'],
+    ['createdDate', 'Added to CRM'],
+    ['retail',      'Band A (€)'],
+    ['bandC',       'Band C (€)'],
+    ['bandF',       'Band F (€)'],
+    ['discount',    'Discount %'],
+    ['clearance',   'Clearance (€)'],
   ];
   const arrowFor = k => k === asSortCol ? (asSortDir === 1 ? ' ▲' : ' ▼') : '';
   const STICKY_TH = `position:sticky;top:0;z-index:10;background:var(--light);` +
@@ -9331,6 +9283,17 @@ function asRenderTable() {
     if (!d) return '<span style="color:var(--muted);font-style:italic;">Never sold</span>';
     const dt = d instanceof Date ? d : new Date(d);
     return dt.getDate() + ' ' + AS_MONTHS[dt.getMonth()] + ' ' + dt.getFullYear();
+  }
+
+  function fmtCreated(d) {
+    if (!d) return '<span style="color:var(--muted);font-style:italic;">—</span>';
+    const dt = d instanceof Date ? d : new Date(d);
+    const now = new Date();
+    const months = (now.getFullYear() - dt.getFullYear()) * 12 + (now.getMonth() - dt.getMonth());
+    const ageStyle = months <= 6  ? 'color:#0891b2;font-weight:700;'
+                   : months <= 18 ? 'color:var(--text);'
+                   :                'color:var(--muted);';
+    return `<span style="${ageStyle}">${dt.getDate()} ${AS_MONTHS[dt.getMonth()]} ${dt.getFullYear()}</span>`;
   }
 
   function fmtDormant(months) {
@@ -9378,6 +9341,7 @@ function asRenderTable() {
       <td style="${TD}color:var(--orange);font-weight:600;">${stockValFmt}</td>
       <td style="${TD}font-size:11px;">${fmtLastSold(r.lastSoldDate)}</td>
       <td style="${TD}">${fmtDormant(r.dormantMonths)}</td>
+      <td style="${TD}font-size:11px;">${fmtCreated(r.createdDate)}</td>
       <td style="${TD}color:var(--brand);">${r.retail != null ? '€' + r.retail.toFixed(2) : '—'}</td>
       <td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>
       <td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>
@@ -9392,7 +9356,7 @@ function asRenderTable() {
       <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="13" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="14" style="padding:30px;text-align:center;color:var(--muted);">
      No aged stock matches this filter.
    </td></tr>`;
 }
@@ -9484,18 +9448,22 @@ function asToggleExclude(type) {
 function _asRefreshExcludePills() {
   const newBtn  = document.getElementById('asExcludeNewBtn');
   const newPill = document.getElementById('asExcludeNewPill');
-  const crmBtn  = document.getElementById('asCrmModeBtn');
+  const crmAll  = document.getElementById('asCrmToggleAll');
+  const crmCat  = document.getElementById('asCrmToggleCat');
   if (newBtn) {
-    newBtn.style.color   = asExcludeNew ? '#fff'    : 'var(--text)';
+    newBtn.style.color = asExcludeNew ? '#fff' : 'var(--text)';
   }
   if (newPill) {
     newPill.style.background  = asExcludeNew ? '#0891b2' : 'var(--light)';
     newPill.style.borderColor = asExcludeNew ? '#0891b2' : 'var(--border)';
   }
-  if (crmBtn) {
-    crmBtn.style.background  = asCrmMode ? '#7c3aed' : 'var(--light)';
-    crmBtn.style.color       = asCrmMode ? '#fff'    : 'var(--text)';
-    crmBtn.style.borderColor = asCrmMode ? '#7c3aed' : 'var(--border)';
+  if (crmAll) {
+    crmAll.style.background = asCrmMode ? '#7c3aed' : 'var(--light)';
+    crmAll.style.color      = asCrmMode ? '#fff'    : 'var(--muted)';
+  }
+  if (crmCat) {
+    crmCat.style.background = asCrmMode ? 'var(--light)' : '#1a3c6e';
+    crmCat.style.color      = asCrmMode ? 'var(--muted)' : '#fff';
   }
 }
 
@@ -9520,13 +9488,13 @@ function asToggleCrmMode() {
         } catch(e) {}
         return b + ' (no cache)';
       });
-      showToast('☰ All SKUs + Pricelist on — ' + ages.join(', ') + '. Reload to apply.');
+      showToast('All SKUs mode — ' + ages.join(', ') + '. Reload to apply.');
     } else {
-      showToast('☰ All SKUs + Pricelist off — reload brands.');
+      showToast('Catalog Only mode — reload brands to apply.');
     }
     asUpdateLoadBtn();
   } else {
-    showToast(asCrmMode ? '☰ All SKUs + Pricelist on — select brands and load.' : '☰ All SKUs + Pricelist off.');
+    showToast(asCrmMode ? 'All SKUs mode — select brands and load.' : 'Catalog Only mode — select brands and load.');
   }
 }
 
@@ -9788,7 +9756,7 @@ function asReset() {
   asSlowData       = [];
   asMainTab        = 'aged';
   asView           = 'all';
-  asCrmMode        = false;
+  asCrmMode        = true;   // default: All SKUs mode
   asSortCol        = 'stockValue';
   asSortDir        = -1;
 
@@ -9807,8 +9775,6 @@ function asReset() {
   asUpdateLoadBtn();
   asRenderBrandList('');
 
-  const tabBar = document.getElementById('asTabBar');
-  if (tabBar) tabBar.style.display = 'none';
   document.getElementById('asSummaryCards').style.display  = 'none';
   document.getElementById('asSearchWrap').style.display    = 'none';
   document.getElementById('asTable').style.display         = 'none';
@@ -19123,7 +19089,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v104 · 17 Sep 2026 · PriceLists diagnostic: entity structure + alt entity probe';
+const TOOL_BUILD = 'v105 · 17 Sep 2026 · Band fix (OperatingCompanyCode), All/Catalog toggle, tabs in toolbar, Created date column';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
