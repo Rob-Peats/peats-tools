@@ -12440,6 +12440,103 @@ function setJJsBranch(branchLabel) {
   if (titleEl) titleEl.innerHTML = escHtml('JJs Appliances — ' + branch.label + ' [' + branch.code + '] — PO ' + (convState.parsedData.orderNo || '(unknown)')) + ' — €' + _pdTotalJJs.toFixed(2);
 }
 
+function parseJJsAppliancesPage(items) {
+  // Dynamically detect column X positions from the table header row.
+  // JJs PDFs: Stock Code | Description | Qty. | Price | Total
+  // (Column positions differ from Expert Stores PDFs — cannot reuse hardcoded bounds.)
+  var rows = groupExpertStoresByRow(items, 3);
+
+  var headerRowY = null;
+  var skuX = null, descX = null, qtyX = null, priceX = null, totalX = null;
+
+  for (var ri = 0; ri < rows.length; ri++) {
+    var row = rows[ri];
+    var hasStockCode = row.items.some(function(it){ return /^Stock\s*Code$/i.test((it.text||'').trim()); });
+    var hasQty       = row.items.some(function(it){ return /^Qty\.?$/i.test((it.text||'').trim()); });
+    if (hasStockCode && hasQty) {
+      headerRowY = row.y;
+      row.items.forEach(function(it) {
+        var t = (it.text||'').trim();
+        if      (/^Stock\s*Code$/i.test(t)) skuX   = it.x;
+        else if (/^Descr/i.test(t))         descX  = it.x;
+        else if (/^Qty\.?$/i.test(t))       qtyX   = it.x;
+        else if (/^Price$/i.test(t))        priceX = it.x;
+        else if (/^Total$/i.test(t))        totalX = it.x;
+      });
+      break;
+    }
+  }
+
+  // Fall back to Expert Stores parser if we can't detect headers
+  if (headerRowY === null || skuX === null || qtyX === null) {
+    return parseExpertStoresPage(items);
+  }
+
+  // Build sorted column list; each column owns from its X to the next column's X
+  var cols = [
+    { name: 'sku',   x: skuX   },
+    { name: 'desc',  x: descX  !== null ? descX  : skuX + 80 },
+    { name: 'qty',   x: qtyX   },
+    { name: 'price', x: priceX !== null ? priceX : qtyX + 30 },
+    { name: 'total', x: totalX !== null ? totalX : qtyX + 70 }
+  ].sort(function(a, b){ return a.x - b.x; });
+
+  function getCol(x) {
+    // Walk right-to-left; assign to the rightmost column whose start is ≤ x + 5
+    for (var ci = cols.length - 1; ci >= 0; ci--) {
+      if (x >= cols[ci].x - 5) return cols[ci].name;
+    }
+    return cols[0].name;
+  }
+
+  var products = [];
+  var lastProduct = null;
+
+  rows.forEach(function(row) {
+    // Skip the header row and everything above it (higher Y = higher on page in PDF.js)
+    if (row.y >= headerRowY) return;
+
+    row.items.sort(function(a, b){ return a.x - b.x; });
+
+    var skuParts = [], descParts = [];
+    var qtyVal = null, priceVal = null, totalVal = null;
+
+    row.items.forEach(function(it) {
+      var s = (it.text || it.str || '').trim();
+      if (!s) return;
+      var col = getCol(it.x);
+      var n   = parseFloat(s.replace(/,/g, ''));
+
+      if      (col === 'sku')   skuParts.push(s);
+      else if (col === 'desc')  descParts.push(s);
+      else if (col === 'qty')   { if (!isNaN(n)) qtyVal   = n; }
+      else if (col === 'price') { if (!isNaN(n)) priceVal = n; }
+      else if (col === 'total') { if (!isNaN(n)) totalVal = n; }
+    });
+
+    if (qtyVal !== null && priceVal !== null) {
+      var sku  = skuParts.join('').trim();
+      var desc = descParts.join(' ').trim();
+      if (sku) {
+        lastProduct = {
+          sku:         sku,
+          description: desc,
+          qty:         Math.round(qtyVal),
+          price:       priceVal,
+          totalCost:   totalVal !== null ? totalVal : Math.round(priceVal * Math.round(qtyVal) * 100) / 100
+        };
+        products.push(lastProduct);
+      }
+    } else if (lastProduct && (skuParts.length > 0 || descParts.length > 0)) {
+      // Continuation / overflow row
+      if (skuParts.length  > 0) lastProduct.sku         += skuParts.join('').trim();
+      if (descParts.length > 0) lastProduct.description  = (lastProduct.description + ' ' + descParts.join(' ').trim()).trim();
+    }
+  });
+
+  return products;
+}
+
 async function parseJJsOrder(arrayBuffer, fileName) {
   if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -12473,8 +12570,8 @@ async function parseJJsOrder(arrayBuffer, fileName) {
       }
     }
 
-    // Reuse the Expert Stores page parser — same Peats Expert PDF format
-    var pageProducts = parseExpertStoresPage(items);
+    // Use the JJs-specific parser — detects column positions from the PDF header row
+    var pageProducts = parseJJsAppliancesPage(items);
     allProducts.push.apply(allProducts, pageProducts);
   }
 
@@ -18190,7 +18287,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v94 · 17 Sep 2026 · Probe: SalesLedgerId FK fix + Step 4 Activity/Notes entity sweep';
+const TOOL_BUILD = 'v95 · 17 Sep 2026 · JJs parser: dynamic column detection; Probe: SalesLedgerId FK + Activity sweep';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
