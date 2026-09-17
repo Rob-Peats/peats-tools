@@ -1026,6 +1026,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
               style="background:#0e7490;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🖼 Probe Product Images</button>
             <button onclick="crmProbeAgedStockFields()" id="crmAgedStockProbeBtn"
               style="background:#92400e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔎 Probe Aged Stock Fields</button>
+            <button onclick="crmProbePriceBands()" id="crmPriceBandProbeBtn"
+              style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">💷 Probe Price Bands</button>
           </div>
           <div id="crmApiOutput" style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:var(--text);white-space:pre-wrap;min-height:80px;max-height:400px;overflow-y:auto;line-height:1.6">
             <span style="color:var(--muted)">Output will appear here…</span>
@@ -1046,6 +1048,10 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
               onkeydown="if(event.key==='Enter')crmLookupSku()">
             <button onclick="crmLookupSku()" id="crmSkuLookupBtn"
               style="background:#92400e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🔍 Lookup SKU</button>
+            <button onclick="crmProbePriceBandsForSku()" id="crmPriceBandSkuBtn"
+              style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">💷 Price Bands for SKU</button>
+            <button onclick="asClearCrmCache()"
+              style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🗑 Clear CRM Cache</button>
           </div>
         </div>
 
@@ -7977,39 +7983,63 @@ async function asLoadForSelectedBrands() {
     .map(([code]) => code);
 
   // ── Step 0: CRM-first mode — query by CategoryId to find extra SKUs ──────
+  const CRM_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
   if (asCrmMode) {
     const pat0 = getCrmPat();
     if (pat0) {
       try {
         const crmSkuSet = new Set(skusToFetch);
         for (const brand of brandsToFetch) {
-          const catId = brand.toUpperCase();
-          let nextUrl = CRM_ODATA_BASE + '/ProductItems?$filter=' +
-            encodeURIComponent(`CategoryId eq '${catId.replace(/'/g,"''")}'`) +
-            '&$select=ProductItemId,Description,CategoryId,DecimalCostPrice,DecimalSellingPrice,DecimalTotalAvailable,Obsolete,Created';
-          while (nextUrl) {
-            const r0 = await fetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat0, 'Accept': 'application/json' } });
-            if (!r0.ok) break;
-            const d0 = await r0.json();
-            (d0.value || []).forEach(item => {
-              const sku = item.ProductItemId;
-              if (!sku) return;
-              // Store CRM data for ALL SKUs from CRM (for reference)
-              asCrmProductData.set(sku, {
-                desc:    item.Description || sku,
-                brand:   brand,
-                cost:    item.DecimalCostPrice   != null ? Number(item.DecimalCostPrice)   : null,
-                retail:  item.DecimalSellingPrice != null ? Number(item.DecimalSellingPrice) : null,
-                createdDate: item.Created ? new Date(item.Created) : null,
-              });
-              // Add to fetch list if not already from catalog
-              if (!crmSkuSet.has(sku)) {
-                crmSkuSet.add(sku);
-                skusToFetch.push(sku);
+          const catId    = brand.toUpperCase();
+          const cacheKey = 'peats_crm_cache_' + catId;
+          let brandProducts = null;
+
+          // ── Check localStorage cache ──
+          try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && parsed.fetchedAt && (Date.now() - parsed.fetchedAt) < CRM_CACHE_TTL_MS) {
+                brandProducts = parsed.products;
               }
-            });
-            nextUrl = d0['@odata.nextLink'] || null;
+            }
+          } catch(e) { /* cache miss */ }
+
+          // ── Fetch from CRM if no valid cache ──
+          if (!brandProducts) {
+            brandProducts = [];
+            let nextUrl = CRM_ODATA_BASE + '/ProductItems?$filter=' +
+              encodeURIComponent(`CategoryId eq '${catId.replace(/'/g,"''")}'`) +
+              '&$select=ProductItemId,Description,CategoryId,DecimalCostPrice,DecimalSellingPrice,DecimalTotalAvailable,Obsolete,Created';
+            while (nextUrl) {
+              const r0 = await fetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat0, 'Accept': 'application/json' } });
+              if (!r0.ok) break;
+              const d0 = await r0.json();
+              (d0.value || []).forEach(item => { if (item.ProductItemId) brandProducts.push(item); });
+              nextUrl = d0['@odata.nextLink'] || null;
+            }
+            // ── Write to cache ──
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify({ fetchedAt: Date.now(), products: brandProducts }));
+            } catch(e) { /* storage full / private mode */ }
           }
+
+          // ── Merge into asCrmProductData and skusToFetch ──
+          brandProducts.forEach(item => {
+            const sku = item.ProductItemId;
+            if (!sku) return;
+            asCrmProductData.set(sku, {
+              desc:        item.Description || sku,
+              brand:       brand,
+              cost:        item.DecimalCostPrice   != null ? Number(item.DecimalCostPrice)   : null,
+              retail:      item.DecimalSellingPrice != null ? Number(item.DecimalSellingPrice) : null,
+              createdDate: item.Created ? new Date(item.Created) : null,
+            });
+            if (!crmSkuSet.has(sku)) {
+              crmSkuSet.add(sku);
+              skusToFetch.push(sku);
+            }
+          });
         }
       } catch(e0) { /* CRM mode best-effort */ }
     }
@@ -8415,7 +8445,7 @@ function asRenderTable() {
     ['stockValue', 'Stock Value (€)'],
     ['lastSold',   'Last Sold'],
     ['dormant',    'Dormant'],
-    ['retail',     'Retail (€)'],
+    ['retail',     'Trade (€)'],
     ['discount',   'Discount %'],
     ['clearance',  'Clearance (€)'],
   ];
@@ -8560,19 +8590,45 @@ function _asRefreshExcludePills() {
 function asToggleCrmMode() {
   asCrmMode = !asCrmMode;
   _asRefreshExcludePills();
-  // Clear cache so next load re-fetches including CRM query
+  // Clear in-memory state so next load re-fetches
   asCrmProductData = new Map();
   asStockMap       = new Map();
   asLoadedBrands   = new Set();
   asData           = [];
-  // If brands are already selected, trigger a reload
   if (asSelBrands.size > 0) {
-    showToast(asCrmMode ? '🔗 CRM Mode on — reload brands to fetch off-catalog SKUs.' : '🔗 CRM Mode off — reload brands.');
-    // Reset loaded state and show load button
+    if (asCrmMode) {
+      // Show cache age for the selected brands
+      const ages = [...asSelBrands].map(b => {
+        try {
+          const c = JSON.parse(localStorage.getItem('peats_crm_cache_' + b.toUpperCase()) || 'null');
+          if (c && c.fetchedAt) {
+            const days = Math.floor((Date.now() - c.fetchedAt) / 86400000);
+            return b + ' (' + (days === 0 ? 'cached today' : days + 'd ago') + ')';
+          }
+        } catch(e) {}
+        return b + ' (no cache)';
+      });
+      showToast('🔗 CRM Mode on — ' + ages.join(', ') + '. Reload to apply.');
+    } else {
+      showToast('🔗 CRM Mode off — reload brands.');
+    }
     asUpdateLoadBtn();
   } else {
     showToast(asCrmMode ? '🔗 CRM Mode on — select brands and load.' : '🔗 CRM Mode off.');
   }
+}
+
+function asClearCrmCache() {
+  let cleared = 0;
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('peats_crm_cache_'));
+    keys.forEach(k => { localStorage.removeItem(k); cleared++; });
+  } catch(e) {}
+  asCrmProductData = new Map();
+  asStockMap       = new Map();
+  asLoadedBrands   = new Set();
+  asData           = [];
+  showToast('🗑 CRM cache cleared (' + cleared + ' brand' + (cleared !== 1 ? 's' : '') + '). Next load will fetch fresh from CRM.');
 }
 
 // ── Discount ───────────────────────────────────────────
@@ -8627,7 +8683,7 @@ async function asExportExcel() {
       { header: 'Stock Value (€)', key: 'stockVal',   width: 16 },
       { header: 'Last Sold',       key: 'lastSold',   width: 15 },
       { header: 'Dormant',         key: 'dormant',    width: 15 },
-      { header: 'Retail (€)',      key: 'retail',     width: 13 },
+      { header: 'Trade (€)',       key: 'retail',     width: 13 },
       { header: 'Discount %',      key: 'discount',   width: 12 },
       { header: 'Clearance (€)',   key: 'clearance',  width: 15 },
     ];
@@ -18009,7 +18065,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v87 · 17 Sep 2026 · Aged Stock: CRM Mode — find off-catalog stocked SKUs via CategoryId';
+const TOOL_BUILD = 'v88 · 17 Sep 2026 · Aged Stock: CRM cache (7-day localStorage); Retail→Trade; Admin: price band probe';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -23716,6 +23772,105 @@ async function crmLookupSku() {
 
   crmApiLog(out);
   btn.disabled = false; btn.textContent = '🔍 Lookup SKU';
+}
+
+// ── Price Band Probe: discover A–F price fields on ProductItems ────────────
+async function crmProbePriceBands() {
+  const btn = document.getElementById('crmPriceBandProbeBtn');
+  btn.disabled = true; btn.textContent = '⏳ Probing…';
+  const pat = getCrmPat();
+  if (!pat) {
+    crmApiLog('✗ No PAT saved — enter your token in Settings first.');
+    btn.disabled = false; btn.textContent = '💷 Probe Price Bands';
+    return;
+  }
+
+  const CRM = CRM_ODATA_BASE;
+  let out = '💷 Price Band Discovery — ProductItems\n' + '═'.repeat(54) + '\n\n';
+  out += 'Fetching a sample ProductItems record to identify all price-related fields…\n\n';
+  crmApiLog(out);
+
+  try {
+    // Use top=1 to get field list, then also fetch a known SKU if input is filled
+    const sku = (document.getElementById('crmSkuInput')?.value || '').trim();
+    let url = sku
+      ? CRM + '/ProductItems?$filter=' + encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g,"''")}'`) + '&$top=1'
+      : CRM + '/ProductItems?$top=1';
+
+    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + resp.statusText);
+    const data  = await resp.json();
+    const items = data.value || [];
+
+    if (!items.length) {
+      out += sku
+        ? '⚠ No record found for SKU "' + sku + '". Try with a different SKU, or clear the SKU input to probe any record.\n'
+        : '⚠ No ProductItems records returned.\n';
+      crmApiLog(out);
+      btn.disabled = false; btn.textContent = '💷 Probe Price Bands';
+      return;
+    }
+
+    const item    = items[0];
+    const entries = Object.entries(item);
+    out += '✓ Record: ' + (item.ProductItemId || '?') + ' — ' + entries.length + ' fields total\n\n';
+
+    // Match anything that looks like a price / band / list price field
+    const priceRx  = /price|cost|band|sell|rrp|list|margin|rate|tariff/i;
+    const bandRx   = /[A-Fa-f]$/;   // ends in a single letter A–F (band suffix)
+    const decRx    = /^Decimal/;
+
+    const priceFields = entries.filter(([k]) => priceRx.test(k));
+    const bandFields  = priceFields.filter(([k]) => bandRx.test(k) || /band/i.test(k));
+    const otherPrices = priceFields.filter(([k]) => !bandRx.test(k) && !/band/i.test(k));
+
+    const fmtVal = v => v == null ? '(null)' : String(v);
+
+    if (bandFields.length) {
+      out += '🏷 Likely price BAND fields (A–F candidates):\n';
+      bandFields.forEach(([k, v]) => {
+        const suffix = k.match(/([A-Fa-f])$/)?.[1]?.toUpperCase() || '';
+        out += '  ' + k.padEnd(44) + fmtVal(v) + (suffix ? '  ← Band ' + suffix : '') + '\n';
+      });
+      out += '\n';
+    } else {
+      out += '⚠ No fields with an A–F suffix found. Price bands may use a different naming convention.\n\n';
+    }
+
+    if (otherPrices.length) {
+      out += '💰 Other price-related fields:\n';
+      otherPrices.forEach(([k, v]) => { out += '  ' + k.padEnd(44) + fmtVal(v) + '\n'; });
+      out += '\n';
+    }
+
+    out += '─'.repeat(54) + '\n';
+    out += '📋 All fields matching price/cost/band/sell/rrp/list:\n';
+    priceFields.forEach(([k, v]) => { out += '  ' + k.padEnd(44) + fmtVal(v) + '\n'; });
+
+    if (!priceFields.length) {
+      out += '  (none found — check All Fields below)\n\n';
+      out += '📋 All ' + entries.length + ' fields:\n';
+      entries.forEach(([k, v]) => { out += '  ' + k.padEnd(44) + fmtVal(v) + '\n'; });
+    }
+
+    out += '\n' + '═'.repeat(54) + '\n';
+    out += '✅ Share these findings to implement C and F price band display.\n';
+    out += '   Once we know the field names we can add Band C and Band F\n';
+    out += '   columns to the aged stock table alongside Trade price.\n';
+
+  } catch(e) {
+    out += '✗ Error: ' + e.message + '\n';
+  }
+
+  crmApiLog(out);
+  btn.disabled = false; btn.textContent = '💷 Probe Price Bands';
+}
+
+// Price band probe using the SKU from the input box (convenience wrapper)
+async function crmProbePriceBandsForSku() {
+  const sku = (document.getElementById('crmSkuInput')?.value || '').trim();
+  if (!sku) { crmApiLog('✗ Enter a SKU in the box above first.'); return; }
+  await crmProbePriceBands();
 }
 
 async function crmTestSalesOrderPost() {
