@@ -1875,37 +1875,31 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- PILL 2: Brands (no label — dropdown row 1, All/Catalog row 2) -->
+    <!-- PILL 2: Brands + Load Stock (dropdown row 1, All/Catalog + Load row 2) -->
     <div class="brand-filter-wrap" id="asBrandWrap"
-      style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:150px;box-sizing:border-box;position:relative;">
+      style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:180px;box-sizing:border-box;position:relative;">
       <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)"
         style="width:100%;justify-content:center;">
         🏷 Brands
         <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
         <span style="font-size:10px;opacity:.6">▾</span>
       </button>
-      <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
-        style="height:22px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;width:100%;">
-        <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 8px;">All</span>
-        <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 8px;white-space:nowrap;">Catalog</span>
+      <div style="display:flex;align-items:center;gap:6px;width:100%;">
+        <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
+          style="height:26px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;flex:1;">
+          <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 6px;">All</span>
+          <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 6px;white-space:nowrap;">Catalog</span>
+        </div>
+        <button class="btn btn-green" onclick="asLoadForSelectedBrands()"
+          style="font-size:11px;padding:4px 10px;font-weight:800;white-space:nowrap;height:26px;flex-shrink:0;">
+          ▶ Load
+        </button>
       </div>
       <!-- Brand dropdown panel -->
       <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:400px;max-width:480px;top:calc(100% + 4px);left:0;">
         <input class="brand-search-inp" id="asBrandSearch" placeholder="Search brands…" oninput="asFilterBrandList(this.value)" autocomplete="off">
         <div class="brand-list-scroll" id="asBrandList" style="max-height:420px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
-        <div id="asLoadBrandBtn" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-          <button onclick="asClosePanelAndLoad()" style="width:100%;background:var(--brand);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">▶ Load Stock</button>
-        </div>
       </div>
-    </div>
-
-    <!-- PILL 3: Load Stock -->
-    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid #16a34a;border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:120px;box-sizing:border-box;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#16a34a;line-height:1;">Load</span>
-      <button class="btn btn-green" onclick="asLoadForSelectedBrands()"
-        style="font-size:12px;padding:4px 18px;font-weight:800;white-space:nowrap;width:100%;">
-        ▶ Load Stock
-      </button>
     </div>
 
     <!-- PILL 4: Price Bands (wider, label+toggle on each row) -->
@@ -1926,23 +1920,19 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </label>
     </div>
 
-    <!-- PILL 5: Exclude New -->
-    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:120px;box-sizing:border-box;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Exclude</span>
-      <div id="asExcludeNewPill"
-        style="display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--white);transition:all .15s;">
-        <button id="asExcludeNewBtn" onclick="asToggleExclude('new')"
-          title="Hide products added to the CRM within the last N months"
-          style="height:22px;padding:0 8px;border:none;border-radius:0;background:transparent;color:var(--text);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;white-space:nowrap;">
-          ⊘ New
-        </button>
-        <input type="number" id="asNewMonthsInput" value="6" min="1" max="60" step="1"
-          title="Products added within this many months are treated as new"
+    <!-- PILL 5: Exclude New — v116 redesign -->
+    <div style="display:flex;flex-direction:column;justify-content:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 14px;gap:5px;min-width:150px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;text-align:center;">Excluded Lines</span>
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;" title="Exclude products added to the CRM within the last N months">
+        <span style="font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;">&lt;&nbsp;<input type="number" id="asNewMonthsInput" value="2" min="1" max="60" step="1"
           onclick="event.stopPropagation()"
-          style="width:32px;height:22px;border:none;border-left:1px solid var(--border);padding:2px 3px;font-size:11px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
-          oninput="asNewMonths=Math.max(1,parseInt(this.value)||6);if(asExcludeNew){asRebuildData();asRebuildSlowData();if(asData.length>0||asSlowData.length>0)asRenderAll();else asShowNoAgedStock();}">
-        <span style="padding:0 6px;font-size:10px;font-weight:700;color:var(--muted);">m</span>
-      </div>
+          style="width:30px;border:1px solid var(--border);border-radius:4px;padding:1px 3px;font-size:11px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
+          oninput="asNewMonths=Math.max(1,parseInt(this.value)||2);if(asExcludeNew){asRebuildData();asRebuildSlowData();if(asData.length>0||asSlowData.length>0)asRenderAll();else if(asLoadedBrands.size>0)asShowNoAgedStock();}">&nbsp;Mths</span>
+        <label class="tog teal" style="flex-shrink:0;">
+          <input type="checkbox" id="asExcludeNewToggle" checked onchange="asToggleExcludeNew(this.checked)">
+          <span class="tog-track"></span>
+        </label>
+      </label>
     </div>
 
     <!-- PILL 6: Discount % -->
@@ -8013,8 +8003,8 @@ let asSortCol      = 'stockValue';
 let asSortDir      = -1;          // -1 = descending
 let asBrands       = [];          // all available brand names from catalog
 let asSelBrands    = new Set();   // brands the user has selected
-let asExcludeNew   = false;
-let asNewMonths    = 6;        // products added within this many months are treated as "new"
+let asExcludeNew   = true;
+let asNewMonths    = 2;        // products added within this many months are treated as "new"
 let asCrmMode      = true;     // default All: also query CRM by CategoryId to find SKUs not in catalog
 // SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, sales3Mo, hasSales12Data, lastSoldDate, createdDate, bands}
 let asStockMap     = new Map();
@@ -8635,7 +8625,8 @@ async function asLoadForSelectedBrands() {
 
   if (brandsToFetch.length === 0) {
     asRebuildData();
-    if (asData.length > 0) { asView = 'all'; asRenderAll(); }
+    asRebuildSlowData();
+    if (asData.length > 0 || asSlowData.length > 0) { asView = 'all'; asRenderAll(); }
     else { asShowNoAgedStock(); }
     return;
   }
@@ -9691,17 +9682,10 @@ function asToggleExclude(type) {
 }
 
 function _asRefreshExcludePills() {
-  const newBtn  = document.getElementById('asExcludeNewBtn');
-  const newPill = document.getElementById('asExcludeNewPill');
-  const crmAll  = document.getElementById('asCrmToggleAll');
-  const crmCat  = document.getElementById('asCrmToggleCat');
-  if (newBtn) {
-    newBtn.style.color = asExcludeNew ? '#fff' : 'var(--text)';
-  }
-  if (newPill) {
-    newPill.style.background  = asExcludeNew ? '#0891b2' : 'var(--light)';
-    newPill.style.borderColor = asExcludeNew ? '#0891b2' : 'var(--border)';
-  }
+  const tog    = document.getElementById('asExcludeNewToggle');
+  const crmAll = document.getElementById('asCrmToggleAll');
+  const crmCat = document.getElementById('asCrmToggleCat');
+  if (tog)    tog.checked            = asExcludeNew;
   if (crmAll) {
     crmAll.style.background = asCrmMode ? '#7c3aed' : 'var(--light)';
     crmAll.style.color      = asCrmMode ? '#fff'    : 'var(--muted)';
@@ -9710,6 +9694,14 @@ function _asRefreshExcludePills() {
     crmCat.style.background = asCrmMode ? 'var(--light)' : '#1a3c6e';
     crmCat.style.color      = asCrmMode ? 'var(--muted)' : '#fff';
   }
+}
+
+function asToggleExcludeNew(checked) {
+  asExcludeNew = checked;
+  asRebuildData();
+  asRebuildSlowData();
+  if (asData.length > 0 || asSlowData.length > 0) asRenderAll();
+  else if (asLoadedBrands.size > 0) asShowNoAgedStock();
 }
 
 function asToggleCrmMode() {
@@ -19373,7 +19365,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v115 · 17 Sep 2026 · slow table cols aligned · checkbox+state+discount+clearance · Band C fix';
+const TOOL_BUILD = 'v116 · 17 Sep 2026 · exclude pill redesign · load into brands pill · slow cache fix';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
