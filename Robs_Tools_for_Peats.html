@@ -2015,7 +2015,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   </div>
 
   <!-- Summary chips -->
-  <div id="beaSummaryBar" style="display:none;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+  <div id="beaSummaryBar" style="display:none;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;flex-wrap:wrap;align-items:center;">
   </div>
 
   <!-- Results table -->
@@ -7101,6 +7101,8 @@ function headerClearAction() {
   if (activeTool === 'soa')            { document.getElementById('soaFrame').src = soaBlobUrl; return; }
   if (activeTool === 'export')         { document.getElementById('exportFrame').src = exportBlobUrl; return; }
   if (activeTool === 'stockanalysis')  { saaReset(); return; }
+  if (activeTool === 'agedstock')      { asReset(); return; }
+  if (activeTool === 'brandengagement'){ beaReset(); return; }
 }
 
 function saaReset() {
@@ -7171,6 +7173,9 @@ function setHeaderClearBtn(tool) {
 
 function launchTool(tool) {
   activeTool = tool;
+  // Reset scroll so the tool's toolbar is never hidden behind the sticky header
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
   document.getElementById('hub').style.display              = 'none';
   document.getElementById('tool-generator').style.display   = 'none';
   document.getElementById('tool-conversion').style.display  = 'none';
@@ -7976,6 +7981,30 @@ function beaOnOpen() {
 }
 
 function beaOnBrandChange() { /* nothing needed — just keeps UI reactive */ }
+
+function beaReset() {
+  beaRows    = [];
+  beaNoteDiv = null;
+  const sel = document.getElementById('beaBrandSel');
+  if (sel) sel.value = '';
+  const status = document.getElementById('beaStatus');
+  if (status) status.textContent = '';
+  const btn = document.getElementById('beaRunBtn');
+  if (btn) { btn.disabled = false; btn.textContent = '▶ Run Analysis'; }
+  const exportBtn = document.getElementById('beaExportBtn');
+  if (exportBtn) exportBtn.style.display = 'none';
+  const bar = document.getElementById('beaSummaryBar');
+  if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  const tableWrap = document.getElementById('beaTableWrap');
+  if (tableWrap) tableWrap.style.display = 'none';
+  const tbody = document.getElementById('beaTBody');
+  if (tbody) tbody.innerHTML = '';
+  const thead = document.getElementById('beaTHead');
+  if (thead) thead.innerHTML = '';
+  const empty = document.getElementById('beaEmpty');
+  if (empty) empty.style.display = 'none';
+  showToast('↺ Brand Engagement cleared.');
+}
 
 async function beaRun() {
   const pat = getCrmPat();
@@ -18778,7 +18807,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v97 · 17 Sep 2026 · Brand Engagement tool: Active/Lapsed/Dormant by brand, CRM note posting';
+const TOOL_BUILD = 'v98 · 17 Sep 2026 · Fix toolbar scroll bug, Clear All for Aged Stock & Brand Engagement';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
