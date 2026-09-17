@@ -1869,6 +1869,15 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         oninput="asNewMonths=Math.max(1,parseInt(this.value)||6);document.getElementById('asNewMonthsDisplay').textContent=asNewMonths;if(asExcludeNew){asRebuildData();if(asData.length>0)asRenderAll();else asShowNoAgedStock();}">
     </div>
 
+    <!-- CRM Mode toggle -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <button id="asCrmModeBtn" onclick="asToggleCrmMode()"
+        title="Also query the CRM to find stocked SKUs not listed in the catalog (slower)"
+        style="height:40px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
+        🔗 CRM Mode
+      </button>
+    </div>
+
     <!-- Bulk discount pill (amber border) -->
     <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
       <div style="background:var(--light);border:1px solid #f5e0b0;border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;">
@@ -7779,8 +7788,10 @@ let asExcludeTBD   = false;
 let asExcludeEOL   = false;
 let asExcludeNew   = false;
 let asNewMonths    = 6;        // products added within this many months are treated as "new"
+let asCrmMode      = false;    // if true: also query CRM by CategoryId to find SKUs not in catalog
 // SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, hasSales12Data, lastSoldDate, createdDate}
 let asStockMap     = new Map();
+let asCrmProductData = new Map(); // CRM-only SKUs: SKU → {desc, brand, cost, retail, createdDate}
 let asLoadedBrands = new Set();   // brands whose data has been fetched (cache key)
 let asFetching     = false;
 let asView         = 'all';       // 'all' | 'current' | 'tbd' | 'eol' | 'never' | 'over2yrs'
@@ -7961,9 +7972,48 @@ async function asLoadForSelectedBrands() {
   }
 
   const cat = state.catalog || {};
-  const skusToFetch = Object.entries(cat)
+  let skusToFetch = Object.entries(cat)
     .filter(([, e]) => brandsToFetch.includes(e.brand))
     .map(([code]) => code);
+
+  // ── Step 0: CRM-first mode — query by CategoryId to find extra SKUs ──────
+  if (asCrmMode) {
+    const pat0 = getCrmPat();
+    if (pat0) {
+      try {
+        const crmSkuSet = new Set(skusToFetch);
+        for (const brand of brandsToFetch) {
+          const catId = brand.toUpperCase();
+          let nextUrl = CRM_ODATA_BASE + '/ProductItems?$filter=' +
+            encodeURIComponent(`CategoryId eq '${catId.replace(/'/g,"''")}'`) +
+            '&$select=ProductItemId,Description,CategoryId,DecimalCostPrice,DecimalSellingPrice,DecimalTotalAvailable,Obsolete,Created';
+          while (nextUrl) {
+            const r0 = await fetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat0, 'Accept': 'application/json' } });
+            if (!r0.ok) break;
+            const d0 = await r0.json();
+            (d0.value || []).forEach(item => {
+              const sku = item.ProductItemId;
+              if (!sku) return;
+              // Store CRM data for ALL SKUs from CRM (for reference)
+              asCrmProductData.set(sku, {
+                desc:    item.Description || sku,
+                brand:   brand,
+                cost:    item.DecimalCostPrice   != null ? Number(item.DecimalCostPrice)   : null,
+                retail:  item.DecimalSellingPrice != null ? Number(item.DecimalSellingPrice) : null,
+                createdDate: item.Created ? new Date(item.Created) : null,
+              });
+              // Add to fetch list if not already from catalog
+              if (!crmSkuSet.has(sku)) {
+                crmSkuSet.add(sku);
+                skusToFetch.push(sku);
+              }
+            });
+            nextUrl = d0['@odata.nextLink'] || null;
+          }
+        }
+      } catch(e0) { /* CRM mode best-effort */ }
+    }
+  }
 
   if (!skusToFetch.length) {
     brandsToFetch.forEach(b => asLoadedBrands.add(b));
@@ -7990,7 +8040,7 @@ async function asLoadForSelectedBrands() {
     <div style="font-size:18px;font-weight:800;color:var(--text);">Analysing aged stock…</div>
     <div style="font-size:13px;color:var(--muted);max-width:420px;line-height:1.65;">
       Fetching <strong>${skusToFetch.length}</strong> products for <strong>${escHtml(brandLabel)}</strong><br>
-      Stock levels &amp; 12-month sales history
+      Stock levels &amp; 12-month sales history${asCrmMode ? '<br><em>🔗 CRM Mode: includes off-catalog SKUs</em>' : ''}
     </div>
   </div>`;
 
@@ -8186,6 +8236,60 @@ function asRebuildData() {
     });
   });
 
+  // ── CRM-only rows (SKUs from CRM not in catalog) ──────
+  if (asCrmMode && asCrmProductData.size > 0) {
+    const catKeys = new Set(Object.keys(cat));
+    asCrmProductData.forEach((crmEntry, sku) => {
+      if (catKeys.has(sku)) return;                          // already handled above
+      if (!brandSelMatch(crmEntry.brand, asSelBrands)) return;
+
+      const s = asStockMap.get(sku);
+      if (!s || !s.hasSales12Data) return;
+
+      const qty = (s.qty != null) ? s.qty : 0;
+      if (qty <= 0) return;
+      if ((s.soldLast12Mo || 0) > 0) return;
+
+      const crmName     = s.crmName || crmEntry.desc || sku;
+      const displayName = crmName.toUpperCase();
+
+      if (asExcludeTBD && displayName.startsWith('TBD')) return;
+      if (asExcludeEOL && displayName.startsWith('EOL')) return;
+
+      const createdDate = s.createdDate || crmEntry.createdDate || null;
+      if (asExcludeNew && createdDate) {
+        const cutoff = new Date();
+        cutoff.setMonth(cutoff.getMonth() - asNewMonths);
+        if (createdDate > cutoff) return;
+      }
+
+      const cost   = (crmEntry.cost   && Number(crmEntry.cost)   > 0) ? Number(crmEntry.cost)   : null;
+      const retail = (crmEntry.retail && Number(crmEntry.retail) > 0) ? Number(crmEntry.retail) : null;
+
+      const lastSoldDate  = s.lastSoldDate || null;
+      const dormantMonths = asMonthsAgo(lastSoldDate);
+
+      const discount   = savedDiscounts.get(sku) || 0;
+      const stockValue = cost   != null ? cost * qty : null;
+      const clearance  = retail != null ? retail * (1 - discount / 100) : null;
+
+      rows.push({
+        code:        sku,
+        brand:       crmEntry.brand || '',
+        desc:        crmEntry.desc  || sku,
+        crmName:     s.crmName || crmEntry.desc || null,
+        crmOnly:     true,          // flag: not in catalog
+        free:        qty,
+        phys:        s.physStock   != null ? s.physStock   : null,
+        salesOrders: s.salesOrders != null ? s.salesOrders : null,
+        cost, retail, stockValue,
+        lastSoldDate, dormantMonths,
+        createdDate,
+        discount, clearance
+      });
+    });
+  }
+
   asData = rows;
 }
 
@@ -8366,10 +8470,14 @@ function asRenderTable() {
       ? '<span style="color:#b45309;font-weight:700;">€' + r.clearance.toFixed(2) + '</span>'
       : '—';
 
-    return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
+    const crmBadge = r.crmOnly
+      ? ' <span style="display:inline-block;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.03em;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;vertical-align:middle;" title="Not in catalog — found via CRM">CRM</span>'
+      : '';
+
+    return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}${r.crmOnly ? 'border-left:2px solid #7c3aed;' : ''}">
       <td style="${TD}padding:4px 8px;">${stateBadge}</td>
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${crmBadge}</td>
       <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
@@ -8426,6 +8534,7 @@ function _asRefreshExcludePills() {
   const tbdBtn = document.getElementById('asExcludeTBDBtn');
   const eolBtn = document.getElementById('asExcludeEOLBtn');
   const newBtn = document.getElementById('asExcludeNewBtn');
+  const crmBtn = document.getElementById('asCrmModeBtn');
   if (tbdBtn) {
     tbdBtn.style.background  = asExcludeTBD ? '#b45309' : 'var(--light)';
     tbdBtn.style.color       = asExcludeTBD ? '#fff'    : 'var(--text)';
@@ -8440,6 +8549,29 @@ function _asRefreshExcludePills() {
     newBtn.style.background  = asExcludeNew ? '#0891b2' : 'var(--light)';
     newBtn.style.color       = asExcludeNew ? '#fff'    : 'var(--text)';
     newBtn.style.borderColor = asExcludeNew ? '#0891b2' : 'var(--border)';
+  }
+  if (crmBtn) {
+    crmBtn.style.background  = asCrmMode ? '#7c3aed' : 'var(--light)';
+    crmBtn.style.color       = asCrmMode ? '#fff'    : 'var(--text)';
+    crmBtn.style.borderColor = asCrmMode ? '#7c3aed' : 'var(--border)';
+  }
+}
+
+function asToggleCrmMode() {
+  asCrmMode = !asCrmMode;
+  _asRefreshExcludePills();
+  // Clear cache so next load re-fetches including CRM query
+  asCrmProductData = new Map();
+  asStockMap       = new Map();
+  asLoadedBrands   = new Set();
+  asData           = [];
+  // If brands are already selected, trigger a reload
+  if (asSelBrands.size > 0) {
+    showToast(asCrmMode ? '🔗 CRM Mode on — reload brands to fetch off-catalog SKUs.' : '🔗 CRM Mode off — reload brands.');
+    // Reset loaded state and show load button
+    asUpdateLoadBtn();
+  } else {
+    showToast(asCrmMode ? '🔗 CRM Mode on — select brands and load.' : '🔗 CRM Mode off.');
   }
 }
 
@@ -8672,15 +8804,17 @@ function asShowNoAgedStock() {
 }
 
 function asReset() {
-  asData         = [];
-  asSelBrands    = new Set();
-  asStockMap     = new Map();
-  asLoadedBrands = new Set();
-  asView         = 'all';
-  asExcludeTBD   = false;
-  asExcludeEOL   = false;
-  asSortCol      = 'stockValue';
-  asSortDir      = -1;
+  asData           = [];
+  asSelBrands      = new Set();
+  asStockMap       = new Map();
+  asCrmProductData = new Map();
+  asLoadedBrands   = new Set();
+  asView           = 'all';
+  asExcludeTBD     = false;
+  asExcludeEOL     = false;
+  asCrmMode        = false;
+  asSortCol        = 'stockValue';
+  asSortDir        = -1;
 
   _asRefreshExcludePills();
 
@@ -17875,7 +18009,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v86 · 17 Sep 2026 · Aged Stock: new-product exclusion toggle; Admin: SKU lookup';
+const TOOL_BUILD = 'v87 · 17 Sep 2026 · Aged Stock: CRM Mode — find off-catalog stocked SKUs via CategoryId';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
