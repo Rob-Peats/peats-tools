@@ -1855,30 +1855,46 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
      ════════════════════════════════════════════════════ -->
 <div id="tool-agedstock" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
 
-  <!-- ── Toolbar ── -->
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
+  <!-- ── Toolbar (v114 pill layout) ── -->
+  <div style="display:flex;align-items:stretch;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
 
-    <!-- Aged / Slow Moving tab switcher — in toolbar -->
-    <div style="display:flex;align-items:stretch;gap:0;height:40px;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0;">
-      <button id="asTabAged" onclick="asSetMainTab('aged')"
-        style="padding:0 14px;border:none;background:#1a3c6e;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .15s;white-space:nowrap;">
-        📦 Free Stock
-      </button>
-      <button id="asTabSlow" onclick="asSetMainTab('slow')"
-        style="padding:0 14px;border:none;border-left:1px solid var(--border);background:var(--light);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .15s;white-space:nowrap;">
-        ⏱ Slow Moving
-      </button>
+    <!-- PILL: Show -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:108px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Show</span>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <button id="asShowAgedBtn" onclick="asToggleShow('aged')"
+          title="Show / hide Aged Stock table"
+          style="padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+          📦 Aged
+        </button>
+        <button id="asShowSlowBtn" onclick="asToggleShow('slow')"
+          title="Show / hide Slow Moving table"
+          style="padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:#0891b2;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+          ⏱ Slow
+        </button>
+      </div>
     </div>
-    <div style="width:1px;height:28px;background:var(--border);margin:0 4px;align-self:center;flex-shrink:0;"></div>
 
-    <!-- Brand filter dropdown -->
-    <div class="brand-filter-wrap" id="asBrandWrap">
-      <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)">
-        🏷 Brands
-        <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
-        <span style="font-size:10px;opacity:.6">▾</span>
-      </button>
-      <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:400px;max-width:480px;">
+    <!-- PILL: Brands -->
+    <div class="brand-filter-wrap" id="asBrandWrap"
+      style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:130px;box-sizing:border-box;position:relative;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Brands</span>
+      <div style="display:flex;flex-direction:column;gap:4px;width:100%;align-items:center;">
+        <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)"
+          style="width:100%;justify-content:center;">
+          🏷 Brands
+          <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
+          <span style="font-size:10px;opacity:.6">▾</span>
+        </button>
+        <!-- All / Catalog Only pill toggle -->
+        <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
+          style="height:22px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;width:100%;">
+          <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 6px;">All</span>
+          <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 6px;white-space:nowrap;">Catalog</span>
+        </div>
+      </div>
+      <!-- Brand dropdown panel -->
+      <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:400px;max-width:480px;top:calc(100% + 4px);left:0;">
         <input class="brand-search-inp" id="asBrandSearch" placeholder="Search brands…" oninput="asFilterBrandList(this.value)" autocomplete="off">
         <div class="brand-list-scroll" id="asBrandList" style="max-height:420px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
         <div id="asLoadBrandBtn" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
@@ -1887,110 +1903,132 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- Exclude new products toggle — pill with embedded month input -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+    <!-- PILL: Price Bands -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:130px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Price Bands</span>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <label style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;font-weight:700;color:#0891b2;">
+          Band C
+          <label class="tog teal">
+            <input type="checkbox" id="asBandCToggle" checked onchange="asToggleBandCol('C')">
+            <span class="tog-track"></span>
+          </label>
+        </label>
+        <label style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;font-weight:700;color:#7c3aed;">
+          Band F
+          <label class="tog purple">
+            <input type="checkbox" id="asBandFToggle" checked onchange="asToggleBandCol('F')">
+            <span class="tog-track"></span>
+          </label>
+        </label>
+      </div>
+    </div>
+
+    <!-- PILL: Discount % -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid #f5e0b0;border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:170px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b45309;line-height:1;">Discount %</span>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <input type="number" id="asGlobalDiscountInput" min="0" max="100" step="0.5" value="0"
+          style="width:48px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;font-size:13px;font-weight:800;text-align:center;font-family:inherit;background:var(--white);color:#b45309;outline:none;">
+        <button onclick="asApplyGlobalDiscount()"
+          style="background:#b45309;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
+          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">All</button>
+        <button onclick="asApplySelectedDiscount()"
+          style="background:#92400e;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
+          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">Selected</button>
+      </div>
+    </div>
+
+    <!-- PILL: Export -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:120px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Export</span>
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;width:100%;">
+        <button id="asExportBtn" onclick="asExportExcel()" disabled
+          style="width:100%;background:#1a3c6e;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:800;cursor:not-allowed;font-family:inherit;transition:opacity .15s;opacity:.45;white-space:nowrap;">
+          ⬇ Export
+        </button>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;">
+          <input type="checkbox" id="asThumbnailToggle" style="cursor:pointer;">
+          Thumbnails
+        </label>
+      </div>
+    </div>
+
+    <!-- PILL: Clear Cache (small) -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 8px;box-sizing:border-box;">
+      <button onclick="asClearCache()"
+        title="Clear the 7-day local cache and re-fetch fresh data from CRM"
+        style="border:none;background:transparent;color:var(--muted);font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;padding:0;">
+        ⚡ Clear Cache
+      </button>
+    </div>
+
+    <!-- Exclude New (small pill) -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 8px;gap:2px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Exclude</span>
       <div id="asExcludeNewPill"
-        style="height:40px;display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--light);transition:all .15s;">
+        style="display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--white);transition:all .15s;">
         <button id="asExcludeNewBtn" onclick="asToggleExclude('new')"
           title="Hide products added to the CRM within the last N months"
-          style="height:100%;padding:0 10px;border:none;border-radius:0;background:transparent;color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;white-space:nowrap;">
+          style="height:20px;padding:0 7px;border:none;border-radius:0;background:transparent;color:var(--text);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;white-space:nowrap;">
           ⊘ New
         </button>
         <input type="number" id="asNewMonthsInput" value="6" min="1" max="60" step="1"
           title="Products added within this many months are treated as new"
           onclick="event.stopPropagation()"
-          style="width:36px;height:26px;border:none;border-left:1px solid var(--border);border-right:1px solid var(--border);padding:2px 3px;font-size:12px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
+          style="width:30px;height:20px;border:none;border-left:1px solid var(--border);padding:2px 3px;font-size:11px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
           oninput="asNewMonths=Math.max(1,parseInt(this.value)||6);if(asExcludeNew){asRebuildData();asRebuildSlowData();if(asData.length>0||asSlowData.length>0)asRenderAll();else asShowNoAgedStock();}">
-        <span style="padding:0 8px;font-size:11px;font-weight:700;color:var(--muted);">m</span>
+        <span style="padding:0 5px;font-size:10px;font-weight:700;color:var(--muted);">m</span>
       </div>
-    </div>
-
-    <!-- All / Catalog Only toggle switch -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
-        style="height:36px;display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;user-select:none;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-family:inherit;transition:all .15s;">
-        <span id="asCrmToggleAll" style="padding:0 12px;height:100%;display:flex;align-items:center;background:#7c3aed;color:#fff;transition:all .15s;">All</span>
-        <span id="asCrmToggleCat" style="padding:0 12px;height:100%;display:flex;align-items:center;background:var(--light);color:var(--muted);transition:all .15s;">Catalog Only</span>
-      </div>
-    </div>
-
-    <!-- Bulk discount pill (amber border) -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <div style="background:var(--light);border:1px solid #f5e0b0;border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;">
-        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b45309;white-space:nowrap;">📉 Discount %</span>
-        <input type="number" id="asGlobalDiscountInput" min="0" max="100" step="0.5" value="0"
-          style="width:52px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;font-size:14px;font-weight:800;text-align:center;font-family:inherit;background:var(--white);color:#b45309;outline:none;">
-        <button onclick="asApplyGlobalDiscount()"
-          style="background:#b45309;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
-          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">Apply All</button>
-      </div>
-    </div>
-
-    <!-- Thumbnails toggle pill -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <label style="background:var(--light);border:1px solid var(--border);border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;cursor:pointer;user-select:none;">
-        <input type="checkbox" id="asThumbnailToggle" style="cursor:pointer;width:14px;height:14px;">
-        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap;">Thumbnails</span>
-      </label>
-    </div>
-
-    <!-- Band C / Band F column toggles -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <button id="asBandCBtn" onclick="asToggleBandCol('C')"
-        title="Show / hide Band C price column"
-        style="height:36px;padding:0 12px;border:1px solid var(--border);border-radius:7px;background:#0891b2;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap;">
-        Band C
-      </button>
-      <button id="asBandFBtn" onclick="asToggleBandCol('F')"
-        title="Show / hide Band F price column"
-        style="height:36px;padding:0 12px;border:1px solid var(--border);border-radius:7px;background:#7c3aed;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap;">
-        Band F
-      </button>
-    </div>
-
-    <!-- Clear cache / force refresh -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <button onclick="asClearCache()"
-        title="Clear the 7-day local cache and re-fetch fresh data from CRM"
-        style="height:36px;padding:0 12px;border:1px solid var(--border);border-radius:7px;background:var(--light);color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap;">
-        ⚡ Clear Cache
-      </button>
-    </div>
-
-    <!-- Export button -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <button id="asExportBtn" onclick="asExportExcel()" disabled
-        style="height:40px;padding:0 16px;background:#1a3c6e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:not-allowed;font-family:inherit;transition:opacity .15s;opacity:.45;white-space:nowrap;">
-        ⬇ Export to Excel
-      </button>
     </div>
 
     <!-- Flex spacer -->
     <div style="flex:1;"></div>
 
-    <!-- Search box (hidden until data loaded) -->
-    <div class="search-x-wrap" id="asSearchWrap" style="display:none;">
-      <input type="search" id="asSearch" placeholder="Search code, description, brand…"
-             oninput="asRenderTable();_syncSearchX('asSearch','asSearchX')"
-             style="width:240px;">
-      <button class="search-x-btn" id="asSearchX"
-              onclick="_clearSearch('asSearch','asSearchX',asRenderTable)" title="Clear">✕</button>
+    <!-- Search box -->
+    <div style="display:flex;align-items:center;">
+      <div class="search-x-wrap" id="asSearchWrap" style="display:none;">
+        <input type="search" id="asSearch" placeholder="Search code, description, brand…"
+               oninput="asRenderAgedTable();asRenderSlowTable();_syncSearchX('asSearch','asSearchX')"
+               style="width:220px;">
+        <button class="search-x-btn" id="asSearchX"
+                onclick="_clearSearch('asSearch','asSearchX',function(){asRenderAgedTable();asRenderSlowTable();})" title="Clear">✕</button>
+      </div>
     </div>
 
   </div><!-- /toolbar -->
 
-  <!-- ── Summary cards (hidden until data loaded) ── -->
-  <div id="asSummaryCards" style="display:none;flex-shrink:0;padding:14px 20px;gap:12px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
+  <!-- ── Summary cards ── -->
+  <div id="asSummaryCards" style="display:none;flex-shrink:0;padding:10px 16px;gap:10px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
 
-  <!-- ── Table / content area ── -->
-  <div style="flex:1;overflow:auto;">
+  <!-- ── Dual table / content area ── -->
+  <div style="flex:1;overflow:auto;" id="asScrollArea">
     <div id="asContent" style="padding:40px;text-align:center;color:var(--muted);font-size:14px;">
       Select brands to load aged stock.
     </div>
-    <table id="asTable" style="display:none;width:100%;border-collapse:collapse;font-size:12px;">
-      <thead id="asTableHead"></thead>
-      <tbody id="asTableBody"></tbody>
-    </table>
+
+    <!-- Aged Stock section -->
+    <div id="asAgedSection" style="display:none;">
+      <div style="padding:6px 14px;background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;">
+        📦 Aged Stock
+      </div>
+      <table id="asTable" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead id="asTableHead"></thead>
+        <tbody id="asTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Slow Moving section -->
+    <div id="asSlowSection" style="display:none;">
+      <div style="padding:6px 14px;background:#0891b2;color:#fff;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;">
+        ⏱ Slow Moving Stock
+      </div>
+      <table id="asSlowTable" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead id="asSlowTableHead"></thead>
+        <tbody id="asSlowTableBody"></tbody>
+      </table>
+    </div>
+
   </div>
 
 </div><!-- /tool-agedstock -->
@@ -7965,7 +8003,9 @@ function _saaRefreshExcludePills() {
 // ── State ─────────────────────────────────────────────
 let asData         = [];          // processed aged-stock rows (see asRebuildData)
 let asSlowData     = [];          // slow-moving stock rows (>8 weeks coverage at 3-month avg sales)
-let asMainTab      = 'aged';      // 'aged' | 'slow'
+let asShowAged     = true;        // v114: show aged stock section
+let asShowSlow     = true;        // v114: show slow moving section
+let asSelected     = new Set();   // v114: selected row SKUs for "Apply Selected"
 let asSortCol      = 'stockValue';
 let asSortDir      = -1;          // -1 = descending
 let asBrands       = [];          // all available brand names from catalog
@@ -8527,7 +8567,7 @@ function asClosePanelAndLoad() {
   asLoadForSelectedBrands();
 }
 
-// Close brand panel when clicking outside it
+// Close brand panel when clicking outside it (v114: no auto-load on close)
 document.addEventListener('click', function(e) {
   const wrap = document.getElementById('asBrandWrap');
   if (wrap && !wrap.contains(e.target)) {
@@ -8536,7 +8576,7 @@ document.addEventListener('click', function(e) {
       p.style.display = 'none';
       const bs = document.getElementById('asBrandSearch');
       if (bs) bs.value = '';
-      asLoadForSelectedBrands();
+      // v114: do NOT auto-load here — user must click Load button explicitly
     }
   }
 });
@@ -8976,7 +9016,6 @@ async function asLoadForSelectedBrands() {
     asShowProgress(AS_TOTAL_STEPS, 'Building results…');
     asRebuildData();
     asRebuildSlowData();
-    asMainTab = 'aged';
     if (asData.length > 0 || asSlowData.length > 0) {
       asRenderAll();
     } else {
@@ -9189,29 +9228,31 @@ function asRebuildSlowData() {
   asSlowData = rows;
 }
 
-// ── Tab switching ──────────────────────────────────────
+// ── Show/hide toggle (v114) ─────────────────────────────
 
-function asSetMainTab(tab) {
-  asMainTab = tab;
-  const agedBtn = document.getElementById('asTabAged');
-  const slowBtn = document.getElementById('asTabSlow');
-  if (agedBtn) {
-    agedBtn.style.background = tab === 'aged' ? '#1a3c6e' : 'var(--light)';
-    agedBtn.style.color      = tab === 'aged' ? '#fff'    : 'var(--muted)';
-    agedBtn.style.fontWeight = tab === 'aged' ? '800' : '700';
+function asToggleShow(which) {
+  if (which === 'aged') asShowAged = !asShowAged;
+  if (which === 'slow') asShowSlow = !asShowSlow;
+  asRefreshShowBtns();
+  const agedEl = document.getElementById('asAgedSection');
+  const slowEl = document.getElementById('asSlowSection');
+  if (agedEl) agedEl.style.display = asShowAged ? '' : 'none';
+  if (slowEl) slowEl.style.display = asShowSlow ? '' : 'none';
+}
+
+function asRefreshShowBtns() {
+  const ab = document.getElementById('asShowAgedBtn');
+  const sb = document.getElementById('asShowSlowBtn');
+  if (ab) {
+    ab.style.background = asShowAged ? '#1a3c6e' : 'var(--light)';
+    ab.style.color      = asShowAged ? '#fff'    : 'var(--muted)';
+    ab.style.border     = asShowAged ? '1px solid #1a3c6e' : '1px solid var(--border)';
   }
-  if (slowBtn) {
-    slowBtn.style.background = tab === 'slow' ? '#0891b2' : 'var(--light)';
-    slowBtn.style.color      = tab === 'slow' ? '#fff'    : 'var(--muted)';
-    slowBtn.style.fontWeight = tab === 'slow' ? '800' : '700';
+  if (sb) {
+    sb.style.background = asShowSlow ? '#0891b2' : 'var(--light)';
+    sb.style.color      = asShowSlow ? '#fff'    : 'var(--muted)';
+    sb.style.border     = asShowSlow ? '1px solid #0891b2' : '1px solid var(--border)';
   }
-  // Update export button label
-  const exportBtn = document.getElementById('asExportBtn');
-  if (exportBtn && !exportBtn.disabled) {
-    exportBtn.textContent = tab === 'slow' ? '⬇ Export Slow Moving' : '⬇ Export to Excel';
-  }
-  asRenderSummaryCards();
-  asRenderTable();
 }
 
 // ── Summary cards ──────────────────────────────────────
@@ -9219,63 +9260,63 @@ function asSetMainTab(tab) {
 function asSetView(v) { asView = v; asRenderTable(); }
 
 function asRenderSummaryCards() {
-  let cards;
-  if (asMainTab === 'slow') {
-    // ── Slow moving cards ──
-    const totalSlow   = asSlowData.length;
-    const over12wks   = asSlowData.filter(r => r.weeksOfCoverage > 12);
-    const over26wks   = asSlowData.filter(r => r.weeksOfCoverage > 26);
-    const totalUnits  = asSlowData.reduce((a, r) => a + r.free, 0);
-    cards = [
-      { label: 'SLOW MOVING',    val: totalSlow.toLocaleString('en-IE'),   sub: '>8 weeks stock cover',       col: '#0891b2', view: null },
-      { label: 'FREE STOCK',     val: totalUnits.toLocaleString('en-IE'),  sub: 'units in stock',             col: '#1a3c6e', view: null },
-      { label: '>12 WKS COVER',  val: over12wks.length,                    sub: 'very slow — 3 months+',      col: '#b45309', view: null },
-      { label: '>26 WKS COVER',  val: over26wks.length,                    sub: 'critical — 6 months+',       col: '#dc2626', view: null },
-    ];
-  } else {
-    // ── Aged stock cards ──
-    const totalValue   = asData.reduce((a, r) => a + (r.stockValue || 0), 0);
-    const totalUnits   = asData.reduce((a, r) => a + r.free, 0);
-    const neverSold  = asData.filter(r => r.lastSoldDate === null);
-    const over2yrs   = asData.filter(r => r.dormantMonths != null && r.dormantMonths >= 24);
-    const hasAnyBandC = asData.some(r => r.bandC != null);
-    cards = [
-      { label: 'AGED SKUS',      val: asData.length.toLocaleString('en-IE'), sub: asSelBrands.size + ' brand' + (asSelBrands.size === 1 ? '' : 's') + ' selected', col: '#b45309', view: 'all' },
-      { label: 'FREE STOCK',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',                 col: '#1a3c6e', view: 'all' },
-      { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: hasAnyBandC ? 'at Band C price' : 'at cost price',  col: '#1f6b3e', view: 'all' },
-      { label: 'NEVER SOLD',     val: neverSold.length,                      sub: 'no sales history',               col: '#6b7280', view: 'never' },
-      { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: 'most urgent to clear',           col: '#7c3aed', view: 'over2yrs' },
-    ];
-  }
+  // Aged stock cards
+  const totalValue   = asData.reduce((a, r) => a + (r.stockValue || 0), 0);
+  const totalUnits   = asData.reduce((a, r) => a + r.free, 0);
+  const neverSold    = asData.filter(r => r.lastSoldDate === null);
+  const over2yrs     = asData.filter(r => r.dormantMonths != null && r.dormantMonths >= 24);
+  const hasAnyBandC  = asData.some(r => r.bandC != null);
+  // Slow moving cards
+  const totalSlow    = asSlowData.length;
+  const over12wks    = asSlowData.filter(r => r.weeksOfCoverage > 12);
+  const over26wks    = asSlowData.filter(r => r.weeksOfCoverage > 26);
+  const slowUnits    = asSlowData.reduce((a, r) => a + r.free, 0);
+
+  const agedCards = [
+    { label: 'AGED SKUs',      val: asData.length.toLocaleString('en-IE'), sub: asSelBrands.size + ' brand' + (asSelBrands.size === 1 ? '' : 's'), col: '#b45309', view: 'all' },
+    { label: 'FREE STOCK',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',     col: '#1a3c6e', view: 'all' },
+    { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: hasAnyBandC ? 'at Band C price' : 'at cost price', col: '#1f6b3e', view: 'all' },
+    { label: 'NEVER SOLD',     val: neverSold.length,                      sub: 'no sales history',   col: '#6b7280', view: 'never' },
+    { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: 'most urgent',        col: '#7c3aed', view: 'over2yrs' },
+  ];
+  const slowCards = [
+    { label: 'SLOW MOVING',    val: totalSlow.toLocaleString('en-IE'),     sub: '>8 weeks cover',     col: '#0891b2', view: null },
+    { label: 'SLOW UNITS',     val: slowUnits.toLocaleString('en-IE'),     sub: 'units in stock',     col: '#1a3c6e', view: null },
+    { label: '>12 WKS COVER',  val: over12wks.length,                      sub: '3 months+',          col: '#b45309', view: null },
+    { label: '>26 WKS COVER',  val: over26wks.length,                      sub: 'critical',           col: '#dc2626', view: null },
+  ];
+  const cards = [...agedCards, ...slowCards];
 
   document.getElementById('asSummaryCards').innerHTML = cards.map(c => {
     const active = c.view != null && asView === c.view;
     const clickable = c.view != null;
     return `<div ${clickable ? `onclick="asSetView('${c.view}')"` : ''}
        style="background:${active ? c.col : 'var(--white)'};border-radius:10px;
-              padding:14px 20px;border-bottom:3px solid ${c.col};
+              padding:10px 14px;border-bottom:3px solid ${c.col};
               box-shadow:${active ? '0 4px 16px rgba(0,0,0,.18)' : 'var(--shadow)'};
-              min-width:110px;flex:1;${clickable ? 'cursor:pointer;' : ''}transition:all .15s;"
+              min-width:90px;flex:1;${clickable ? 'cursor:pointer;' : ''}transition:all .15s;"
        ${clickable ? `onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.13)'"
        onmouseout="this.style.boxShadow='${active ? '0 4px 16px rgba(0,0,0,.18)' : 'var(--shadow)'}'"`  : ''}>
       <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
-                  color:${active ? 'rgba(255,255,255,.85)' : c.col};margin-bottom:5px;">${c.label}</div>
-      <div style="font-size:28px;font-weight:800;color:${active ? '#fff' : c.col};line-height:1.05;">${c.val}</div>
-      <div style="font-size:11px;color:${active ? 'rgba(255,255,255,.75)' : 'var(--muted)'};margin-top:4px;">${c.sub}</div>
+                  color:${active ? 'rgba(255,255,255,.85)' : c.col};margin-bottom:4px;">${c.label}</div>
+      <div style="font-size:22px;font-weight:800;color:${active ? '#fff' : c.col};line-height:1.05;">${c.val}</div>
+      <div style="font-size:10px;color:${active ? 'rgba(255,255,255,.75)' : 'var(--muted)'};margin-top:3px;">${c.sub}</div>
     </div>`;
   }).join('');
 }
 
 function asRenderAll() {
-  // Update toolbar tab styling
-  asSetMainTab(asMainTab);
-
   asRenderSummaryCards();
-  asRenderTable();
+  asRenderAgedTable();
+  asRenderSlowTable();
+  asRefreshShowBtns();
   document.getElementById('asSummaryCards').style.display = 'flex';
   document.getElementById('asSearchWrap').style.display   = 'flex';
   document.getElementById('asContent').style.display      = 'none';
-  document.getElementById('asTable').style.display        = 'table';
+  const agedEl = document.getElementById('asAgedSection');
+  const slowEl = document.getElementById('asSlowSection');
+  if (agedEl) agedEl.style.display = asShowAged ? '' : 'none';
+  if (slowEl) slowEl.style.display = asShowSlow ? '' : 'none';
   const btn = document.getElementById('asExportBtn');
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
 }
@@ -9303,8 +9344,10 @@ function asGetFilteredRows() {
   return rows;
 }
 
-function asRenderTable() {
-  if (asMainTab === 'slow') { asRenderSlowTable(); return; }
+// ── Alias for backward compat (sort, search X clear) ──
+function asRenderTable() { asRenderAgedTable(); }
+
+function asRenderAgedTable() {
   if (!asData.length) return;
   asRenderSummaryCards();
 
@@ -9358,9 +9401,12 @@ function asRenderTable() {
   const STICKY_TH = `position:sticky;top:0;z-index:10;background:var(--light);` +
     `padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;` +
     `border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;text-align:center;`;
+  const CHK_TH = `position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;border-bottom:2px solid var(--border);text-align:center;`;
 
   document.getElementById('asTableHead').innerHTML =
-    '<tr>' + ths.map(([k, label]) =>
+    '<tr>' +
+    `<th style="${CHK_TH}"><input type="checkbox" title="Select all" onchange="asSelectAll(this.checked)" style="cursor:pointer;"></th>` +
+    ths.map(([k, label]) =>
       `<th onclick="asSort('${k}')" style="${STICKY_TH}` +
       (k === 'desc'       ? 'text-align:left;'      : '') +
       (k === 'free'       ? 'background:#e8f5e9;'   : '') +
@@ -9420,7 +9466,9 @@ function asRenderTable() {
       ? ' <span style="display:inline-block;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.03em;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;vertical-align:middle;" title="Not in catalog — found via CRM">CRM</span>'
       : '';
 
-    return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}${r.crmOnly ? 'border-left:2px solid #7c3aed;' : ''}">
+    const isChecked = asSelected.has(r.code);
+    return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}${r.crmOnly ? 'border-left:2px solid #7c3aed;' : ''}${isChecked ? 'background:#fffbea !important;' : ''}">
+      <td style="${TD}padding:4px 8px;"><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="asToggleSelect('${r.code.replace(/'/g,"\'")}')" style="cursor:pointer;"></td>
       <td style="${TD}padding:4px 8px;">${stateBadge}</td>
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
       <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${crmBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:11px;opacity:.75;">⚡</span>' : ''}</td>
@@ -9444,15 +9492,17 @@ function asRenderTable() {
       <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="${9 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0)}" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="${10 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0)}" style="padding:30px;text-align:center;color:var(--muted);">
      No aged stock matches this filter.
    </td></tr>`;
 }
 
-// ── Slow Moving table render ───────────────────────────
+// ── Slow Moving table render (v114: writes to asSlowTableHead/Body) ─────────
 
 function asRenderSlowTable() {
-  asRenderSummaryCards();
+  const slowHead = document.getElementById('asSlowTableHead');
+  const slowBody = document.getElementById('asSlowTableBody');
+  if (!slowHead || !slowBody) return;
   const q = (document.getElementById('asSearch')?.value || '').toLowerCase().trim();
   let rows = asSlowData;
   if (q) {
@@ -9473,7 +9523,7 @@ function asRenderSlowTable() {
   };
 
   const SLOW_TH = 'padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;background:var(--light);white-space:nowrap;position:sticky;top:0;z-index:10;border-bottom:2px solid var(--border);';
-  document.getElementById('asTableHead').innerHTML = `<tr>
+  slowHead.innerHTML = `<tr>
     <th style="${SLOW_TH}color:var(--muted);text-align:left;">Brand</th>
     <th style="${SLOW_TH}color:var(--muted);">Code</th>
     <th style="${SLOW_TH}color:var(--muted);text-align:left;">Description</th>
@@ -9486,7 +9536,7 @@ function asRenderSlowTable() {
     ${asBandFVisible ? `<th style="${SLOW_TH}color:#7c3aed;">Band F (€)</th>` : ''}
   </tr>`;
 
-  document.getElementById('asTableBody').innerHTML = rows.map((r, ri) => {
+  slowBody.innerHTML = rows.map((r, ri) => {
     const slowCreatedFmt = (() => {
       if (!r.createdDate) return '<span style="color:var(--muted);font-style:italic;">—</span>';
       const dt = r.createdDate instanceof Date ? r.createdDate : new Date(r.createdDate);
@@ -9523,7 +9573,7 @@ function asSort(col) {
     asSortCol = col;
     asSortDir = ['brand', 'code', 'desc', 'state'].includes(col) ? 1 : -1;
   }
-  asRenderTable();
+  asRenderAgedTable();
 }
 
 // ── Exclude TBD / EOL ─────────────────────────────────
@@ -9543,19 +9593,18 @@ function asClearCache() {
 }
 
 function asToggleBandCol(col) {
-  if (col === 'C') { asBandCVisible = !asBandCVisible; }
-  if (col === 'F') { asBandFVisible = !asBandFVisible; }
-  const btnC = document.getElementById('asBandCBtn');
-  const btnF = document.getElementById('asBandFBtn');
-  if (btnC) {
-    btnC.style.background = asBandCVisible ? '#0891b2' : 'var(--light)';
-    btnC.style.color      = asBandCVisible ? '#fff'    : 'var(--muted)';
+  if (col === 'C') {
+    asBandCVisible = !asBandCVisible;
+    const t = document.getElementById('asBandCToggle');
+    if (t) t.checked = asBandCVisible;
   }
-  if (btnF) {
-    btnF.style.background = asBandFVisible ? '#7c3aed' : 'var(--light)';
-    btnF.style.color      = asBandFVisible ? '#fff'    : 'var(--muted)';
+  if (col === 'F') {
+    asBandFVisible = !asBandFVisible;
+    const t = document.getElementById('asBandFToggle');
+    if (t) t.checked = asBandFVisible;
   }
-  if (asData.length > 0 || asSlowData.length > 0) asRenderTable();
+  if (asData.length > 0) asRenderAgedTable();
+  if (asSlowData.length > 0) asRenderSlowTable();
 }
 
 function asToggleExclude(type) {
@@ -9570,6 +9619,7 @@ function asToggleExclude(type) {
   } else {
     asShowPickPrompt();
   }
+  asSelected.clear();
 }
 
 function _asRefreshExcludePills() {
@@ -9646,7 +9696,7 @@ function asSetRowDiscount(idx, pct) {
   const p = Math.min(99, Math.max(0, parseFloat(pct) || 0));
   row.discount  = p;
   row.clearance = row.retail != null ? row.retail * (1 - p / 100) : null;
-  asRenderTable();
+  asRenderAgedTable();
 }
 
 function asApplyGlobalDiscount() {
@@ -9656,7 +9706,34 @@ function asApplyGlobalDiscount() {
     r.discount  = pct;
     r.clearance = r.retail != null ? r.retail * (1 - pct / 100) : null;
   });
-  if (asData.length) asRenderTable();
+  if (asData.length) asRenderAgedTable();
+}
+
+// ── Row selection (v114) ──────────────────────────────
+
+function asToggleSelect(code) {
+  if (asSelected.has(code)) asSelected.delete(code);
+  else asSelected.add(code);
+  asRenderAgedTable();
+}
+
+function asSelectAll(checked) {
+  if (checked) { asGetFilteredRows().forEach(r => asSelected.add(r.code)); }
+  else { asSelected.clear(); }
+  asRenderAgedTable();
+}
+
+function asApplySelectedDiscount() {
+  if (asSelected.size === 0) { showToast('No rows selected — tick checkboxes first.'); return; }
+  const inp = document.getElementById('asGlobalDiscountInput');
+  const pct = Math.min(99, Math.max(0, parseFloat(inp ? inp.value : '0') || 0));
+  asData.forEach(r => {
+    if (!asSelected.has(r.code)) return;
+    r.discount  = pct;
+    r.clearance = r.retail != null ? r.retail * (1 - pct / 100) : null;
+  });
+  if (asData.length) asRenderAgedTable();
+  showToast('✓ Applied ' + pct + '% to ' + asSelected.size + ' selected row' + (asSelected.size === 1 ? '' : 's') + '.');
 }
 
 // ── Export to Excel ───────────────────────────────────
@@ -9819,7 +9896,10 @@ async function asExportExcel() {
 function asShowPickPrompt() {
   document.getElementById('asSummaryCards').style.display  = 'none';
   document.getElementById('asSearchWrap').style.display    = 'none';
-  document.getElementById('asTable').style.display         = 'none';
+  const agedEl = document.getElementById('asAgedSection');
+  const slowEl = document.getElementById('asSlowSection');
+  if (agedEl) agedEl.style.display = 'none';
+  if (slowEl) slowEl.style.display = 'none';
   const btn = document.getElementById('asExportBtn');
   if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; }
 
@@ -9834,13 +9914,16 @@ function asShowPickPrompt() {
     <div style="font-size:13px;color:var(--muted);max-width:440px;line-height:1.65;">
       ${total.toLocaleString('en-IE')} products across ${bcount} brands in catalog.<br>
       <em>Aged stock</em> = free stock with <strong>no invoiced sales in the last 12 months</strong>.<br>
-      Use <strong>🏷 Brands</strong> above to pick which brands to check — data is fetched on demand.
+      Use <strong>🏷 Brands</strong> above to pick which brands to check, then click <strong>▶ Load Aged Stock</strong>.
     </div>
   </div>`;
 }
 
 function asShowNoAgedStock() {
-  document.getElementById('asTable').style.display         = 'none';
+  const agedEl2 = document.getElementById('asAgedSection');
+  const slowEl2 = document.getElementById('asSlowSection');
+  if (agedEl2) agedEl2.style.display = 'none';
+  if (slowEl2) slowEl2.style.display = 'none';
   document.getElementById('asSummaryCards').style.display  = 'none';
   document.getElementById('asSearchWrap').style.display    = 'none';
   const btn = document.getElementById('asExportBtn');
@@ -9865,7 +9948,9 @@ function asReset() {
   asLoadedBrands   = new Set();
   asCachedSkus     = new Set();
   asSlowData       = [];
-  asMainTab        = 'aged';
+  asShowAged       = true;
+  asShowSlow       = true;
+  asSelected       = new Set();
   asView           = 'all';
   asCrmMode        = true;   // default: All SKUs mode
   asSortCol        = 'stockValue';
@@ -9888,9 +9973,12 @@ function asReset() {
 
   document.getElementById('asSummaryCards').style.display  = 'none';
   document.getElementById('asSearchWrap').style.display    = 'none';
-  document.getElementById('asTable').style.display         = 'none';
+  const agedElR = document.getElementById('asAgedSection');
+  const slowElR = document.getElementById('asSlowSection');
+  if (agedElR) agedElR.style.display = 'none';
+  if (slowElR) slowElR.style.display = 'none';
   const btn = document.getElementById('asExportBtn');
-  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; btn.textContent = '⬇ Export to Excel'; }
+  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; btn.textContent = '⬇ Export'; }
 
   asShowPickPrompt();
   showToast('↺ Aged stock cleared.');
@@ -19200,7 +19288,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v113 · 17 Sep 2026 · ⚡ 7-day SKU cache · SOA catalog auto-load';
+const TOOL_BUILD = 'v114 · 17 Sep 2026 · pill toolbar · dual tables · row checkboxes · brand panel bug fix';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
