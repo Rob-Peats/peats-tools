@@ -1855,137 +1855,139 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
      ════════════════════════════════════════════════════ -->
 <div id="tool-agedstock" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
 
-  <!-- ── Toolbar (v114 pill layout) ── -->
+  <!-- ── Toolbar (v114b pill layout) ── -->
   <div style="display:flex;align-items:stretch;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
 
-    <!-- PILL: Show -->
-    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:108px;box-sizing:border-box;">
+    <!-- PILL 1: Show -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:120px;box-sizing:border-box;">
       <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Show</span>
-      <div style="display:flex;gap:4px;align-items:center;">
+      <div style="display:flex;gap:5px;align-items:center;">
         <button id="asShowAgedBtn" onclick="asToggleShow('aged')"
           title="Show / hide Aged Stock table"
-          style="padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+          style="padding:4px 12px;border:1px solid #1a3c6e;border-radius:6px;background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
           📦 Aged
         </button>
         <button id="asShowSlowBtn" onclick="asToggleShow('slow')"
           title="Show / hide Slow Moving table"
-          style="padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:#0891b2;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+          style="padding:4px 12px;border:1px solid #0891b2;border-radius:6px;background:#0891b2;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
           ⏱ Slow
         </button>
       </div>
     </div>
 
-    <!-- PILL: Brands -->
+    <!-- PILL 2: Brands (no label — dropdown row 1, All/Catalog row 2) -->
     <div class="brand-filter-wrap" id="asBrandWrap"
-      style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:130px;box-sizing:border-box;position:relative;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Brands</span>
-      <div style="display:flex;flex-direction:column;gap:4px;width:100%;align-items:center;">
-        <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)"
-          style="width:100%;justify-content:center;">
-          🏷 Brands
-          <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
-          <span style="font-size:10px;opacity:.6">▾</span>
-        </button>
-        <!-- All / Catalog Only pill toggle -->
-        <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
-          style="height:22px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;width:100%;">
-          <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 6px;">All</span>
-          <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 6px;white-space:nowrap;">Catalog</span>
-        </div>
+      style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:150px;box-sizing:border-box;position:relative;">
+      <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)"
+        style="width:100%;justify-content:center;">
+        🏷 Brands
+        <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
+        <span style="font-size:10px;opacity:.6">▾</span>
+      </button>
+      <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
+        style="height:22px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;width:100%;">
+        <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 8px;">All</span>
+        <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 8px;white-space:nowrap;">Catalog</span>
       </div>
       <!-- Brand dropdown panel -->
       <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:400px;max-width:480px;top:calc(100% + 4px);left:0;">
         <input class="brand-search-inp" id="asBrandSearch" placeholder="Search brands…" oninput="asFilterBrandList(this.value)" autocomplete="off">
         <div class="brand-list-scroll" id="asBrandList" style="max-height:420px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
         <div id="asLoadBrandBtn" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-          <button onclick="asClosePanelAndLoad()" style="width:100%;background:var(--brand);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">▶ Load Aged Stock</button>
+          <button onclick="asClosePanelAndLoad()" style="width:100%;background:var(--brand);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">▶ Load Stock</button>
         </div>
       </div>
     </div>
 
-    <!-- PILL: Price Bands -->
-    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:130px;box-sizing:border-box;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Price Bands</span>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <label style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;font-weight:700;color:#0891b2;">
-          Band C
-          <label class="tog teal">
-            <input type="checkbox" id="asBandCToggle" checked onchange="asToggleBandCol('C')">
-            <span class="tog-track"></span>
-          </label>
-        </label>
-        <label style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;font-weight:700;color:#7c3aed;">
-          Band F
-          <label class="tog purple">
-            <input type="checkbox" id="asBandFToggle" checked onchange="asToggleBandCol('F')">
-            <span class="tog-track"></span>
-          </label>
-        </label>
-      </div>
-    </div>
-
-    <!-- PILL: Discount % -->
-    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid #f5e0b0;border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:170px;box-sizing:border-box;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b45309;line-height:1;">Discount %</span>
-      <div style="display:flex;gap:4px;align-items:center;">
-        <input type="number" id="asGlobalDiscountInput" min="0" max="100" step="0.5" value="0"
-          style="width:48px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;font-size:13px;font-weight:800;text-align:center;font-family:inherit;background:var(--white);color:#b45309;outline:none;">
-        <button onclick="asApplyGlobalDiscount()"
-          style="background:#b45309;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
-          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">All</button>
-        <button onclick="asApplySelectedDiscount()"
-          style="background:#92400e;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
-          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">Selected</button>
-      </div>
-    </div>
-
-    <!-- PILL: Export -->
-    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 10px;gap:4px;min-width:120px;box-sizing:border-box;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Export</span>
-      <div style="display:flex;flex-direction:column;gap:3px;align-items:center;width:100%;">
-        <button id="asExportBtn" onclick="asExportExcel()" disabled
-          style="width:100%;background:#1a3c6e;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:800;cursor:not-allowed;font-family:inherit;transition:opacity .15s;opacity:.45;white-space:nowrap;">
-          ⬇ Export
-        </button>
-        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;">
-          <input type="checkbox" id="asThumbnailToggle" style="cursor:pointer;">
-          Thumbnails
-        </label>
-      </div>
-    </div>
-
-    <!-- PILL: Clear Cache (small) -->
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 8px;box-sizing:border-box;">
-      <button onclick="asClearCache()"
-        title="Clear the 7-day local cache and re-fetch fresh data from CRM"
-        style="border:none;background:transparent;color:var(--muted);font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;padding:0;">
-        ⚡ Clear Cache
+    <!-- PILL 3: Load Stock -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid #16a34a;border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:120px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#16a34a;line-height:1;">Load</span>
+      <button class="btn btn-green" onclick="asLoadForSelectedBrands()"
+        style="font-size:12px;padding:4px 18px;font-weight:800;white-space:nowrap;width:100%;">
+        ▶ Load Stock
       </button>
     </div>
 
-    <!-- Exclude New (small pill) -->
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:4px 8px;gap:2px;box-sizing:border-box;">
+    <!-- PILL 4: Price Bands (wider, label+toggle on each row) -->
+    <div style="display:flex;flex-direction:column;justify-content:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 14px;gap:5px;min-width:140px;box-sizing:border-box;">
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;">
+        <span style="font-size:11px;font-weight:700;color:#0891b2;white-space:nowrap;">Band C</span>
+        <label class="tog teal" style="flex-shrink:0;">
+          <input type="checkbox" id="asBandCToggle" checked onchange="asToggleBandCol('C')">
+          <span class="tog-track"></span>
+        </label>
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;">
+        <span style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Band F</span>
+        <label class="tog purple" style="flex-shrink:0;">
+          <input type="checkbox" id="asBandFToggle" checked onchange="asToggleBandCol('F')">
+          <span class="tog-track"></span>
+        </label>
+      </label>
+    </div>
+
+    <!-- PILL 5: Exclude New -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:120px;box-sizing:border-box;">
       <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Exclude</span>
       <div id="asExcludeNewPill"
         style="display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--white);transition:all .15s;">
         <button id="asExcludeNewBtn" onclick="asToggleExclude('new')"
           title="Hide products added to the CRM within the last N months"
-          style="height:20px;padding:0 7px;border:none;border-radius:0;background:transparent;color:var(--text);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;white-space:nowrap;">
+          style="height:22px;padding:0 8px;border:none;border-radius:0;background:transparent;color:var(--text);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;white-space:nowrap;">
           ⊘ New
         </button>
         <input type="number" id="asNewMonthsInput" value="6" min="1" max="60" step="1"
           title="Products added within this many months are treated as new"
           onclick="event.stopPropagation()"
-          style="width:30px;height:20px;border:none;border-left:1px solid var(--border);padding:2px 3px;font-size:11px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
+          style="width:32px;height:22px;border:none;border-left:1px solid var(--border);padding:2px 3px;font-size:11px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
           oninput="asNewMonths=Math.max(1,parseInt(this.value)||6);if(asExcludeNew){asRebuildData();asRebuildSlowData();if(asData.length>0||asSlowData.length>0)asRenderAll();else asShowNoAgedStock();}">
-        <span style="padding:0 5px;font-size:10px;font-weight:700;color:var(--muted);">m</span>
+        <span style="padding:0 6px;font-size:10px;font-weight:700;color:var(--muted);">m</span>
       </div>
     </div>
 
-    <!-- Flex spacer -->
-    <div style="flex:1;"></div>
+    <!-- PILL 6: Discount % -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid #f5e0b0;border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:170px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b45309;line-height:1;">Discount %</span>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <input type="number" id="asGlobalDiscountInput" min="0" max="100" step="0.5" value="0"
+          style="width:50px;border:1px solid #f5e0b0;border-radius:5px;padding:3px 5px;font-size:13px;font-weight:800;text-align:center;font-family:inherit;background:var(--white);color:#b45309;outline:none;">
+        <button onclick="asApplyGlobalDiscount()"
+          style="background:#b45309;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
+          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">All</button>
+        <button onclick="asApplySelectedDiscount()"
+          style="background:#92400e;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
+          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">Selected</button>
+      </div>
+    </div>
 
-    <!-- Search box -->
+    <!-- PILL 7: Export (no top label, big button row 1, thumbnails row 2) -->
+    <div style="display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 12px;gap:5px;min-width:140px;box-sizing:border-box;">
+      <button id="asExportBtn" onclick="asExportExcel()" disabled
+        class="btn"
+        style="background:#1a3c6e;color:#fff;font-size:12px;padding:5px 14px;width:100%;cursor:not-allowed;opacity:.38;">
+        ⬇ Export to Excel
+      </button>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;">
+        <input type="checkbox" id="asThumbnailToggle" style="cursor:pointer;">
+        Thumbnails
+      </label>
+    </div>
+
+    <!-- PILL 8: Clear Cache (small, centred) -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:10px;background:var(--light);padding:5px 10px;gap:2px;box-sizing:border-box;min-width:80px;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Cache</span>
+      <button onclick="asClearCache()"
+        title="Clear the 7-day local cache and re-fetch fresh data from CRM"
+        style="border:none;background:transparent;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;padding:2px 0;transition:color .15s;"
+        onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        ⚡ Clear
+      </button>
+    </div>
+
+    <!-- Flex spacer -->
+    <div style="flex:1;min-width:8px;"></div>
+
+    <!-- Search box (far right, aligned centre vertically) -->
     <div style="display:flex;align-items:center;">
       <div class="search-x-wrap" id="asSearchWrap" style="display:none;">
         <input type="search" id="asSearch" placeholder="Search code, description, brand…"
@@ -8719,7 +8721,6 @@ async function asLoadForSelectedBrands() {
   asFetching = true;
   const content = document.getElementById('asContent');
   content.style.display = 'block';
-  document.getElementById('asTable').style.display        = 'none';
   document.getElementById('asSummaryCards').style.display = 'none';
 
   const brandLabel = brandsToFetch.length === 1 ? brandsToFetch[0] : brandsToFetch.length + ' brands';
@@ -9318,7 +9319,7 @@ function asRenderAll() {
   if (agedEl) agedEl.style.display = asShowAged ? '' : 'none';
   if (slowEl) slowEl.style.display = asShowSlow ? '' : 'none';
   const btn = document.getElementById('asExportBtn');
-  if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+  if (btn) { btn.disabled = false; btn.style.cursor = ''; }
 }
 
 // ── Table render ───────────────────────────────────────
@@ -9901,7 +9902,7 @@ function asShowPickPrompt() {
   if (agedEl) agedEl.style.display = 'none';
   if (slowEl) slowEl.style.display = 'none';
   const btn = document.getElementById('asExportBtn');
-  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; }
+  if (btn) { btn.disabled = true; btn.style.cursor = 'not-allowed'; }
 
   const content = document.getElementById('asContent');
   content.style.display = 'block';
@@ -9927,7 +9928,7 @@ function asShowNoAgedStock() {
   document.getElementById('asSummaryCards').style.display  = 'none';
   document.getElementById('asSearchWrap').style.display    = 'none';
   const btn = document.getElementById('asExportBtn');
-  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; }
+  if (btn) { btn.disabled = true; btn.style.cursor = 'not-allowed'; }
   const content = document.getElementById('asContent');
   content.style.display = 'block';
   content.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -9978,7 +9979,7 @@ function asReset() {
   if (agedElR) agedElR.style.display = 'none';
   if (slowElR) slowElR.style.display = 'none';
   const btn = document.getElementById('asExportBtn');
-  if (btn) { btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed'; btn.textContent = '⬇ Export'; }
+  if (btn) { btn.disabled = true; btn.style.cursor = 'not-allowed'; btn.textContent = '⬇ Export to Excel'; }
 
   asShowPickPrompt();
   showToast('↺ Aged stock cleared.');
@@ -19288,7 +19289,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v114 · 17 Sep 2026 · pill toolbar · dual tables · row checkboxes · brand panel bug fix';
+const TOOL_BUILD = 'v114b · 17 Sep 2026 · toolbar redesign · view bug fix · Load Stock pill';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
