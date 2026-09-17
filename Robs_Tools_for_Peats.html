@@ -1986,6 +1986,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         <option value="12">Last 12 months</option>
         <option value="24" selected>Last 24 months</option>
         <option value="36">Last 36 months</option>
+        <option value="60">Last 5 years</option>
+        <option value="0">All time</option>
       </select>
     </div>
 
@@ -8014,9 +8016,10 @@ async function beaRun() {
   const brand     = brandSel ? brandSel.value : '';
   if (!brand) { alert('Select a brand first.'); return; }
 
-  const periodMo  = parseInt(document.getElementById('beaPeriodSel').value,  10) || 24;
+  const periodMo  = parseInt(document.getElementById('beaPeriodSel').value,  10); // 0 = all time
   const activeMo  = parseInt(document.getElementById('beaActiveSel').value, 10) || 6;
   const lapsedMo  = Math.max(activeMo + 1, 18); // lapsed = active..18 months; dormant = 18+
+  const allTime   = (periodMo === 0);
 
   const btn    = document.getElementById('beaRunBtn');
   const status = document.getElementById('beaStatus');
@@ -8024,8 +8027,6 @@ async function beaRun() {
 
   const CRM = CRM_ODATA_BASE;
   const now = new Date();
-  const cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth() - periodMo);
-  const cutoffStr = cutoff.toISOString().slice(0, 10) + 'T00:00:00Z';
 
   // Step 1: get all SKUs for this brand from the catalog
   const brandSkus = new Set();
@@ -8033,22 +8034,25 @@ async function beaRun() {
     const b = (item.CategoryId || item.brand || item.category || '').toUpperCase().trim();
     if (b === brand) brandSkus.add(sku.toUpperCase());
   });
-  status.textContent = brand + ' — ' + brandSkus.size + ' SKUs in catalog. Fetching transactions…';
+  const periodLabel = allTime ? 'all time' : periodMo + ' months';
+  status.textContent = brand + ' — ' + brandSkus.size + ' SKUs in catalog. Fetching transactions (' + periodLabel + ')…';
 
-  // Step 2: fetch SalesTransactions with date filter, paged
-  // Use $select to minimise data transfer
-  const select = '$select=Account,ProductItemId,TransactionDate,CalculatedLineValue,CalculatedInvoiceQuantity';
-  const filter  = '$filter=TransactionDate ge ' + cutoffStr;
+  // Step 2: fetch SalesTransactions, paged (date-filtered or all time)
+  const select  = '$select=Account,ProductItemId,TransactionDate,CalculatedLineValue,CalculatedInvoiceQuantity,Quantity,LineQuantity';
+  const filter  = allTime ? '' : '$filter=TransactionDate ge ' + (function(){
+    const c = new Date(now); c.setMonth(c.getMonth() - periodMo);
+    return c.toISOString().slice(0, 10) + 'T00:00:00Z';
+  })();
   const perPage = 1000;
   let allTx = [];
   let skip = 0;
   let page = 0;
-  const maxPages = 30;
+  const maxPages = allTime ? 100 : 50; // all-time may be large
 
   try {
     while (page < maxPages) {
       page++;
-      const url = CRM + '/SalesTransactions?' + filter + '&' + select +
+      const url = CRM + '/SalesTransactions?' + (filter ? filter + '&' : '') + select +
                   '&$top=' + perPage + '&$skip=' + skip;
       status.textContent = 'Fetching page ' + page + ' (' + allTx.length + ' transactions so far)…';
       const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
@@ -8068,8 +8072,9 @@ async function beaRun() {
   status.textContent = allTx.length + ' transactions fetched. Filtering to ' + brand + '…';
 
   // Step 3: filter to brand SKUs and group by customer
-  // Map: accountCode → { lastDate, totalValue, totalQty, halfValue (last half of period for trend) }
-  const halfCutoff = new Date(now); halfCutoff.setMonth(halfCutoff.getMonth() - Math.round(periodMo / 2));
+  // For trend: "recent" = last half of period (or last 12mo if all-time)
+  const trendMonths = allTime ? 12 : Math.round(periodMo / 2);
+  const halfCutoff = new Date(now); halfCutoff.setMonth(halfCutoff.getMonth() - trendMonths);
   const customerMap = new Map();
 
   allTx.forEach(function(tx) {
@@ -8080,8 +8085,8 @@ async function beaRun() {
     if (!acct) return;
 
     const txDate  = new Date(tx.TransactionDate || 0);
-    const value   = parseFloat(tx.CalculatedLineValue)   || 0;
-    const qty     = parseFloat(tx.CalculatedInvoiceQuantity) || 0;
+    const value   = parseFloat(tx.CalculatedLineValue) || 0;
+    const qty     = parseFloat(tx.CalculatedInvoiceQuantity || tx.Quantity || tx.LineQuantity || tx.InvoiceQuantity) || 0;
 
     if (!customerMap.has(acct)) {
       customerMap.set(acct, { lastDate: txDate, totalValue: 0, totalQty: 0, recentValue: 0, recentQty: 0 });
@@ -8182,11 +8187,11 @@ async function beaRun() {
     return a.lastDate - b.lastDate; // oldest purchase first within group
   });
 
-  beaRenderResults(brand, periodMo, activeMo, lapsedMo);
+  beaRenderResults(brand, periodMo, activeMo, lapsedMo, allTime);
   btn.disabled = false; btn.textContent = '▶ Run Analysis';
 }
 
-function beaRenderResults(brand, periodMo, activeMo, lapsedMo) {
+function beaRenderResults(brand, periodMo, activeMo, lapsedMo, allTime) {
   const counts = { active: 0, lapsed: 0, dormant: 0 };
   beaRows.forEach(function(r) { counts[r.status_cls] = (counts[r.status_cls] || 0) + 1; });
 
@@ -8195,8 +8200,9 @@ function beaRenderResults(brand, periodMo, activeMo, lapsedMo) {
   const chipStyle = function(bg, fg) {
     return 'display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;background:' + bg + ';color:' + fg + ';';
   };
+  const pLabel = allTime ? 'all time' : 'last ' + periodMo + ' months';
   bar.innerHTML =
-    '<span style="font-size:12px;color:var(--muted);font-weight:600;">' + brand + ' · last ' + periodMo + ' months · ' + beaRows.length + ' customers</span>' +
+    '<span style="font-size:12px;color:var(--muted);font-weight:600;">' + brand + ' · ' + pLabel + ' · ' + beaRows.length + ' customers</span>' +
     '<span style="' + chipStyle('#dcfce7','#166534') + '">● Active (≤' + activeMo + 'mo): ' + counts.active + '</span>' +
     '<span style="' + chipStyle('#fef9c3','#854d0e') + '">● Lapsed (' + (activeMo+1) + '–' + lapsedMo + 'mo): ' + counts.lapsed + '</span>' +
     '<span style="' + chipStyle('#fee2e2','#991b1b') + '">● Dormant (>' + lapsedMo + 'mo): ' + counts.dormant + '</span>';
@@ -18807,7 +18813,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v98 · 17 Sep 2026 · Fix toolbar scroll bug, Clear All for Aged Stock & Brand Engagement';
+const TOOL_BUILD = 'v99 · 17 Sep 2026 · Brand Engagement: 5yr + all-time period, qty field fallbacks';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
