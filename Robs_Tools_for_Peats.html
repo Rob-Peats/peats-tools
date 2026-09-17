@@ -8883,13 +8883,25 @@ async function asLoadForSelectedBrands() {
           bandEntity = candidate;
           const fields = Object.keys(rows[0]);
           console.log('[Bands] Entity found:', candidate);
-          console.log('[Bands] Fields:', fields);
-          console.log('[Bands] Sample row:', rows[0]);
+          console.log('[Bands] Fields:', fields.join(', '));
+          console.log('[Bands] Sample row keys+values:');
+          fields.forEach(f => console.log('  ', f, '=', rows[0][f]));
           // Identify SKU link field
           bandSkuField = fields.find(f => /^productitemid$/i.test(f))
                       || fields.find(f => /productitem/i.test(f))
                       || fields.find(f => /^code$/i.test(f))
                       || fields.find(f => /stockcode/i.test(f))
+                      || fields.find(f => /productcode/i.test(f))
+                      || fields.find(f => /itemcode/i.test(f))
+                      || fields.find(f => /^item$/i.test(f))
+                      || fields.find(f => /^sku$/i.test(f))
+                      // catch-all: first field whose sample value looks like a product code
+                      // (short non-GUID string, not Band/Price fields)
+                      || fields.find(f => {
+                           if (/band|price|date|created|modified|id$/i.test(f)) return false;
+                           const v = String(rows[0][f] || '');
+                           return v.length > 0 && v.length <= 30 && !/^[0-9a-f-]{32,}$/i.test(v);
+                         })
                       || null;
           // Identify band letter field
           bandLetterField = fields.find(f => /^band$/i.test(f))
@@ -19176,7 +19188,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v109 · 17 Sep 2026 · Band entity discovery via $metadata + expanded candidate list';
+const TOOL_BUILD = 'v110 · 17 Sep 2026 · Band fields logged as text, SKU field detection broadened';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
