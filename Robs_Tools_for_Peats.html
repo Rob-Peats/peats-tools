@@ -8038,7 +8038,7 @@ async function beaRun() {
   status.textContent = brand + ' — ' + brandSkus.size + ' SKUs in catalog. Fetching transactions (' + periodLabel + ')…';
 
   // Step 2: fetch SalesTransactions, paged (date-filtered or all time)
-  const select  = '$select=Account,ProductItemId,TransactionDate,CalculatedLineValue,CalculatedInvoiceQuantity,Quantity,LineQuantity';
+  const select  = '$select=Account,ProductItemId,TransactionDate,CalculatedLineValue,CalculatedInvoiceQuantity';
   const filter  = allTime ? '' : '$filter=TransactionDate ge ' + (function(){
     const c = new Date(now); c.setMonth(c.getMonth() - periodMo);
     return c.toISOString().slice(0, 10) + 'T00:00:00Z';
@@ -8056,7 +8056,12 @@ async function beaRun() {
                   '&$top=' + perPage + '&$skip=' + skip;
       status.textContent = 'Fetching page ' + page + ' (' + allTx.length + ' transactions so far)…';
       const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
-      if (!r.ok) { status.textContent = '✗ API error ' + r.status; btn.disabled = false; btn.textContent = '▶ Run Analysis'; return; }
+      if (!r.ok) {
+        let errDetail = '';
+        try { const j = await r.json(); errDetail = j.message || j['odata.error']?.message?.value || ''; } catch(e) {}
+        status.textContent = '✗ API error ' + r.status + (errDetail ? ': ' + errDetail : '');
+        btn.disabled = false; btn.textContent = '▶ Run Analysis'; return;
+      }
       const d = await r.json();
       const batch = (d.value || []);
       allTx = allTx.concat(batch);
@@ -18813,7 +18818,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v99 · 17 Sep 2026 · Brand Engagement: 5yr + all-time period, qty field fallbacks';
+const TOOL_BUILD = 'v100 · 17 Sep 2026 · Brand Engagement: fix API 400 ($select), better error detail';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
