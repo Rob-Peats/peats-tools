@@ -1013,6 +1013,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Stored only in this browser's localStorage. Generate at <strong>CRM → Profile → Tokens</strong> with scope <code>ProspectSoft.OData</code>.</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <input type="password" id="crmPatInput" placeholder="Paste your Personal Access Token here…"
+              autocomplete="new-password" data-lpignore="true" data-1p-ignore
               style="flex:1;min-width:240px;font-family:monospace;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--white);color:var(--text)"
               oninput="crmPatDirty()" />
             <button onclick="saveCrmPat()" id="crmPatSaveBtn"
@@ -1098,6 +1099,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Stored only in this browser's localStorage — never saved in the HTML source. Generate at <strong>GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained tokens</strong>. <strong style="color:#dc2626">Important:</strong> choose <strong>"Only select repositories"</strong> and add <code>peats-tools</code> — do <em>not</em> use "Public repositories" (that is read-only). Set <strong>Contents: Read &amp; Write</strong>.</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <input type="password" id="ghPatInput" placeholder="Paste your GitHub Fine-grained PAT here (github_pat_…)"
+              autocomplete="new-password" data-lpignore="true" data-1p-ignore
               style="flex:1;min-width:240px;font-family:monospace;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--white);color:var(--text)"
               oninput="ghPatDirty()" />
             <button onclick="saveGhPat()"
@@ -1872,37 +1874,30 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- Exclude TBD / EOL toggles -->
+    <!-- Exclude new products toggle — pill with embedded month input -->
     <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <button id="asExcludeTBDBtn" onclick="asToggleExclude('tbd')"
-        style="height:40px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
-        ⊘ TBD
-      </button>
-      <button id="asExcludeEOLBtn" onclick="asToggleExclude('eol')"
-        style="height:40px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
-        ⊘ EOL
-      </button>
+      <div id="asExcludeNewPill"
+        style="height:40px;display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--light);transition:all .15s;">
+        <button id="asExcludeNewBtn" onclick="asToggleExclude('new')"
+          title="Hide products added to the CRM within the last N months"
+          style="height:100%;padding:0 10px;border:none;border-radius:0;background:transparent;color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;white-space:nowrap;">
+          ⊘ New
+        </button>
+        <input type="number" id="asNewMonthsInput" value="6" min="1" max="60" step="1"
+          title="Products added within this many months are treated as new"
+          onclick="event.stopPropagation()"
+          style="width:36px;height:26px;border:none;border-left:1px solid var(--border);border-right:1px solid var(--border);padding:2px 3px;font-size:12px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
+          oninput="asNewMonths=Math.max(1,parseInt(this.value)||6);if(asExcludeNew){asRebuildData();asRebuildSlowData();if(asData.length>0||asSlowData.length>0)asRenderAll();else asShowNoAgedStock();}">
+        <span style="padding:0 8px;font-size:11px;font-weight:700;color:var(--muted);">m</span>
+      </div>
     </div>
 
-    <!-- Exclude new products toggle -->
-    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <button id="asExcludeNewBtn" onclick="asToggleExclude('new')"
-        title="Hide products added to the CRM within the last N months"
-        style="height:40px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
-        ⊘ New &lt;<span id="asNewMonthsDisplay">6</span>m
-      </button>
-      <input type="number" id="asNewMonthsInput" value="6" min="1" max="60" step="1"
-        title="Products added within this many months are treated as new"
-        style="width:40px;height:32px;border:1px solid var(--border);border-radius:6px;padding:2px 4px;font-size:12px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
-        oninput="asNewMonths=Math.max(1,parseInt(this.value)||6);document.getElementById('asNewMonthsDisplay').textContent=asNewMonths;if(asExcludeNew){asRebuildData();if(asData.length>0)asRenderAll();else asShowNoAgedStock();}">
-    </div>
-
-    <!-- CRM Mode toggle -->
+    <!-- All SKUs / Current Pricelist toggle -->
     <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
       <button id="asCrmModeBtn" onclick="asToggleCrmMode()"
         title="Also query the CRM to find stocked SKUs not listed in the catalog (slower)"
-        style="height:40px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
-        🔗 CRM Mode
+        style="height:40px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;line-height:1.3;">
+        ☰ All SKUs<br>· Pricelist
       </button>
     </div>
 
@@ -1947,6 +1942,18 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     </div>
 
   </div><!-- /toolbar -->
+
+  <!-- ── Aged / Slow Moving tab bar (hidden until data loaded) ── -->
+  <div id="asTabBar" style="display:none;flex-shrink:0;background:var(--white);border-bottom:2px solid var(--border);padding:0 16px;gap:0;align-items:flex-end;">
+    <button id="asTabAged" onclick="asSetMainTab('aged')"
+      style="padding:10px 20px;border:none;border-bottom:3px solid var(--brand);background:transparent;color:var(--brand);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.02em;margin-bottom:-2px;">
+      📦 Aged Stock
+    </button>
+    <button id="asTabSlow" onclick="asSetMainTab('slow')"
+      style="padding:10px 20px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.02em;margin-bottom:-2px;">
+      🐢 Slow Moving
+    </button>
+  </div>
 
   <!-- ── Summary cards (hidden until data loaded) ── -->
   <div id="asSummaryCards" style="display:none;flex-shrink:0;padding:14px 20px;gap:12px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
@@ -7609,7 +7616,7 @@ async function saaLoadForSelectedBrands() {
         let nextUrl = CRM_ODATA_BASE + '/SalesTransactions?$filter=' + encodeURIComponent(filter)
           + '&$select=ProductItemId,CalculatedInvoiceQuantity';
         while (nextUrl) {
-          const sr = await fetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+          const sr = await crmFetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
           if (!sr.ok) break;
           const sd = await sr.json();
           (sd.value || []).forEach(item => {
@@ -7907,16 +7914,16 @@ function _saaRefreshExcludePills() {
 
 // ── State ─────────────────────────────────────────────
 let asData         = [];          // processed aged-stock rows (see asRebuildData)
+let asSlowData     = [];          // slow-moving stock rows (>8 weeks coverage at 3-month avg sales)
+let asMainTab      = 'aged';      // 'aged' | 'slow'
 let asSortCol      = 'stockValue';
 let asSortDir      = -1;          // -1 = descending
 let asBrands       = [];          // all available brand names from catalog
 let asSelBrands    = new Set();   // brands the user has selected
-let asExcludeTBD   = false;
-let asExcludeEOL   = false;
 let asExcludeNew   = false;
 let asNewMonths    = 6;        // products added within this many months are treated as "new"
 let asCrmMode      = false;    // if true: also query CRM by CategoryId to find SKUs not in catalog
-// SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, hasSales12Data, lastSoldDate, createdDate}
+// SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, sales3Mo, hasSales12Data, lastSoldDate, createdDate, bands}
 let asStockMap     = new Map();
 let asCrmProductData = new Map(); // CRM-only SKUs: SKU → {desc, brand, cost, retail, createdDate}
 let asLoadedBrands = new Set();   // brands whose data has been fetched (cache key)
@@ -8597,15 +8604,65 @@ async function asLoadForSelectedBrands() {
 
   const brandLabel = brandsToFetch.length === 1 ? brandsToFetch[0] : brandsToFetch.length + ' brands';
 
+  // Total steps: 1=stock, 2=names, 3=12mo sales, 3b=3mo sales, 4=last sold, 5=created, 6=price bands [+ CRM if needed]
+  const AS_TOTAL_STEPS = asCrmMode ? 8 : 7;
+  let asCurrentStep = 0;
+
+  const asStepNames = [
+    'Stock levels',
+    'Product names',
+    '12-month sales history',
+    '3-month sales (slow moving)',
+    'Last sold dates',
+    'Product created dates',
+    'Price bands (A–F)',
+    ...(asCrmMode ? ['CRM off-catalog SKUs'] : [])
+  ];
+
+  function asShowProgress(stepIdx, detail) {
+    asCurrentStep = stepIdx;
+    const pct = Math.round((stepIdx / AS_TOTAL_STEPS) * 100);
+    const stepEl = document.getElementById('asProgressStep');
+    const barEl  = document.getElementById('asProgressBar');
+    const listEl = document.getElementById('asProgressList');
+    if (!stepEl) return;
+    stepEl.textContent = detail || asStepNames[stepIdx - 1] || '';
+    if (barEl) barEl.style.width = pct + '%';
+    if (listEl) {
+      listEl.innerHTML = asStepNames.map((name, i) => {
+        const done    = i < stepIdx - 1;
+        const active  = i === stepIdx - 1;
+        const pending = i > stepIdx - 1;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;opacity:${pending ? '.35' : '1'};transition:opacity .3s;">
+          <span style="font-size:14px;">${done ? '✅' : active ? '⏳' : '○'}</span>
+          <span style="font-size:12px;font-weight:${active ? '700' : '500'};color:${active ? 'var(--brand)' : done ? 'var(--text)' : 'var(--muted)'};">${name}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
   content.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-      height:100%;gap:14px;padding:40px;text-align:center;">
-    <div style="font-size:48px;line-height:1;animation:spin 1.2s linear infinite">⏳</div>
+      min-height:60%;gap:16px;padding:40px;text-align:center;">
+    <div style="font-size:44px;line-height:1;animation:spin 1.8s linear infinite">⏳</div>
     <div style="font-size:18px;font-weight:800;color:var(--text);">Analysing aged stock…</div>
-    <div style="font-size:13px;color:var(--muted);max-width:420px;line-height:1.65;">
-      Fetching <strong>${skusToFetch.length}</strong> products for <strong>${escHtml(brandLabel)}</strong><br>
-      Stock levels &amp; 12-month sales history${asCrmMode ? '<br><em>🔗 CRM Mode: includes off-catalog SKUs</em>' : ''}
+    <div style="font-size:13px;color:var(--muted);">
+      <strong>${skusToFetch.length}</strong> products · <strong>${escHtml(brandLabel)}</strong>${asCrmMode ? ' · CRM Mode' : ''}
+    </div>
+
+    <!-- Progress bar -->
+    <div style="width:340px;max-width:90vw;background:var(--border);border-radius:99px;height:6px;overflow:hidden;margin-top:4px;">
+      <div id="asProgressBar" style="height:100%;width:0%;background:var(--brand);border-radius:99px;transition:width .4s ease;"></div>
+    </div>
+
+    <!-- Current step label -->
+    <div id="asProgressStep" style="font-size:12px;font-weight:600;color:var(--brand);min-height:18px;"></div>
+
+    <!-- Step list -->
+    <div id="asProgressList" style="text-align:left;margin-top:4px;line-height:1.8;">
     </div>
   </div>`;
+
+  asShowProgress(1, asStepNames[0]);
 
   try {
     // ── Step 1: Stock levels ─────────────────────────────
@@ -8613,6 +8670,7 @@ async function asLoadForSelectedBrands() {
     newStockMap.forEach((v, k) => asStockMap.set(k, v));
 
     // ── Step 2: CRM product names for TBD/EOL detection ──
+    asShowProgress(2, asStepNames[1]);
     try {
       const crmNames = await fetchSaaCrmNames(skusToFetch);
       crmNames.forEach((name, sku) => {
@@ -8622,6 +8680,7 @@ async function asLoadForSelectedBrands() {
     } catch(e) { /* non-fatal */ }
 
     // ── Step 3: 12-month invoiced sales per SKU ──────────
+    asShowProgress(3, asStepNames[2]);
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     const dateFilter  = twelveMonthsAgo.toISOString().slice(0, 10) + 'T00:00:00Z';
@@ -8636,7 +8695,7 @@ async function asLoadForSelectedBrands() {
         let nextUrl = CRM_ODATA_BASE + '/SalesTransactions?$filter=' + encodeURIComponent(filter)
           + '&$select=ProductItemId,CalculatedInvoiceQuantity';
         while (nextUrl) {
-          const sr = await fetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+          const sr = await crmFetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
           if (!sr.ok) break;
           const sd = await sr.json();
           (sd.value || []).forEach(item => {
@@ -8658,7 +8717,40 @@ async function asLoadForSelectedBrands() {
       }
     });
 
+    // ── Step 3b: 3-month invoiced sales per SKU (for slow moving) ──
+    asShowProgress(4, asStepNames[3]);
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const dateFilter3mo = threeMonthsAgo.toISOString().slice(0, 10) + 'T00:00:00Z';
+    const sales3Map = new Map();
+    for (let i = 0; i < skusToFetch.length; i += SALES_BATCH) {
+      const batch  = skusToFetch.slice(i, i + SALES_BATCH);
+      const skuF   = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+      const filter = skuF + ` and TransactionType eq 'I' and InvoiceDate ge ${dateFilter3mo} and Obsolete eq 0`;
+      try {
+        let nextUrl = CRM_ODATA_BASE + '/SalesTransactions?$filter=' + encodeURIComponent(filter)
+          + '&$select=ProductItemId,CalculatedInvoiceQuantity';
+        while (nextUrl) {
+          const sr = await crmFetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+          if (!sr.ok) break;
+          const sd = await sr.json();
+          (sd.value || []).forEach(item => {
+            const qty = item.CalculatedInvoiceQuantity;
+            if (qty > 0) {
+              sales3Map.set(item.ProductItemId, (sales3Map.get(item.ProductItemId) || 0) + qty);
+            }
+          });
+          nextUrl = sd['@odata.nextLink'] || null;
+        }
+      } catch(e) { /* best effort */ }
+    }
+    skusToFetch.forEach(sku => {
+      const entry = asStockMap.get(sku);
+      if (entry) entry.sales3Mo = sales3Map.get(sku) || 0;
+    });
+
     // ── Step 4: Last sold date for aged SKUs only ─────────
+    asShowProgress(5, asStepNames[4]);
     const agedSkus = skusToFetch.filter(sku => {
       const s = asStockMap.get(sku);
       return s && s.hasSales12Data && (s.qty || 0) > 0 && s.soldLast12Mo === 0;
@@ -8697,6 +8789,7 @@ async function asLoadForSelectedBrands() {
     });
 
     // ── Step 5: Created date for new-product exclusion ────
+    asShowProgress(6, asStepNames[5]);
     const CREATED_BATCH = 20;
     const createdMap    = new Map();
     try {
@@ -8720,12 +8813,16 @@ async function asLoadForSelectedBrands() {
     });
 
     // ── Step 6: Exchequer price bands from PriceLists ────
-    // Entity: PriceLists | Band: Type field (A–F) | Price: SellingPrice / 10^SellDecimals
-    // FK field still being confirmed: currently tries ProductItemId then Code
+    asShowProgress(7, asStepNames[6]);
+    // Fetch ALL bands (A–F) for each batch.
+    // Strategy: try Code first (product code string, matches our SKU identifiers),
+    //   then also try ProductItemId to catch any extra rows.
+    //   Both passes are always run and merged, so we don't miss C/F if one key field
+    //   returns fewer bands than the other.
     const BANDS_BATCH = 15;
     const bandMap     = new Map();  // SKU → { A, B, C, D, E, F }  (decimal prices)
     try {
-      // Helper: process a PriceLists response and store into bandMap keyed by fkValue
+      // Store rows into bandMap keyed by fkField
       const processBandRows = (rows, fkField) => {
         rows.forEach(row => {
           const sku   = row[fkField];
@@ -8741,60 +8838,75 @@ async function asLoadForSelectedBrands() {
       for (let i = 0; i < skusToFetch.length; i += BANDS_BATCH) {
         const batch = skusToFetch.slice(i, i + BANDS_BATCH);
 
-        // Try ProductItemId first
-        const skuFbyId = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
-        const respId = await fetch(
-          CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyId) +
-          '&$select=ProductItemId,Type,SellingPrice,SellDecimals',
-          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
-        );
-        if (respId.ok) {
-          const d = await respId.json();
-          const rows = d.value || [];
-          if (rows.length) {
-            processBandRows(rows, 'ProductItemId');
-            continue;  // got results — skip Code fallback for this batch
-          }
-        }
-
-        // Fallback: try Code field (may hold the product code string)
+        // Pass 1: filter by Code (the product code string we use as SKU)
         const skuFbyCode = '(' + batch.map(s => `Code eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
-        const respCode = await fetch(
-          CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyCode) +
-          '&$select=ProductItemId,Code,Type,SellingPrice,SellDecimals',
-          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
-        );
-        if (respCode.ok) {
-          const d = await respCode.json();
-          const rows = d.value || [];
-          if (rows.length) {
-            // Use Code as the SKU key since that matched
-            processBandRows(rows, 'Code');
+        try {
+          const respCode = await crmFetch(
+            CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyCode) +
+            '&$select=Code,Type,SellingPrice,SellDecimals',
+            { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+          );
+          if (respCode.ok) {
+            const d = await respCode.json();
+            if (i === 0) console.log('[PriceLists Code batch 0]', (d.value || []).slice(0, 5));
+            processBandRows(d.value || [], 'Code');
           }
-        }
+        } catch(e) { /* best effort */ }
+
+        // Pass 2: also try ProductItemId in case the CRM links by that field
+        const skuFbyId = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+        try {
+          const respId = await crmFetch(
+            CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFbyId) +
+            '&$select=ProductItemId,Type,SellingPrice,SellDecimals',
+            { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+          );
+          if (respId.ok) {
+            const d = await respId.json();
+            if (i === 0) console.log('[PriceLists ProductItemId batch 0]', (d.value || []).slice(0, 5));
+            processBandRows(d.value || [], 'ProductItemId');
+          }
+        } catch(e) { /* best effort */ }
       }
     } catch(e) { /* best effort — price bands degrade gracefully */ }
     skusToFetch.forEach(sku => {
       const entry = asStockMap.get(sku);
       if (entry && bandMap.has(sku)) entry.bands = bandMap.get(sku);
     });
+    if (bandMap.size > 0) {
+      console.log('[PriceLists] bands loaded for', bandMap.size, 'SKUs. Sample:', [...bandMap.entries()].slice(0,3));
+    } else {
+      console.warn('[PriceLists] No band data returned. Check Code/ProductItemId field names in browser console above.');
+    }
 
     brandsToFetch.forEach(b => asLoadedBrands.add(b));
     if (asSelBrands.has('AVSL') && [...AVSL_BRANDS].every(b => asLoadedBrands.has(b))) {
       asLoadedBrands.add('AVSL');
     }
 
+    asShowProgress(AS_TOTAL_STEPS, 'Building results…');
     asRebuildData();
-    asView = 'all';
-    if (asData.length > 0) {
+    asRebuildSlowData();
+    asMainTab = 'aged';
+    if (asData.length > 0 || asSlowData.length > 0) {
       asRenderAll();
     } else {
       asShowNoAgedStock();
     }
 
   } catch(err) {
-    content.innerHTML = `<div style="text-align:center;padding:40px;color:#c0392b;font-size:13px;">
-      ✗ Error loading aged stock: ${escHtml(err.message)}
+    const is429 = /429/.test(err.message);
+    content.innerHTML = `<div style="text-align:center;padding:40px;color:#c0392b;font-size:13px;line-height:1.8;">
+      <div style="font-size:28px;margin-bottom:8px;">${is429 ? '⏳' : '✗'}</div>
+      <strong>${is429 ? 'CRM rate limit hit — too many requests in quick succession.' : 'Error loading aged stock'}</strong><br>
+      ${is429
+        ? 'Wait a few seconds, then click Retry below.'
+        : escHtml(err.message)}
+      <br><br>
+      <button onclick="asLoadForSelectedBrands()"
+        style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+        ↺ Retry
+      </button>
     </div>`;
   } finally {
     asFetching = false;
@@ -8826,8 +8938,6 @@ function asRebuildData() {
     const crmName     = s.crmName || null;
     const displayName = (crmName || e.desc || '').toUpperCase();
 
-    if (asExcludeTBD && displayName.startsWith('TBD')) return;
-    if (asExcludeEOL && displayName.startsWith('EOL')) return;
     if (asExcludeNew && s.createdDate) {
       const cutoff = new Date();
       cutoff.setMonth(cutoff.getMonth() - asNewMonths);
@@ -8881,9 +8991,6 @@ function asRebuildData() {
       const crmName     = s.crmName || crmEntry.desc || sku;
       const displayName = crmName.toUpperCase();
 
-      if (asExcludeTBD && displayName.startsWith('TBD')) return;
-      if (asExcludeEOL && displayName.startsWith('EOL')) return;
-
       const createdDate = s.createdDate || crmEntry.createdDate || null;
       if (asExcludeNew && createdDate) {
         const cutoff = new Date();
@@ -8926,42 +9033,146 @@ function asRebuildData() {
   asData = rows;
 }
 
+// ── Slow Moving Stock rebuild ──────────────────────────
+// Slow moving = free stock > 0, has 3-month sales > 0, but coverage > 8 weeks (2 months)
+
+function asRebuildSlowData() {
+  if (asSelBrands.size === 0) { asSlowData = []; return; }
+  const cat = state.catalog || {};
+  const rows = [];
+  const EIGHT_WEEKS_AS_MONTHS = 2;  // 8 weeks ≈ 2 months
+
+  const processSlowEntry = (code, brandName, descStr, crmName, s) => {
+    const qty = (s.qty != null) ? s.qty : 0;
+    if (qty <= 0) return;
+    const sales3Mo = s.sales3Mo || 0;
+    if (sales3Mo <= 0) return;  // no recent sales = aged, not slow
+
+    const avgMonthly = sales3Mo / 3;
+    const monthsCoverage = qty / avgMonthly;
+    if (monthsCoverage <= EIGHT_WEEKS_AS_MONTHS) return;  // not slow moving
+
+    if (asExcludeNew && s.createdDate) {
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - asNewMonths);
+      if (s.createdDate > cutoff) return;
+    }
+
+    const cost   = null; // enriched below if in catalog
+    const bands  = s.bands || {};
+    const bandC  = bands['C'] ?? null;
+    const bandF  = bands['F'] ?? null;
+    const weeksOfCoverage = monthsCoverage * 4.33;
+
+    rows.push({
+      code, brand: brandName, desc: descStr, crmName,
+      free: qty, sales3Mo, avgMonthly, weeksOfCoverage, monthsCoverage,
+      bandC, bandF,
+      stockValue: null  // set after cost lookup
+    });
+  };
+
+  Object.entries(cat).forEach(([code, e]) => {
+    if (!brandSelMatch(e.brand, asSelBrands)) return;
+    const s = asStockMap.get(code);
+    if (!s || !s.hasSales12Data) return;
+    processSlowEntry(code, e.brand || '', e.desc || '', s.crmName || null, s);
+  });
+
+  // CRM-mode: off-catalog entries
+  if (asCrmMode && asCrmProductData.size > 0) {
+    const catKeys = new Set(Object.keys(cat));
+    asCrmProductData.forEach((crmEntry, sku) => {
+      if (catKeys.has(sku)) return;
+      if (!brandSelMatch(crmEntry.brand, asSelBrands)) return;
+      const s = asStockMap.get(sku);
+      if (!s || !s.hasSales12Data) return;
+      processSlowEntry(sku, crmEntry.brand || '', crmEntry.desc || sku, s.crmName || crmEntry.desc || null, s);
+    });
+  }
+
+  // Sort by most overstocked first (highest weeks of coverage)
+  rows.sort((a, b) => b.weeksOfCoverage - a.weeksOfCoverage);
+  asSlowData = rows;
+}
+
+// ── Tab switching ──────────────────────────────────────
+
+function asSetMainTab(tab) {
+  asMainTab = tab;
+  const agedBtn = document.getElementById('asTabAged');
+  const slowBtn = document.getElementById('asTabSlow');
+  if (agedBtn) {
+    agedBtn.style.borderBottomColor = tab === 'aged' ? 'var(--brand)' : 'transparent';
+    agedBtn.style.color             = tab === 'aged' ? 'var(--brand)' : 'var(--muted)';
+    agedBtn.style.fontWeight        = tab === 'aged' ? '800' : '700';
+  }
+  if (slowBtn) {
+    slowBtn.style.borderBottomColor = tab === 'slow' ? '#0891b2' : 'transparent';
+    slowBtn.style.color             = tab === 'slow' ? '#0891b2' : 'var(--muted)';
+    slowBtn.style.fontWeight        = tab === 'slow' ? '800' : '700';
+  }
+  // Update export button label
+  const exportBtn = document.getElementById('asExportBtn');
+  if (exportBtn && !exportBtn.disabled) {
+    exportBtn.textContent = tab === 'slow' ? '⬇ Export Slow Moving' : '⬇ Export to Excel';
+  }
+  asRenderSummaryCards();
+  asRenderTable();
+}
+
 // ── Summary cards ──────────────────────────────────────
 
 function asSetView(v) { asView = v; asRenderTable(); }
 
 function asRenderSummaryCards() {
-  const totalValue   = asData.reduce((a, r) => a + (r.stockValue || 0), 0);
-  const totalUnits   = asData.reduce((a, r) => a + r.free, 0);
-  const tbdItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('TBD'));
-  const eolItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('EOL'));
-  const currentItems = asData.filter(r =>
-    !(r.crmName || r.desc || '').toUpperCase().startsWith('TBD') &&
-    !(r.crmName || r.desc || '').toUpperCase().startsWith('EOL')
-  );
-  const neverSold  = asData.filter(r => r.lastSoldDate === null);
-  const over2yrs   = asData.filter(r => r.dormantMonths != null && r.dormantMonths >= 24);
-
-  const cards = [
-    { label: 'AGED SKUS',      val: asData.length.toLocaleString('en-IE'), sub: asSelBrands.size + ' brand' + (asSelBrands.size === 1 ? '' : 's') + ' selected', col: '#b45309', view: 'all' },
-    { label: 'FREE UNITS',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',                 col: '#1a3c6e', view: 'all' },
-    { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: 'at cost price',  col: '#1f6b3e', view: 'all' },
-    { label: 'CURRENT',        val: currentItems.length,                   sub: 'not TBD or EOL',                 col: '#0891b2', view: 'current' },
-    { label: 'TBD',            val: tbdItems.length,                       sub: 'going end-of-line',              col: '#b45309', view: 'tbd' },
-    { label: 'END OF LINE',    val: eolItems.length,                       sub: 'EOL — clear first',              col: '#dc2626', view: 'eol' },
-    { label: 'NEVER SOLD',     val: neverSold.length,                      sub: 'no sales history',               col: '#6b7280', view: 'never' },
-    { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: 'most urgent to clear',           col: '#7c3aed', view: 'over2yrs' },
-  ];
+  let cards;
+  if (asMainTab === 'slow') {
+    // ── Slow moving cards ──
+    const totalSlow   = asSlowData.length;
+    const over12wks   = asSlowData.filter(r => r.weeksOfCoverage > 12);
+    const over26wks   = asSlowData.filter(r => r.weeksOfCoverage > 26);
+    const totalUnits  = asSlowData.reduce((a, r) => a + r.free, 0);
+    cards = [
+      { label: 'SLOW MOVING',    val: totalSlow.toLocaleString('en-IE'),   sub: '>8 weeks stock cover',       col: '#0891b2', view: null },
+      { label: 'FREE UNITS',     val: totalUnits.toLocaleString('en-IE'),  sub: 'units in stock',             col: '#1a3c6e', view: null },
+      { label: '>12 WKS COVER',  val: over12wks.length,                    sub: 'very slow — 3 months+',      col: '#b45309', view: null },
+      { label: '>26 WKS COVER',  val: over26wks.length,                    sub: 'critical — 6 months+',       col: '#dc2626', view: null },
+    ];
+  } else {
+    // ── Aged stock cards ──
+    const totalValue   = asData.reduce((a, r) => a + (r.stockValue || 0), 0);
+    const totalUnits   = asData.reduce((a, r) => a + r.free, 0);
+    const tbdItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('TBD'));
+    const eolItems     = asData.filter(r => (r.crmName || r.desc || '').toUpperCase().startsWith('EOL'));
+    const currentItems = asData.filter(r =>
+      !(r.crmName || r.desc || '').toUpperCase().startsWith('TBD') &&
+      !(r.crmName || r.desc || '').toUpperCase().startsWith('EOL')
+    );
+    const neverSold  = asData.filter(r => r.lastSoldDate === null);
+    const over2yrs   = asData.filter(r => r.dormantMonths != null && r.dormantMonths >= 24);
+    cards = [
+      { label: 'AGED SKUS',      val: asData.length.toLocaleString('en-IE'), sub: asSelBrands.size + ' brand' + (asSelBrands.size === 1 ? '' : 's') + ' selected', col: '#b45309', view: 'all' },
+      { label: 'FREE UNITS',     val: totalUnits.toLocaleString('en-IE'),    sub: 'units in stock',                 col: '#1a3c6e', view: 'all' },
+      { label: 'STOCK VALUE',    val: '€' + Math.round(totalValue).toLocaleString('en-IE'), sub: 'at cost price',  col: '#1f6b3e', view: 'all' },
+      { label: 'CURRENT',        val: currentItems.length,                   sub: 'not TBD or EOL',                 col: '#0891b2', view: 'current' },
+      { label: 'TBD',            val: tbdItems.length,                       sub: 'going end-of-line',              col: '#b45309', view: 'tbd' },
+      { label: 'END OF LINE',    val: eolItems.length,                       sub: 'EOL — clear first',              col: '#dc2626', view: 'eol' },
+      { label: 'NEVER SOLD',     val: neverSold.length,                      sub: 'no sales history',               col: '#6b7280', view: 'never' },
+      { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: 'most urgent to clear',           col: '#7c3aed', view: 'over2yrs' },
+    ];
+  }
 
   document.getElementById('asSummaryCards').innerHTML = cards.map(c => {
-    const active = asView === c.view;
-    return `<div onclick="asSetView('${c.view}')"
+    const active = c.view != null && asView === c.view;
+    const clickable = c.view != null;
+    return `<div ${clickable ? `onclick="asSetView('${c.view}')"` : ''}
        style="background:${active ? c.col : 'var(--white)'};border-radius:10px;
               padding:14px 20px;border-bottom:3px solid ${c.col};
               box-shadow:${active ? '0 4px 16px rgba(0,0,0,.18)' : 'var(--shadow)'};
-              min-width:110px;flex:1;cursor:pointer;transition:all .15s;"
-       onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.13)'"
-       onmouseout="this.style.boxShadow='${active ? '0 4px 16px rgba(0,0,0,.18)' : 'var(--shadow)'}'">
+              min-width:110px;flex:1;${clickable ? 'cursor:pointer;' : ''}transition:all .15s;"
+       ${clickable ? `onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.13)'"
+       onmouseout="this.style.boxShadow='${active ? '0 4px 16px rgba(0,0,0,.18)' : 'var(--shadow)'}'"`  : ''}>
       <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
                   color:${active ? 'rgba(255,255,255,.85)' : c.col};margin-bottom:5px;">${c.label}</div>
       <div style="font-size:28px;font-weight:800;color:${active ? '#fff' : c.col};line-height:1.05;">${c.val}</div>
@@ -8971,6 +9182,11 @@ function asRenderSummaryCards() {
 }
 
 function asRenderAll() {
+  // Show/hide tab bar and update active tab styling
+  const tabBar = document.getElementById('asTabBar');
+  if (tabBar) tabBar.style.display = 'flex';
+  asSetMainTab(asMainTab);  // refreshes tab button styles
+
   asRenderSummaryCards();
   asRenderTable();
   document.getElementById('asSummaryCards').style.display = 'flex';
@@ -9008,6 +9224,7 @@ function asGetFilteredRows() {
 }
 
 function asRenderTable() {
+  if (asMainTab === 'slow') { asRenderSlowTable(); return; }
   if (!asData.length) return;
   asRenderSummaryCards();
 
@@ -9140,6 +9357,62 @@ function asRenderTable() {
    </td></tr>`;
 }
 
+// ── Slow Moving table render ───────────────────────────
+
+function asRenderSlowTable() {
+  asRenderSummaryCards();
+  const q = (document.getElementById('asSearch')?.value || '').toLowerCase().trim();
+  let rows = asSlowData;
+  if (q) {
+    rows = rows.filter(r =>
+      r.code.toLowerCase().includes(q) ||
+      (r.desc    || '').toLowerCase().includes(q) ||
+      (r.crmName || '').toLowerCase().includes(q) ||
+      r.brand.toLowerCase().includes(q)
+    );
+  }
+
+  const TD  = 'padding:5px 10px;white-space:nowrap;text-align:center;';
+
+  const fmtWks = wks => {
+    const rounded = Math.round(wks);
+    const col = wks > 26 ? '#dc2626' : wks > 12 ? '#b45309' : '#0891b2';
+    return `<span style="color:${col};font-weight:700;">${rounded} wks</span>`;
+  };
+
+  document.getElementById('asTableHead').innerHTML = `<tr>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;text-align:left;">Brand</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;">Code</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;text-align:left;">Description</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#1f6b3e;background:var(--light);white-space:nowrap;">Free Stock</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;">3mo Sales</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;">Avg/Mo</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#0891b2;background:var(--light);white-space:nowrap;">Weeks Cover</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--brand);background:var(--light);white-space:nowrap;">Band A (€)</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#0891b2;background:var(--light);white-space:nowrap;">Band C (€)</th>
+    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#7c3aed;background:var(--light);white-space:nowrap;">Band F (€)</th>
+  </tr>`;
+
+  document.getElementById('asTableBody').innerHTML = rows.map((r, ri) => {
+    return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
+      <td style="${TD}font-size:11px;color:var(--muted);text-align:left;">${escHtml(r.brand)}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+          title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
+      <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
+      <td style="${TD}color:var(--muted);">${Math.round(r.sales3Mo).toLocaleString('en-IE')}</td>
+      <td style="${TD}color:var(--muted);">${r.avgMonthly.toFixed(1)}</td>
+      <td style="${TD}">${fmtWks(r.weeksOfCoverage)}</td>
+      <td style="${TD}color:var(--brand);">${r.bandF != null ? '€' + r.bandF.toFixed(2) : (r.retail != null ? '€' + r.retail.toFixed(2) : '—')}</td>
+      <td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>
+      <td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>
+    </tr>`;
+  }).join('') ||
+  `<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted);">
+     No slow moving stock found — all products are within 8 weeks cover.
+   </td></tr>`;
+}
+
 // ── Sort ───────────────────────────────────────────────
 
 function asSort(col) {
@@ -9155,12 +9428,11 @@ function asSort(col) {
 // ── Exclude TBD / EOL ─────────────────────────────────
 
 function asToggleExclude(type) {
-  if      (type === 'tbd') { asExcludeTBD = !asExcludeTBD; }
-  else if (type === 'eol') { asExcludeEOL = !asExcludeEOL; }
-  else if (type === 'new') { asExcludeNew = !asExcludeNew; }
+  if (type === 'new') { asExcludeNew = !asExcludeNew; }
   _asRefreshExcludePills();
   asRebuildData();
-  if (asData.length > 0) {
+  asRebuildSlowData();
+  if (asData.length > 0 || asSlowData.length > 0) {
     asRenderAll();
   } else if (asLoadedBrands.size > 0) {
     asShowNoAgedStock();
@@ -9170,24 +9442,15 @@ function asToggleExclude(type) {
 }
 
 function _asRefreshExcludePills() {
-  const tbdBtn = document.getElementById('asExcludeTBDBtn');
-  const eolBtn = document.getElementById('asExcludeEOLBtn');
-  const newBtn = document.getElementById('asExcludeNewBtn');
-  const crmBtn = document.getElementById('asCrmModeBtn');
-  if (tbdBtn) {
-    tbdBtn.style.background  = asExcludeTBD ? '#b45309' : 'var(--light)';
-    tbdBtn.style.color       = asExcludeTBD ? '#fff'    : 'var(--text)';
-    tbdBtn.style.borderColor = asExcludeTBD ? '#b45309' : 'var(--border)';
-  }
-  if (eolBtn) {
-    eolBtn.style.background  = asExcludeEOL ? '#dc2626' : 'var(--light)';
-    eolBtn.style.color       = asExcludeEOL ? '#fff'    : 'var(--text)';
-    eolBtn.style.borderColor = asExcludeEOL ? '#dc2626' : 'var(--border)';
-  }
+  const newBtn  = document.getElementById('asExcludeNewBtn');
+  const newPill = document.getElementById('asExcludeNewPill');
+  const crmBtn  = document.getElementById('asCrmModeBtn');
   if (newBtn) {
-    newBtn.style.background  = asExcludeNew ? '#0891b2' : 'var(--light)';
-    newBtn.style.color       = asExcludeNew ? '#fff'    : 'var(--text)';
-    newBtn.style.borderColor = asExcludeNew ? '#0891b2' : 'var(--border)';
+    newBtn.style.color   = asExcludeNew ? '#fff'    : 'var(--text)';
+  }
+  if (newPill) {
+    newPill.style.background  = asExcludeNew ? '#0891b2' : 'var(--light)';
+    newPill.style.borderColor = asExcludeNew ? '#0891b2' : 'var(--border)';
   }
   if (crmBtn) {
     crmBtn.style.background  = asCrmMode ? '#7c3aed' : 'var(--light)';
@@ -9217,13 +9480,13 @@ function asToggleCrmMode() {
         } catch(e) {}
         return b + ' (no cache)';
       });
-      showToast('🔗 CRM Mode on — ' + ages.join(', ') + '. Reload to apply.');
+      showToast('☰ All SKUs + Pricelist on — ' + ages.join(', ') + '. Reload to apply.');
     } else {
-      showToast('🔗 CRM Mode off — reload brands.');
+      showToast('☰ All SKUs + Pricelist off — reload brands.');
     }
     asUpdateLoadBtn();
   } else {
-    showToast(asCrmMode ? '🔗 CRM Mode on — select brands and load.' : '🔗 CRM Mode off.');
+    showToast(asCrmMode ? '☰ All SKUs + Pricelist on — select brands and load.' : '☰ All SKUs + Pricelist off.');
   }
 }
 
@@ -9482,9 +9745,9 @@ function asReset() {
   asStockMap       = new Map();
   asCrmProductData = new Map();
   asLoadedBrands   = new Set();
+  asSlowData       = [];
+  asMainTab        = 'aged';
   asView           = 'all';
-  asExcludeTBD     = false;
-  asExcludeEOL     = false;
   asCrmMode        = false;
   asSortCol        = 'stockValue';
   asSortDir        = -1;
@@ -9504,6 +9767,8 @@ function asReset() {
   asUpdateLoadBtn();
   asRenderBrandList('');
 
+  const tabBar = document.getElementById('asTabBar');
+  if (tabBar) tabBar.style.display = 'none';
   document.getElementById('asSummaryCards').style.display  = 'none';
   document.getElementById('asSearchWrap').style.display    = 'none';
   document.getElementById('asTable').style.display         = 'none';
@@ -18818,7 +19083,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v100 · 17 Sep 2026 · Brand Engagement: fix API 400 ($select), better error detail';
+const TOOL_BUILD = 'v103 · 17 Sep 2026 · Aged Stock: slow moving tab, progress animation, toolbar redesign, band C/F fix';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -20654,7 +20919,7 @@ async function fetchConvStockLevels(skus) {
     const filter = batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ');
     const url = CRM_ODATA_BASE + '/ProductItems?$filter=' + encodeURIComponent(filter)
       + '&$select=ProductItemId,QuantityAvailable,DateNextAvailable,DecimalTotalAvailable,QuantityOvercommitted';
-    const resp = await fetch(url, {
+    const resp = await crmFetch(url, {
       headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
     });
     if (!resp.ok) {
@@ -23595,6 +23860,21 @@ const CRM_BASE = 'https://crm.prospect365.com';
 const CRM_ODATA_BASE = 'https://crm-odata-v1-westeurope.prospect365.com';
 const CRM_PAT_KEY    = 'peats_crm_pat';
 
+// Fetch wrapper with automatic 429 retry + exponential backoff
+async function crmFetch(url, opts, maxRetries) {
+  maxRetries = maxRetries || 4;
+  let delay = 2000;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const resp = await fetch(url, opts);
+    if (resp.status !== 429) return resp;           // success or non-rate-limit error
+    if (attempt === maxRetries) return resp;         // give up, return 429 to caller
+    const retryAfter = parseInt(resp.headers.get('Retry-After') || '0', 10);
+    const wait = retryAfter > 0 ? retryAfter * 1000 : delay;
+    await new Promise(function(r) { setTimeout(r, wait); });
+    delay = Math.min(delay * 2, 16000);             // cap at 16s
+  }
+}
+
 function getCrmPat() {
   try { return localStorage.getItem(CRM_PAT_KEY) || ''; } catch(e) { return ''; }
 }
@@ -26334,6 +26614,7 @@ function markCrmDone(idx) {
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:18px">Enter PIN to access CRM API Settings</p>
     <input id="adminPinInput" type="password" inputmode="numeric" maxlength="8"
       placeholder="Enter PIN"
+      autocomplete="off" data-lpignore="true" data-1p-ignore
       style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:6px;font-size:20px;padding:10px;border:2px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-family:monospace;margin-bottom:6px"
       onkeydown="if(event.key==='Enter')checkAdminPin()" />
     <p id="adminPinError" style="color:#dc2626;font-size:12px;min-height:16px;margin-bottom:10px"></p>
