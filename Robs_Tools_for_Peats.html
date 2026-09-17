@@ -8829,69 +8829,100 @@ async function asLoadForSelectedBrands() {
       if (entry && createdMap.has(sku)) entry.createdDate = createdMap.get(sku);
     });
 
-    // ── Step 6: Exchequer price bands from PriceLists ────
+    // ── Step 6: Exchequer price bands (ExchequerSpecialPrices entity) ────
     asShowProgress(7, asStepNames[6]);
-    // Fetch ALL bands (A–F) for each batch.
-    // Strategy: try Code first (product code string, matches our SKU identifiers),
-    //   then also try ProductItemId to catch any extra rows.
-    //   Both passes are always run and merged, so we don't miss C/F if one key field
-    //   returns fewer bands than the other.
     const BANDS_BATCH = 15;
-    const bandMap     = new Map();  // SKU → { A, B, C, D, E, F }  (decimal prices)
+    const bandMap = new Map();  // SKU → { A, B, C, D, E, F } (decimal prices)
     try {
-      // Store rows into bandMap: Code = SKU, OperatingCompanyCode = band letter (A–F)
-      const processBandRows = (rows) => {
-        rows.forEach(row => {
-          const sku   = row.Code;
-          const band  = (row.OperatingCompanyCode || '').toUpperCase().trim();
-          const dec   = row.SellDecimals ?? 2;
-          const price = row.SellingPrice != null ? row.SellingPrice / Math.pow(10, dec) : null;
-          if (!sku || !band || price == null) return;
-          if (!bandMap.has(sku)) bandMap.set(sku, {});
-          bandMap.get(sku)[band] = price;
-        });
-      };
+      // Probe to discover the correct entity name and field layout.
+      // The CRM UI calls this section "Exchequer Special Prices" — try most likely OData names.
+      const BAND_ENTITY_CANDIDATES = [
+        'ExchequerSpecialPrices',
+        'ProductExchequerSpecialPrices',
+        'ExchequerPrices',
+        'SpecialPrices',
+      ];
+      let bandEntity      = null;
+      let bandSkuField    = null;   // field that holds our product code (e.g. ProductItemId)
+      let bandLetterField = null;   // field with A/B/C/D/E/F
+      let bandPriceField  = null;   // field with the price value
 
-      // Probe: log what we're querying vs what's actually in PriceLists
-      console.log('[PriceLists] Querying SKUs (first 5):', skusToFetch.slice(0,5));
-      try {
-        const probeResp = await crmFetch(
-          CRM_ODATA_BASE + '/PriceLists?$top=20&$select=Code,OperatingCompanyCode',
-          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
-        );
-        if (probeResp.ok) {
-          const probeData = await probeResp.json();
-          const probeCodes = [...new Set((probeData.value || []).map(r => r.Code))];
-          console.log('[PriceLists] First 20 unfiltered Code values:', probeCodes);
-          const ourSet = new Set(skusToFetch);
-          const matches = probeCodes.filter(c => ourSet.has(c));
-          console.log('[PriceLists] Overlap with our SKUs in those 20:', matches.length > 0 ? matches : 'NONE — our SKUs may not have price bands configured');
-        }
-      } catch(e) {}
-
-      // Filter by Code (= our SKU), band letter is in OperatingCompanyCode (A/B/C/D/E/F)
-      for (let i = 0; i < skusToFetch.length; i += BANDS_BATCH) {
-        const batch = skusToFetch.slice(i, i + BANDS_BATCH);
-        const skuFilter = '(' + batch.map(s => `Code eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+      for (const candidate of BAND_ENTITY_CANDIDATES) {
         try {
-          const resp = await crmFetch(
-            CRM_ODATA_BASE + '/PriceLists?$filter=' + encodeURIComponent(skuFilter) +
-            '&$select=Code,OperatingCompanyCode,SellingPrice,SellDecimals',
+          const probeResp = await crmFetch(
+            CRM_ODATA_BASE + '/' + candidate + '?$top=3',
             { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
           );
-          if (!resp.ok) continue;
-          let nextUrl = null;
-          const d = await resp.json();
-          processBandRows(d.value || []);
-          nextUrl = d['@odata.nextLink'] || null;
-          while (nextUrl) {
-            const r2 = await crmFetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
-            if (!r2.ok) break;
-            const d2 = await r2.json();
-            processBandRows(d2.value || []);
-            nextUrl = d2['@odata.nextLink'] || null;
-          }
-        } catch(e) { /* best effort */ }
+          if (!probeResp.ok) continue;
+          const probeData = await probeResp.json();
+          const rows = probeData.value || [];
+          if (!rows.length) continue;
+          bandEntity = candidate;
+          const fields = Object.keys(rows[0]);
+          console.log('[Bands] Entity found:', candidate);
+          console.log('[Bands] Fields:', fields);
+          console.log('[Bands] Sample row:', rows[0]);
+          // Identify SKU link field
+          bandSkuField = fields.find(f => /^productitemid$/i.test(f))
+                      || fields.find(f => /productitem/i.test(f))
+                      || fields.find(f => /^code$/i.test(f))
+                      || fields.find(f => /stockcode/i.test(f))
+                      || null;
+          // Identify band letter field
+          bandLetterField = fields.find(f => /^band$/i.test(f))
+                         || fields.find(f => /bandletter/i.test(f))
+                         || fields.find(f => /operatingcompanycode/i.test(f))
+                         || fields.find(f => /priceband/i.test(f))
+                         || null;
+          // Identify price field
+          bandPriceField = fields.find(f => /pricebandprice/i.test(f))
+                        || fields.find(f => /specialprice/i.test(f))
+                        || fields.find(f => /sellingprice/i.test(f))
+                        || fields.find(f => /^price$/i.test(f))
+                        || null;
+          console.log('[Bands] Identified — SKU field:', bandSkuField, '| Band field:', bandLetterField, '| Price field:', bandPriceField);
+          break;
+        } catch(e) { /* try next */ }
+      }
+
+      if (!bandEntity) {
+        console.warn('[Bands] ExchequerSpecialPrices entity not found under any candidate name.');
+      } else if (!bandSkuField || !bandLetterField || !bandPriceField) {
+        console.warn('[Bands] Entity found but could not identify all key fields — bands unavailable until field names are confirmed.');
+      } else {
+        const processBandRows = (rows) => {
+          rows.forEach(row => {
+            const sku   = row[bandSkuField];
+            const band  = (row[bandLetterField] || '').toUpperCase().trim();
+            const raw   = row[bandPriceField];
+            const price = raw != null ? Number(raw) : null;
+            if (!sku || !band || price == null || isNaN(price)) return;
+            if (!bandMap.has(sku)) bandMap.set(sku, {});
+            bandMap.get(sku)[band] = price;
+          });
+        };
+
+        for (let i = 0; i < skusToFetch.length; i += BANDS_BATCH) {
+          const batch = skusToFetch.slice(i, i + BANDS_BATCH);
+          const skuFilter = '(' + batch.map(s => `${bandSkuField} eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+          try {
+            const resp = await crmFetch(
+              CRM_ODATA_BASE + '/' + bandEntity + '?$filter=' + encodeURIComponent(skuFilter),
+              { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+            );
+            if (!resp.ok) continue;
+            const d = await resp.json();
+            processBandRows(d.value || []);
+            let nextUrl = d['@odata.nextLink'] || null;
+            while (nextUrl) {
+              const r2 = await crmFetch(nextUrl, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+              if (!r2.ok) break;
+              const d2 = await r2.json();
+              processBandRows(d2.value || []);
+              nextUrl = d2['@odata.nextLink'] || null;
+            }
+          } catch(e) { /* best effort */ }
+        }
       }
     } catch(e) { /* best effort — price bands degrade gracefully */ }
     skusToFetch.forEach(sku => {
@@ -8899,9 +8930,9 @@ async function asLoadForSelectedBrands() {
       if (entry && bandMap.has(sku)) entry.bands = bandMap.get(sku);
     });
     if (bandMap.size > 0) {
-      console.log('[PriceLists] bands loaded for', bandMap.size, 'SKUs. Sample:', [...bandMap.entries()].slice(0,3));
+      console.log('[Bands] Loaded for', bandMap.size, 'SKUs. Sample:', [...bandMap.entries()].slice(0,3));
     } else {
-      console.warn('[PriceLists] No band data returned. Check Code/ProductItemId field names in browser console above.');
+      console.warn('[Bands] No band data returned — see [Bands] log above for entity/field details.');
     }
 
     brandsToFetch.forEach(b => asLoadedBrands.add(b));
@@ -19122,7 +19153,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v107 · 17 Sep 2026 · Band C/F from catalog columns (add "Band C"/"Band F" headers to Excel)';
+const TOOL_BUILD = 'v108 · 17 Sep 2026 · Band fetch switched to ExchequerSpecialPrices entity (self-discovering)';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
