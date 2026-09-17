@@ -958,6 +958,14 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <span class="hub-card-launch">Open →</span>
     </div>
 
+    <!-- Brand Engagement — hidden until PIN unlocked -->
+    <div class="hub-card" id="hubCardBrandEngagement" style="display:none;" onclick="launchTool('brandengagement')">
+      <div class="hub-card-icon">👥</div>
+      <h3>Brand Engagement</h3>
+      <p>See which customers are buying, lapsing, or going dormant for a brand — and post re-engagement notes to the CRM.</p>
+      <span class="hub-card-launch">Open →</span>
+    </div>
+
     <!-- Admin — hidden until PIN unlocked -->
     <div class="hub-card" id="hubCardAdmin" style="display:none;" onclick="launchTool('crmsettings')">
       <div class="hub-card-icon">⚙️</div>
@@ -1955,6 +1963,93 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   </div>
 
 </div><!-- /tool-agedstock -->
+
+<div id="tool-brandengagement" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
+
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
+
+    <!-- Brand selector -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);">Brand</label>
+      <select id="beaBrandSel" onchange="beaOnBrandChange()"
+        style="border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;font-weight:600;color:var(--brand);background:var(--white);cursor:pointer;font-family:inherit;">
+        <option value="">— select brand —</option>
+      </select>
+    </div>
+
+    <!-- Period -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);">Period</label>
+      <select id="beaPeriodSel"
+        style="border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;background:var(--white);font-family:inherit;">
+        <option value="12">Last 12 months</option>
+        <option value="24" selected>Last 24 months</option>
+        <option value="36">Last 36 months</option>
+      </select>
+    </div>
+
+    <!-- Active threshold -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);">Active if bought within</label>
+      <select id="beaActiveSel"
+        style="border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;background:var(--white);font-family:inherit;">
+        <option value="3">3 months</option>
+        <option value="6" selected>6 months</option>
+        <option value="12">12 months</option>
+      </select>
+    </div>
+
+    <button id="beaRunBtn" onclick="beaRun()"
+      style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;">
+      ▶ Run Analysis
+    </button>
+
+    <div id="beaStatus" style="font-size:12px;color:var(--muted);margin-left:4px;"></div>
+
+    <!-- Export -->
+    <button id="beaExportBtn" onclick="beaExport()"
+      style="display:none;margin-left:auto;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+      ⬇ Export Excel
+    </button>
+  </div>
+
+  <!-- Summary chips -->
+  <div id="beaSummaryBar" style="display:none;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+  </div>
+
+  <!-- Results table -->
+  <div style="flex:1;overflow:auto;padding:0 16px 16px;">
+    <div id="beaNoCatalog" style="display:none;margin-top:24px;padding:16px;background:#fffbea;border:1px solid #f59e0b;border-radius:10px;font-size:13px;color:#92400e;">
+      ⚠ Load a catalog first — Brand Engagement needs the product list to identify which SKUs belong to each brand.
+    </div>
+    <div id="beaTableWrap" style="display:none;margin-top:12px;">
+      <table id="beaTable" style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead id="beaTHead"></thead>
+        <tbody id="beaTBody"></tbody>
+      </table>
+    </div>
+    <div id="beaEmpty" style="display:none;margin-top:40px;text-align:center;color:var(--muted);font-size:14px;">No results — try a different brand or wider period.</div>
+  </div>
+
+  <!-- CRM Note modal -->
+  <div id="beaNoteOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center;">
+    <div style="background:var(--white);border-radius:14px;padding:28px 32px;width:480px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+      <h3 style="margin:0 0 4px;font-size:16px;">Post CRM Note</h3>
+      <p id="beaNoteCustomer" style="margin:0 0 14px;font-size:13px;color:var(--muted);"></p>
+      <textarea id="beaNoteText" rows="4" placeholder="Note text…"
+        style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+        <button onclick="document.getElementById('beaNoteOverlay').style.display='none'"
+          style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button id="beaNotePostBtn" onclick="beaPostNote()"
+          style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Post Note</button>
+      </div>
+      <div id="beaNoteStatus" style="margin-top:10px;font-size:12px;color:var(--muted);"></div>
+    </div>
+  </div>
+
+</div>
 
 <div id="tool-export" style="display:none; flex-direction:column; height:calc(100vh - 64px);">
   <iframe id="exportFrame" style="flex:1; border:none; width:100%;" title="Export from Product Catalogue"></iframe>
@@ -7084,8 +7179,9 @@ function launchTool(tool) {
   document.getElementById('tool-backorder').style.display   = 'none';
   document.getElementById('tool-webimport').style.display    = 'none';
   document.getElementById('tool-stockanalysis').style.display = 'none';
-  document.getElementById('tool-agedstock').style.display     = 'none';
-  document.getElementById('tool-crmsettings').style.display  = 'none';
+  document.getElementById('tool-agedstock').style.display         = 'none';
+  document.getElementById('tool-brandengagement').style.display   = 'none';
+  document.getElementById('tool-crmsettings').style.display       = 'none';
 
   function setToolName(name) {
     document.getElementById('headerTitle').textContent = name;
@@ -7143,6 +7239,10 @@ function launchTool(tool) {
     document.getElementById('tool-agedstock').style.display = 'flex';
     setToolName('Aged Stock');
     asOnOpen();
+  } else if (tool === 'brandengagement') {
+    document.getElementById('tool-brandengagement').style.display = 'flex';
+    setToolName('Brand Engagement');
+    beaOnOpen();
   } else if (tool === 'export') {
     document.getElementById('tool-export').style.display = 'flex';
     setToolName('Export from Product Catalogue');
@@ -7838,6 +7938,385 @@ function asMonthsAgo(date) {
   const past = date instanceof Date ? date : new Date(date);
   const m = (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
   return m < 0 ? 0 : m;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ── Brand Engagement Tool ────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+
+let beaRows = [];       // last computed result rows (for export)
+let beaNoteDiv = null;  // current division record for note modal
+
+function beaOnOpen() {
+  // Populate brand selector from loaded catalog
+  const sel = document.getElementById('beaBrandSel');
+  if (!sel) return;
+  // Clear existing options except placeholder
+  while (sel.options.length > 1) sel.remove(1);
+
+  if (!state.catalog || !Object.keys(state.catalog).length) {
+    document.getElementById('beaNoCatalog').style.display = 'block';
+    document.getElementById('beaRunBtn').disabled = true;
+    return;
+  }
+  document.getElementById('beaNoCatalog').style.display = 'none';
+  document.getElementById('beaRunBtn').disabled = false;
+
+  // Collect unique brands (CategoryId from catalog items)
+  const brands = new Set();
+  Object.values(state.catalog).forEach(function(item) {
+    const b = (item.CategoryId || item.brand || item.category || '').toUpperCase().trim();
+    if (b) brands.add(b);
+  });
+  [...brands].sort().forEach(function(b) {
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = b;
+    sel.appendChild(opt);
+  });
+}
+
+function beaOnBrandChange() { /* nothing needed — just keeps UI reactive */ }
+
+async function beaRun() {
+  const pat = getCrmPat();
+  if (!pat) { alert('CRM API token not set — open Admin → Settings first.'); return; }
+
+  const brandSel  = document.getElementById('beaBrandSel');
+  const brand     = brandSel ? brandSel.value : '';
+  if (!brand) { alert('Select a brand first.'); return; }
+
+  const periodMo  = parseInt(document.getElementById('beaPeriodSel').value,  10) || 24;
+  const activeMo  = parseInt(document.getElementById('beaActiveSel').value, 10) || 6;
+  const lapsedMo  = Math.max(activeMo + 1, 18); // lapsed = active..18 months; dormant = 18+
+
+  const btn    = document.getElementById('beaRunBtn');
+  const status = document.getElementById('beaStatus');
+  btn.disabled = true; btn.textContent = '⏳ Loading…';
+
+  const CRM = CRM_ODATA_BASE;
+  const now = new Date();
+  const cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth() - periodMo);
+  const cutoffStr = cutoff.toISOString().slice(0, 10) + 'T00:00:00Z';
+
+  // Step 1: get all SKUs for this brand from the catalog
+  const brandSkus = new Set();
+  Object.entries(state.catalog || {}).forEach(function([sku, item]) {
+    const b = (item.CategoryId || item.brand || item.category || '').toUpperCase().trim();
+    if (b === brand) brandSkus.add(sku.toUpperCase());
+  });
+  status.textContent = brand + ' — ' + brandSkus.size + ' SKUs in catalog. Fetching transactions…';
+
+  // Step 2: fetch SalesTransactions with date filter, paged
+  // Use $select to minimise data transfer
+  const select = '$select=Account,ProductItemId,TransactionDate,CalculatedLineValue,CalculatedInvoiceQuantity';
+  const filter  = '$filter=TransactionDate ge ' + cutoffStr;
+  const perPage = 1000;
+  let allTx = [];
+  let skip = 0;
+  let page = 0;
+  const maxPages = 30;
+
+  try {
+    while (page < maxPages) {
+      page++;
+      const url = CRM + '/SalesTransactions?' + filter + '&' + select +
+                  '&$top=' + perPage + '&$skip=' + skip;
+      status.textContent = 'Fetching page ' + page + ' (' + allTx.length + ' transactions so far)…';
+      const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+      if (!r.ok) { status.textContent = '✗ API error ' + r.status; btn.disabled = false; btn.textContent = '▶ Run Analysis'; return; }
+      const d = await r.json();
+      const batch = (d.value || []);
+      allTx = allTx.concat(batch);
+      if (batch.length < perPage) break; // last page
+      skip += perPage;
+    }
+  } catch(e) {
+    status.textContent = '✗ Fetch error: ' + e.message;
+    btn.disabled = false; btn.textContent = '▶ Run Analysis';
+    return;
+  }
+
+  status.textContent = allTx.length + ' transactions fetched. Filtering to ' + brand + '…';
+
+  // Step 3: filter to brand SKUs and group by customer
+  // Map: accountCode → { lastDate, totalValue, totalQty, halfValue (last half of period for trend) }
+  const halfCutoff = new Date(now); halfCutoff.setMonth(halfCutoff.getMonth() - Math.round(periodMo / 2));
+  const customerMap = new Map();
+
+  allTx.forEach(function(tx) {
+    const sku = (tx.ProductItemId || '').toUpperCase();
+    if (!brandSkus.has(sku)) return;
+
+    const acct = (tx.Account || '').trim();
+    if (!acct) return;
+
+    const txDate  = new Date(tx.TransactionDate || 0);
+    const value   = parseFloat(tx.CalculatedLineValue)   || 0;
+    const qty     = parseFloat(tx.CalculatedInvoiceQuantity) || 0;
+
+    if (!customerMap.has(acct)) {
+      customerMap.set(acct, { lastDate: txDate, totalValue: 0, totalQty: 0, recentValue: 0, recentQty: 0 });
+    }
+    const c = customerMap.get(acct);
+    if (txDate > c.lastDate) c.lastDate = txDate;
+    c.totalValue += value;
+    c.totalQty   += qty;
+    // "recent" = last half of period (for trend: recent vs earlier)
+    if (txDate >= halfCutoff) {
+      c.recentValue += value;
+      c.recentQty   += qty;
+    }
+  });
+
+  if (!customerMap.size) {
+    status.textContent = 'No transactions found for ' + brand + ' in the selected period.';
+    document.getElementById('beaTableWrap').style.display = 'none';
+    document.getElementById('beaSummaryBar').style.display = 'none';
+    document.getElementById('beaEmpty').style.display = 'block';
+    document.getElementById('beaExportBtn').style.display = 'none';
+    btn.disabled = false; btn.textContent = '▶ Run Analysis';
+    return;
+  }
+
+  // Step 4: look up Division records for each account code
+  status.textContent = 'Looking up ' + customerMap.size + ' customer records in CRM…';
+  const divisionMap = new Map(); // accountCode → Division record
+
+  const acctCodes = [...customerMap.keys()];
+  // Batch Divisions lookup: fetch one at a time (or could use OR filter batches)
+  const batchSize = 10;
+  for (let i = 0; i < acctCodes.length; i += batchSize) {
+    const batch = acctCodes.slice(i, i + batchSize);
+    // Build an OR filter: SalesLedgerId eq 'A' or SalesLedgerId eq 'B' ...
+    const filterParts = batch.map(function(c){ return "SalesLedgerId eq '" + c.replace(/'/g,"''") + "'"; });
+    const divFilter = '$filter=' + filterParts.join(' or ');
+    const divSelect = '$select=DivisionId,Name,PhoneNumber,SalesLedgerId,StatusFlag,TerritoryCode,AccountManager';
+    try {
+      const r = await fetch(CRM + '/Divisions?' + divFilter + '&' + divSelect + '&$top=' + batchSize * 2, {
+        headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+      });
+      if (r.ok) {
+        const d = await r.json();
+        (d.value || []).forEach(function(div) {
+          if (div.SalesLedgerId) divisionMap.set(div.SalesLedgerId.trim(), div);
+        });
+      }
+    } catch(e) { /* skip */ }
+    status.textContent = 'Looking up customers… ' + Math.min(i + batchSize, acctCodes.length) + ' / ' + acctCodes.length;
+    await new Promise(function(r){ setTimeout(r, 80); });
+  }
+
+  // Step 5: classify and build result rows
+  const msPerMonth = 30.44 * 24 * 3600 * 1000;
+  beaRows = [];
+
+  customerMap.forEach(function(c, acct) {
+    const div    = divisionMap.get(acct) || {};
+    const name   = div.Name    || acct;
+    const phone  = div.PhoneNumber || '—';
+    const divId  = div.DivisionId || null;
+    const mgr    = div.AccountManager || '—';
+    const monthsAgo = (now - c.lastDate) / msPerMonth;
+
+    let status_cls, statusLabel;
+    if (monthsAgo <= activeMo) {
+      status_cls = 'active';  statusLabel = 'Active';
+    } else if (monthsAgo <= lapsedMo) {
+      status_cls = 'lapsed';  statusLabel = 'Lapsed';
+    } else {
+      status_cls = 'dormant'; statusLabel = 'Dormant';
+    }
+
+    // Trend: compare recent half vs earlier half
+    const earlyValue = c.totalValue - c.recentValue;
+    let trend = '→';
+    if (c.recentValue > earlyValue * 1.2)     trend = '↑';
+    else if (c.recentValue < earlyValue * 0.8) trend = '↓';
+
+    beaRows.push({
+      acct, name, phone, divId, mgr,
+      statusLabel, status_cls,
+      lastDate:    c.lastDate,
+      monthsAgo:   monthsAgo,
+      totalValue:  c.totalValue,
+      totalQty:    c.totalQty,
+      recentValue: c.recentValue,
+      trend
+    });
+  });
+
+  // Sort: dormant first, then lapsed, then active; within group by lastDate asc
+  const order = { dormant: 0, lapsed: 1, active: 2 };
+  beaRows.sort(function(a, b) {
+    const so = (order[a.status_cls] || 0) - (order[b.status_cls] || 0);
+    if (so !== 0) return so;
+    return a.lastDate - b.lastDate; // oldest purchase first within group
+  });
+
+  beaRenderResults(brand, periodMo, activeMo, lapsedMo);
+  btn.disabled = false; btn.textContent = '▶ Run Analysis';
+}
+
+function beaRenderResults(brand, periodMo, activeMo, lapsedMo) {
+  const counts = { active: 0, lapsed: 0, dormant: 0 };
+  beaRows.forEach(function(r) { counts[r.status_cls] = (counts[r.status_cls] || 0) + 1; });
+
+  // Summary bar
+  const bar = document.getElementById('beaSummaryBar');
+  const chipStyle = function(bg, fg) {
+    return 'display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;background:' + bg + ';color:' + fg + ';';
+  };
+  bar.innerHTML =
+    '<span style="font-size:12px;color:var(--muted);font-weight:600;">' + brand + ' · last ' + periodMo + ' months · ' + beaRows.length + ' customers</span>' +
+    '<span style="' + chipStyle('#dcfce7','#166534') + '">● Active (≤' + activeMo + 'mo): ' + counts.active + '</span>' +
+    '<span style="' + chipStyle('#fef9c3','#854d0e') + '">● Lapsed (' + (activeMo+1) + '–' + lapsedMo + 'mo): ' + counts.lapsed + '</span>' +
+    '<span style="' + chipStyle('#fee2e2','#991b1b') + '">● Dormant (>' + lapsedMo + 'mo): ' + counts.dormant + '</span>';
+  bar.style.display = 'flex';
+
+  // Table
+  const statusColors = { active: '#16a34a', lapsed: '#ca8a04', dormant: '#dc2626' };
+  const statusBg     = { active: '#dcfce7', lapsed: '#fef9c3', dormant: '#fee2e2' };
+
+  const TH = 'padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;';
+  const TD = 'padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;';
+
+  document.getElementById('beaTHead').innerHTML =
+    '<tr>' +
+    '<th style="' + TH + '">Status</th>' +
+    '<th style="' + TH + '">Customer</th>' +
+    '<th style="' + TH + '">Account</th>' +
+    '<th style="' + TH + '">Phone</th>' +
+    '<th style="' + TH + '">Last Purchase</th>' +
+    '<th style="' + TH + '">Months Ago</th>' +
+    '<th style="' + TH + 'text-align:right;">Total Value (€)</th>' +
+    '<th style="' + TH + 'text-align:right;">Total Qty</th>' +
+    '<th style="' + TH + 'text-align:center;">Trend</th>' +
+    '<th style="' + TH + '">Manager</th>' +
+    '<th style="' + TH + '">CRM</th>' +
+    '</tr>';
+
+  document.getElementById('beaTBody').innerHTML = beaRows.map(function(r, idx) {
+    const sc = statusColors[r.status_cls] || '#666';
+    const sb = statusBg[r.status_cls]     || '#f3f4f6';
+    const lastFmt = r.lastDate instanceof Date && r.lastDate.getFullYear() > 2000
+      ? r.lastDate.toLocaleDateString('en-IE', { day:'2-digit', month:'short', year:'numeric' })
+      : '—';
+    const trendColor = r.trend === '↑' ? '#16a34a' : r.trend === '↓' ? '#dc2626' : '#6b7280';
+    const crmBtn = r.divId
+      ? '<button onclick="beaOpenNote(' + idx + ')" title="Post CRM note" ' +
+        'style="background:var(--brand);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📝 Note</button>'
+      : '<span style="font-size:11px;color:var(--muted);">no CRM record</span>';
+
+    return '<tr style="background:' + (idx % 2 === 0 ? 'var(--white)' : 'var(--surface)') + ';">' +
+      '<td style="' + TD + '"><span style="display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + sb + ';color:' + sc + ';">' + r.statusLabel + '</span></td>' +
+      '<td style="' + TD + 'font-weight:600;">' + escHtml(r.name) + '</td>' +
+      '<td style="' + TD + 'font-family:monospace;font-size:12px;">' + escHtml(r.acct) + '</td>' +
+      '<td style="' + TD + '">' + escHtml(r.phone) + '</td>' +
+      '<td style="' + TD + '">' + lastFmt + '</td>' +
+      '<td style="' + TD + 'text-align:center;">' + Math.round(r.monthsAgo) + '</td>' +
+      '<td style="' + TD + 'text-align:right;font-weight:600;">€' + r.totalValue.toFixed(2) + '</td>' +
+      '<td style="' + TD + 'text-align:right;">' + Math.round(r.totalQty) + '</td>' +
+      '<td style="' + TD + 'text-align:center;font-size:16px;color:' + trendColor + ';">' + r.trend + '</td>' +
+      '<td style="' + TD + '">' + escHtml(r.mgr) + '</td>' +
+      '<td style="' + TD + '">' + crmBtn + '</td>' +
+      '</tr>';
+  }).join('');
+
+  document.getElementById('beaTableWrap').style.display = 'block';
+  document.getElementById('beaEmpty').style.display = 'none';
+  document.getElementById('beaExportBtn').style.display = '';
+  document.getElementById('beaStatus').textContent = beaRows.length + ' customers found.';
+}
+
+function beaOpenNote(idx) {
+  const r = beaRows[idx];
+  if (!r) return;
+  beaNoteDiv = r;
+  document.getElementById('beaNoteCustomer').textContent = r.name + ' (' + r.acct + ') — ' + r.statusLabel;
+  document.getElementById('beaNoteText').value = '';
+  document.getElementById('beaNoteStatus').textContent = '';
+  document.getElementById('beaNotePostBtn').disabled = false;
+  document.getElementById('beaNoteOverlay').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('beaNoteText').focus(); }, 80);
+}
+
+async function beaPostNote() {
+  if (!beaNoteDiv) return;
+  const pat  = getCrmPat();
+  if (!pat)  { alert('CRM token not set.'); return; }
+
+  const text = (document.getElementById('beaNoteText').value || '').trim();
+  if (!text) { alert('Please enter a note.'); return; }
+
+  const btn    = document.getElementById('beaNotePostBtn');
+  const stEl   = document.getElementById('beaNoteStatus');
+  btn.disabled = true; stEl.textContent = 'Posting…';
+
+  // Post a Task to Prospect365 CRM linked to this Division
+  const now  = new Date();
+  const payload = {
+    Name:        'Peats Tool Note — ' + beaNoteDiv.name,
+    Description: text,
+    DivisionId:  beaNoteDiv.divId,
+    TaskTypeId:  'OTHER',
+    TaskDateUtc: now.toISOString(),
+    StatusFlag:  'A'
+  };
+
+  try {
+    const r = await fetch(CRM_ODATA_BASE + '/Tasks', {
+      method:  'POST',
+      headers: {
+        'Authorization': 'Bearer ' + pat,
+        'Accept':        'application/json',
+        'Content-Type':  'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (r.ok || r.status === 201) {
+      stEl.textContent = '✅ Note posted to CRM.';
+      stEl.style.color = '#16a34a';
+      btn.disabled = false;
+      setTimeout(function(){ document.getElementById('beaNoteOverlay').style.display = 'none'; }, 1500);
+    } else {
+      const body = await r.text().catch(function(){ return ''; });
+      stEl.textContent = '✗ Error ' + r.status + (body ? ': ' + body.slice(0, 200) : '');
+      stEl.style.color = '#dc2626';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    stEl.textContent = '✗ ' + e.message;
+    stEl.style.color = '#dc2626';
+    btn.disabled = false;
+  }
+}
+
+async function beaExport() {
+  if (!beaRows.length) return;
+  try {
+    // Use SheetJS / xlsx if available, else CSV
+    const brand = (document.getElementById('beaBrandSel') || {}).value || 'Brand';
+    const headers = ['Status','Customer','Account','Phone','Last Purchase','Months Ago','Total Value (€)','Total Qty','Trend','Manager'];
+    const csvRows = [headers.join(',')];
+    beaRows.forEach(function(r) {
+      const lastFmt = r.lastDate instanceof Date && r.lastDate.getFullYear() > 2000
+        ? r.lastDate.toLocaleDateString('en-IE')
+        : '';
+      csvRows.push([
+        r.statusLabel, '"' + r.name.replace(/"/g,'""') + '"', r.acct,
+        '"' + r.phone.replace(/"/g,'""') + '"', lastFmt,
+        Math.round(r.monthsAgo), r.totalValue.toFixed(2), Math.round(r.totalQty),
+        r.trend, '"' + r.mgr.replace(/"/g,'""') + '"'
+      ].join(','));
+    });
+    const csv = csvRows.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = brand + '_engagement_' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
+  } catch(e) { alert('Export failed: ' + e.message); }
 }
 
 // ── Open / init ───────────────────────────────────────
@@ -9051,11 +9530,13 @@ function checkAdminPin() {
   if (entered === ADMIN_PIN) {
     closeAdminPin();
     hubAdminUnlocked = true;
-    // Reveal the two gated tiles
+    // Reveal the three gated tiles
     const agedCard  = document.getElementById('hubCardAgedStock');
+    const beaCard   = document.getElementById('hubCardBrandEngagement');
     const adminCard = document.getElementById('hubCardAdmin');
     const lockRow   = document.getElementById('hubAdminUnlockRow');
     if (agedCard)  agedCard.style.display  = '';
+    if (beaCard)   beaCard.style.display   = '';
     if (adminCard) adminCard.style.display = '';
     if (lockRow)   lockRow.style.display   = 'none';
     // If triggered by a direct card click, also launch the tool
@@ -12528,9 +13009,19 @@ function parseJJsAppliancesPage(items) {
         products.push(lastProduct);
       }
     } else if (lastProduct && (skuParts.length > 0 || descParts.length > 0)) {
-      // Continuation / overflow row
-      if (skuParts.length  > 0) lastProduct.sku         += skuParts.join('').trim();
-      if (descParts.length > 0) lastProduct.description  = (lastProduct.description + ' ' + descParts.join(' ').trim()).trim();
+      // Skip footer / note lines — "NB. Please quote...", "Sub total", "V.A.T.", "Comment:" etc.
+      var rowText = skuParts.concat(descParts).join(' ');
+      var isFooter = /^NB\b/i.test(rowText) ||
+                     /^Sub\s*total/i.test(rowText) ||
+                     /^V\.?A\.?T/i.test(rowText)   ||
+                     /^Comment/i.test(rowText)      ||
+                     /please\s+quote/i.test(rowText)||
+                     /purchase\s+order\s+price/i.test(rowText);
+      if (!isFooter) {
+        // Continuation / overflow row
+        if (skuParts.length  > 0) lastProduct.sku         += skuParts.join('').trim();
+        if (descParts.length > 0) lastProduct.description  = (lastProduct.description + ' ' + descParts.join(' ').trim()).trim();
+      }
     }
   });
 
@@ -18287,7 +18778,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v95 · 17 Sep 2026 · JJs parser: dynamic column detection; Probe: SalesLedgerId FK + Activity sweep';
+const TOOL_BUILD = 'v97 · 17 Sep 2026 · Brand Engagement tool: Active/Lapsed/Dormant by brand, CRM note posting';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
