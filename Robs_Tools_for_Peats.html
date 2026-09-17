@@ -1862,7 +1862,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div style="display:flex;align-items:stretch;gap:0;height:40px;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0;">
       <button id="asTabAged" onclick="asSetMainTab('aged')"
         style="padding:0 14px;border:none;background:#1a3c6e;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .15s;white-space:nowrap;">
-        📦 Aged Stock
+        📦 Free Stock
       </button>
       <button id="asTabSlow" onclick="asSetMainTab('slow')"
         style="padding:0 14px;border:none;border-left:1px solid var(--border);background:var(--light);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .15s;white-space:nowrap;">
@@ -8836,7 +8836,24 @@ async function asLoadForSelectedBrands() {
         });
       };
 
-        // Filter by Code (= our SKU), band letter is in OperatingCompanyCode (A/B/C/D/E/F)
+      // Probe: log what we're querying vs what's actually in PriceLists
+      console.log('[PriceLists] Querying SKUs (first 5):', skusToFetch.slice(0,5));
+      try {
+        const probeResp = await crmFetch(
+          CRM_ODATA_BASE + '/PriceLists?$top=20&$select=Code,OperatingCompanyCode',
+          { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+        );
+        if (probeResp.ok) {
+          const probeData = await probeResp.json();
+          const probeCodes = [...new Set((probeData.value || []).map(r => r.Code))];
+          console.log('[PriceLists] First 20 unfiltered Code values:', probeCodes);
+          const ourSet = new Set(skusToFetch);
+          const matches = probeCodes.filter(c => ourSet.has(c));
+          console.log('[PriceLists] Overlap with our SKUs in those 20:', matches.length > 0 ? matches : 'NONE — our SKUs may not have price bands configured');
+        }
+      } catch(e) {}
+
+      // Filter by Code (= our SKU), band letter is in OperatingCompanyCode (A/B/C/D/E/F)
       for (let i = 0; i < skusToFetch.length; i += BANDS_BATCH) {
         const batch = skusToFetch.slice(i, i + BANDS_BATCH);
         const skuFilter = '(' + batch.map(s => `Code eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
@@ -9034,7 +9051,7 @@ function asRebuildSlowData() {
   const rows = [];
   const EIGHT_WEEKS_AS_MONTHS = 2;  // 8 weeks ≈ 2 months
 
-  const processSlowEntry = (code, brandName, descStr, crmName, s) => {
+  const processSlowEntry = (code, brandName, descStr, crmName, s, catRetail) => {
     const qty = (s.qty != null) ? s.qty : 0;
     if (qty <= 0) return;
     const sales3Mo = s.sales3Mo || 0;
@@ -9050,17 +9067,19 @@ function asRebuildSlowData() {
       if (s.createdDate > cutoff) return;
     }
 
-    const cost   = null; // enriched below if in catalog
-    const bands  = s.bands || {};
-    const bandC  = bands['C'] ?? null;
-    const bandF  = bands['F'] ?? null;
+    const bands = s.bands || {};
+    const bandC = bands['C'] ?? null;
+    const bandF = bands['F'] ?? null;
+    // Band A: prefer PriceLists 'A' band, fall back to catalog retail
+    const retail = bands['A'] ?? (catRetail && Number(catRetail) > 0 ? Number(catRetail) : null);
     const weeksOfCoverage = monthsCoverage * 4.33;
 
     rows.push({
       code, brand: brandName, desc: descStr, crmName,
       free: qty, sales3Mo, avgMonthly, weeksOfCoverage, monthsCoverage,
-      bandC, bandF,
-      stockValue: null  // set after cost lookup
+      retail, bandC, bandF,
+      createdDate: s.createdDate || null,
+      stockValue: null
     });
   };
 
@@ -9068,7 +9087,7 @@ function asRebuildSlowData() {
     if (!brandSelMatch(e.brand, asSelBrands)) return;
     const s = asStockMap.get(code);
     if (!s || !s.hasSales12Data) return;
-    processSlowEntry(code, e.brand || '', e.desc || '', s.crmName || null, s);
+    processSlowEntry(code, e.brand || '', e.desc || '', s.crmName || null, s, e.retail);
   });
 
   // CRM-mode: off-catalog entries
@@ -9079,7 +9098,7 @@ function asRebuildSlowData() {
       if (!brandSelMatch(crmEntry.brand, asSelBrands)) return;
       const s = asStockMap.get(sku);
       if (!s || !s.hasSales12Data) return;
-      processSlowEntry(sku, crmEntry.brand || '', crmEntry.desc || sku, s.crmName || crmEntry.desc || null, s);
+      processSlowEntry(sku, crmEntry.brand || '', crmEntry.desc || sku, s.crmName || crmEntry.desc || null, s, crmEntry.retail);
     });
   }
 
@@ -9384,20 +9403,30 @@ function asRenderSlowTable() {
     return `<span style="color:${col};font-weight:700;">${rounded} wks</span>`;
   };
 
+  const SLOW_TH = 'padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;background:var(--light);white-space:nowrap;position:sticky;top:0;z-index:10;border-bottom:2px solid var(--border);';
   document.getElementById('asTableHead').innerHTML = `<tr>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;text-align:left;">Brand</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;">Code</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;text-align:left;">Description</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#1f6b3e;background:var(--light);white-space:nowrap;">Free Stock</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;">3mo Sales</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--light);white-space:nowrap;">Avg/Mo</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#0891b2;background:var(--light);white-space:nowrap;">Weeks Cover</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--brand);background:var(--light);white-space:nowrap;">Band A (€)</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#0891b2;background:var(--light);white-space:nowrap;">Band C (€)</th>
-    <th style="padding:7px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#7c3aed;background:var(--light);white-space:nowrap;">Band F (€)</th>
+    <th style="${SLOW_TH}color:var(--muted);text-align:left;">Brand</th>
+    <th style="${SLOW_TH}color:var(--muted);">Code</th>
+    <th style="${SLOW_TH}color:var(--muted);text-align:left;">Description</th>
+    <th style="${SLOW_TH}color:#1f6b3e;background:#e8f5e9;">Free Stock</th>
+    <th style="${SLOW_TH}color:var(--muted);">3mo Sales</th>
+    <th style="${SLOW_TH}color:var(--muted);">Avg/Mo</th>
+    <th style="${SLOW_TH}color:#0891b2;">Weeks Cover</th>
+    <th style="${SLOW_TH}color:var(--muted);">Added to CRM</th>
+    <th style="${SLOW_TH}color:var(--brand);">Band A (€)</th>
+    <th style="${SLOW_TH}color:#0891b2;">Band C (€)</th>
+    <th style="${SLOW_TH}color:#7c3aed;">Band F (€)</th>
   </tr>`;
 
   document.getElementById('asTableBody').innerHTML = rows.map((r, ri) => {
+    const slowCreatedFmt = (() => {
+      if (!r.createdDate) return '<span style="color:var(--muted);font-style:italic;">—</span>';
+      const dt = r.createdDate instanceof Date ? r.createdDate : new Date(r.createdDate);
+      const now = new Date();
+      const months = (now.getFullYear() - dt.getFullYear()) * 12 + (now.getMonth() - dt.getMonth());
+      const col = months <= 6 ? '#0891b2' : 'var(--muted)';
+      return `<span style="color:${col};">${dt.getDate()} ${AS_MONTHS[dt.getMonth()]} ${dt.getFullYear()}</span>`;
+    })();
     return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
       <td style="${TD}font-size:11px;color:var(--muted);text-align:left;">${escHtml(r.brand)}</td>
       <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
@@ -9407,12 +9436,13 @@ function asRenderSlowTable() {
       <td style="${TD}color:var(--muted);">${Math.round(r.sales3Mo).toLocaleString('en-IE')}</td>
       <td style="${TD}color:var(--muted);">${r.avgMonthly.toFixed(1)}</td>
       <td style="${TD}">${fmtWks(r.weeksOfCoverage)}</td>
-      <td style="${TD}color:var(--brand);">${r.bandF != null ? '€' + r.bandF.toFixed(2) : (r.retail != null ? '€' + r.retail.toFixed(2) : '—')}</td>
+      <td style="${TD}font-size:11px;">${slowCreatedFmt}</td>
+      <td style="${TD}color:var(--brand);">${r.retail != null ? '€' + r.retail.toFixed(2) : '—'}</td>
       <td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>
       <td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted);">
      No slow moving stock found — all products are within 8 weeks cover.
    </td></tr>`;
 }
@@ -9675,7 +9705,6 @@ async function asExportExcel() {
     setTimeout(() => URL.revokeObjectURL(a.href), 8000);
 
     showToast('✓ Exported ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' → ' + filename);
-    asOpenEmailCompose(rows.length);
 
   } catch(err) {
     console.error('asExportExcel:', err);
@@ -9689,20 +9718,6 @@ async function asExportExcel() {
   }
 }
 
-function asOpenEmailCompose(count) {
-  const subject = encodeURIComponent('Aged Stock Clearance List');
-  const body    = encodeURIComponent(
-    'Hi,\n\n' +
-    'Please find attached our aged stock clearance list (' + count + ' line' + (count === 1 ? '' : 's') + ').\n\n' +
-    'These products have free stock with no invoiced sales in the last 12 months ' +
-    'and are available for clearance at the prices shown.\n\n' +
-    'Please let us know if you would like to discuss quantities or pricing.\n\n' +
-    'Kind regards,\nPeats\n'
-  );
-  setTimeout(() => {
-    try { window.open('mailto:?subject=' + subject + '&body=' + body, '_blank'); } catch(e) {}
-  }, 600);
-}
 
 // ── Prompt / empty-state messages ─────────────────────
 
@@ -19089,7 +19104,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v105 · 17 Sep 2026 · Band fix (OperatingCompanyCode), All/Catalog toggle, tabs in toolbar, Created date column';
+const TOOL_BUILD = 'v106 · 17 Sep 2026 · Free Stock tab rename, mailto removed, Created date on slow moving, band probe';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
