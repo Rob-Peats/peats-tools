@@ -1036,6 +1036,19 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           </div>
         </div>
 
+        <!-- SKU Lookup -->
+        <div style="background:var(--light);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:4px">Product SKU Lookup</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Fetch a single product's full CRM record — useful for checking the exact <code>Manufacturer</code> field value and spelling used in the system.</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="crmSkuInput" placeholder="Enter a SKU (e.g. SEN-HD280PRO)"
+              style="flex:1;min-width:200px;font-family:monospace;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--white);color:var(--text);"
+              onkeydown="if(event.key==='Enter')crmLookupSku()">
+            <button onclick="crmLookupSku()" id="crmSkuLookupBtn"
+              style="background:#92400e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🔍 Lookup SKU</button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1841,6 +1854,19 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         style="height:40px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
         ⊘ EOL
       </button>
+    </div>
+
+    <!-- Exclude new products toggle -->
+    <div style="display:flex;gap:6px;align-items:center;border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
+      <button id="asExcludeNewBtn" onclick="asToggleExclude('new')"
+        title="Hide products added to the CRM within the last N months"
+        style="height:40px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--light);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;">
+        ⊘ New &lt;<span id="asNewMonthsDisplay">6</span>m
+      </button>
+      <input type="number" id="asNewMonthsInput" value="6" min="1" max="60" step="1"
+        title="Products added within this many months are treated as new"
+        style="width:40px;height:32px;border:1px solid var(--border);border-radius:6px;padding:2px 4px;font-size:12px;font-weight:700;text-align:center;font-family:inherit;background:var(--white);color:var(--text);outline:none;"
+        oninput="asNewMonths=Math.max(1,parseInt(this.value)||6);document.getElementById('asNewMonthsDisplay').textContent=asNewMonths;if(asExcludeNew){asRebuildData();if(asData.length>0)asRenderAll();else asShowNoAgedStock();}">
     </div>
 
     <!-- Bulk discount pill (amber border) -->
@@ -7751,7 +7777,9 @@ let asBrands       = [];          // all available brand names from catalog
 let asSelBrands    = new Set();   // brands the user has selected
 let asExcludeTBD   = false;
 let asExcludeEOL   = false;
-// SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, hasSales12Data, lastSoldDate}
+let asExcludeNew   = false;
+let asNewMonths    = 6;        // products added within this many months are treated as "new"
+// SKU → {qty, physStock, salesOrders, onOrder, crmName, soldLast12Mo, hasSales12Data, lastSoldDate, createdDate}
 let asStockMap     = new Map();
 let asLoadedBrands = new Set();   // brands whose data has been fetched (cache key)
 let asFetching     = false;
@@ -8055,6 +8083,29 @@ async function asLoadForSelectedBrands() {
       if (entry) entry.lastSoldDate = lastSoldMap.get(sku) || null;
     });
 
+    // ── Step 5: Created date for new-product exclusion ────
+    const CREATED_BATCH = 20;
+    const createdMap    = new Map();
+    try {
+      for (let i = 0; i < skusToFetch.length; i += CREATED_BATCH) {
+        const batch = skusToFetch.slice(i, i + CREATED_BATCH);
+        const skuF  = '(' + batch.map(s => `ProductItemId eq '${s.replace(/'/g, "''")}'`).join(' or ') + ')';
+        const resp  = await fetch(CRM_ODATA_BASE + '/ProductItems?$filter=' + encodeURIComponent(skuF) + '&$select=ProductItemId,Created', {
+          headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+        });
+        if (resp.ok) {
+          const d = await resp.json();
+          (d.value || []).forEach(item => {
+            if (item.Created) createdMap.set(item.ProductItemId, new Date(item.Created));
+          });
+        }
+      }
+    } catch(e) { /* best effort — new-product exclusion gracefully degrades */ }
+    skusToFetch.forEach(sku => {
+      const entry = asStockMap.get(sku);
+      if (entry && createdMap.has(sku)) entry.createdDate = createdMap.get(sku);
+    });
+
     brandsToFetch.forEach(b => asLoadedBrands.add(b));
     if (asSelBrands.has('AVSL') && [...AVSL_BRANDS].every(b => asLoadedBrands.has(b))) {
       asLoadedBrands.add('AVSL');
@@ -8104,6 +8155,11 @@ function asRebuildData() {
 
     if (asExcludeTBD && displayName.startsWith('TBD')) return;
     if (asExcludeEOL && displayName.startsWith('EOL')) return;
+    if (asExcludeNew && s.createdDate) {
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - asNewMonths);
+      if (s.createdDate > cutoff) return;
+    }
 
     const cost   = (e.cost   && Number(e.cost)   > 0) ? Number(e.cost)   : null;
     const retail = (e.retail && Number(e.retail) > 0) ? Number(e.retail) : null;
@@ -8125,6 +8181,7 @@ function asRebuildData() {
       salesOrders: s.salesOrders != null ? s.salesOrders : null,
       cost, retail, stockValue,
       lastSoldDate, dormantMonths,
+      createdDate: s.createdDate || null,
       discount, clearance
     });
   });
@@ -8351,8 +8408,9 @@ function asSort(col) {
 // ── Exclude TBD / EOL ─────────────────────────────────
 
 function asToggleExclude(type) {
-  if (type === 'tbd') { asExcludeTBD = !asExcludeTBD; }
-  else                { asExcludeEOL = !asExcludeEOL; }
+  if      (type === 'tbd') { asExcludeTBD = !asExcludeTBD; }
+  else if (type === 'eol') { asExcludeEOL = !asExcludeEOL; }
+  else if (type === 'new') { asExcludeNew = !asExcludeNew; }
   _asRefreshExcludePills();
   asRebuildData();
   if (asData.length > 0) {
@@ -8367,6 +8425,7 @@ function asToggleExclude(type) {
 function _asRefreshExcludePills() {
   const tbdBtn = document.getElementById('asExcludeTBDBtn');
   const eolBtn = document.getElementById('asExcludeEOLBtn');
+  const newBtn = document.getElementById('asExcludeNewBtn');
   if (tbdBtn) {
     tbdBtn.style.background  = asExcludeTBD ? '#b45309' : 'var(--light)';
     tbdBtn.style.color       = asExcludeTBD ? '#fff'    : 'var(--text)';
@@ -8376,6 +8435,11 @@ function _asRefreshExcludePills() {
     eolBtn.style.background  = asExcludeEOL ? '#dc2626' : 'var(--light)';
     eolBtn.style.color       = asExcludeEOL ? '#fff'    : 'var(--text)';
     eolBtn.style.borderColor = asExcludeEOL ? '#dc2626' : 'var(--border)';
+  }
+  if (newBtn) {
+    newBtn.style.background  = asExcludeNew ? '#0891b2' : 'var(--light)';
+    newBtn.style.color       = asExcludeNew ? '#fff'    : 'var(--text)';
+    newBtn.style.borderColor = asExcludeNew ? '#0891b2' : 'var(--border)';
   }
 }
 
@@ -17811,7 +17875,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v85 · 17 Sep 2026 · Hub: 3×3 grid, compact cards, hover-reveal launch; Export: personal sign-off';
+const TOOL_BUILD = 'v86 · 17 Sep 2026 · Aged Stock: new-product exclusion toggle; Admin: SKU lookup';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -23442,6 +23506,82 @@ async function crmProbeAgedStockFields() {
   out += '✅ Discovery complete — share these findings in chat to implement the fixes.\n';
   crmApiLog(out);
   btn.disabled = false; btn.textContent = '🔎 Probe Aged Stock Fields';
+}
+
+async function crmLookupSku() {
+  const btn = document.getElementById('crmSkuLookupBtn');
+  const inp = document.getElementById('crmSkuInput');
+  const sku = (inp ? inp.value : '').trim();
+  if (!sku) { crmApiLog('✗ Enter a SKU first.'); return; }
+
+  btn.disabled = true; btn.textContent = '⏳ Looking up…';
+  const pat = getCrmPat();
+  if (!pat) {
+    crmApiLog('✗ No PAT saved — enter your token in Settings first.');
+    btn.disabled = false; btn.textContent = '🔍 Lookup SKU';
+    return;
+  }
+
+  const CRM = 'https://crm-odata-v1-westeurope.prospect365.com';
+  let out = '🔍 SKU Lookup: ' + sku + '\n' + '═'.repeat(50) + '\n\n';
+  crmApiLog(out);
+
+  try {
+    const url  = CRM + '/ProductItems?$filter=' + encodeURIComponent(`ProductItemId eq '${sku.replace(/'/g, "''")}'`);
+    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + resp.statusText);
+    const data  = await resp.json();
+    const items = data.value || [];
+
+    if (!items.length) {
+      out += '⚠ No product found for SKU "' + sku + '".\n';
+      out += 'Check the exact SKU spelling — it must match ProductItemId in the CRM.\n';
+      crmApiLog(out);
+      btn.disabled = false; btn.textContent = '🔍 Lookup SKU';
+      return;
+    }
+
+    const item    = items[0];
+    const entries = Object.entries(item);
+    out += '✓ Found product — ' + entries.length + ' fields\n\n';
+
+    // Highlight brand/date/stock fields prominently
+    const brandRx = /brand|manufacturer|supplier|vendor|make/i;
+    const dateRx  = /date|created|modified|updated|added/i;
+    const stockRx = /qty|quantity|stock|available/i;
+
+    const brandFields = entries.filter(([k]) => brandRx.test(k));
+    const dateFields  = entries.filter(([k]) => dateRx.test(k));
+    const stockFields = entries.filter(([k]) => stockRx.test(k));
+
+    const fmtVal = v => v == null ? '(null)' : (String(v).length > 90 ? String(v).slice(0, 90) + '…' : String(v));
+
+    if (brandFields.length) {
+      out += '🏷 Brand / Manufacturer fields:\n';
+      brandFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+      out += '\n';
+    }
+    if (dateFields.length) {
+      out += '📅 Date fields:\n';
+      dateFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+      out += '\n';
+    }
+    if (stockFields.length) {
+      out += '📦 Stock / Qty fields:\n';
+      stockFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+      out += '\n';
+    }
+
+    out += '─'.repeat(50) + '\n';
+    out += '📋 All fields:\n';
+    entries.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+
+  } catch(e) {
+    out += '✗ Error: ' + e.message + '\n';
+  }
+
+  crmApiLog(out);
+  btn.disabled = false; btn.textContent = '🔍 Lookup SKU';
 }
 
 async function crmTestSalesOrderPost() {
