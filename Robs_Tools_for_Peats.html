@@ -8012,7 +8012,7 @@ function saaRenderSummaryCards() {
       col:'#1f6b3e', onclick:"saaSetView('healthy')" },
     { label:'CURRENT',
       val: currentItems.length,
-      sub: 'active — not TBD or EOL',
+      sub: 'Currently Active',
       col:'#0891b2', onclick:"saaSetView('current')" },
     { label:'TBD',
       val: tbdItems.length,
@@ -8020,7 +8020,7 @@ function saaRenderSummaryCards() {
       col:'#b45309', onclick:"saaSetView('tbd')" },
     { label:'END OF LINE',
       val: eolItems.length,
-      sub: 'EOL — consider removing',
+      sub: 'EOL',
       col:'#dc2626', onclick:"saaSetView('eol')" },
     { label:'FORECAST',
       val: '🔮',
@@ -8178,6 +8178,7 @@ async function saaFetchMonthlyData(sku) {
   const url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}`;
   try {
     const resp = await fetch(url, {
+      credentials: 'include',
       headers: { 'Authorization': 'Bearer ' + PAT, 'Accept': 'application/json' }
     });
     if (!resp.ok) { console.warn('[SAA] CRM fetch', resp.status, sku); return null; }
@@ -8253,8 +8254,13 @@ function saaForecastNextMonths(r, nextMonthsArr) {
 }
 
 // Trigger async monthly-data load for visible rows, then re-render once done.
+let saaCrmLoadState = 'idle';  // 'idle' | 'loading' | 'ok' | 'error'
+
 async function saaTriggerMonthlyLoad(rowsToLoad) {
-  if (!localStorage.getItem('peats_crm_pat')) return;  // no PAT — nothing to do
+  if (!localStorage.getItem('peats_crm_pat')) return;
+  if (saaCrmLoadState === 'loading') return;   // already in flight
+  saaCrmLoadState = 'loading';
+
   const skus = new Set();
   for (const r of rowsToLoad) {
     skus.add(r.code);
@@ -8262,11 +8268,19 @@ async function saaTriggerMonthlyLoad(rowsToLoad) {
     const alt  = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
     if (alt) skus.add(alt);
   }
-  const { loaded } = await saaLoadMonthlyDataForSkus([...skus]);
+
+  const { loaded, failed } = await saaLoadMonthlyDataForSkus([...skus]);
+
   if (loaded > 0) {
+    saaCrmLoadState = 'ok';
     saaSeasonalIndices = saaComputeSeasonalIndices();
-    saaRenderForecastTable();   // re-render now that data arrived
+    saaRenderForecastTable();
     showToast(`📈 Monthly sales loaded for ${loaded} SKU${loaded===1?'':'s'} — forecasts updated.`);
+  } else {
+    saaCrmLoadState = 'error';
+    // Re-render so the banner updates to show the error
+    saaRenderForecastTable();
+    console.warn('[SAA] All CRM fetches failed — check browser console for CORS/auth errors');
   }
 }
 
@@ -8303,11 +8317,17 @@ function saaRenderForecastTable() {
   // Kick off background monthly-data load (will re-render when done; no-op if all cached)
   if (!hasCrmData && hasPAT) setTimeout(() => saaTriggerMonthlyLoad(rows), 0);
 
+  const crmErr = saaCrmLoadState === 'error';
+  const crmLoading = saaCrmLoadState === 'loading';
   const banner = hasCrmData ? '' :
-    `<tr><td colspan="8" style="padding:9px 16px;background:${hasPAT?'#f0fdf4':'#eff6ff'};border-bottom:1px solid ${hasPAT?'#bbf7d0':'#bfdbfe'};font-size:12px;color:${hasPAT?'#166534':'#1e40af'};font-weight:600;text-align:left;">
-      ${hasPAT
-        ? '📡 Loading monthly sales from CRM… forecasts will appear momentarily.'
-        : '🔮 Forecast engine ready — add your CRM PAT in Admin (⚙) to activate predictions. Pre-configure predecessor SKUs below to prepare new-line forecasts.'}
+    `<tr><td colspan="8" style="padding:9px 16px;background:${crmErr?'#fef2f2':hasPAT?'#f0fdf4':'#eff6ff'};border-bottom:1px solid ${crmErr?'#fecaca':hasPAT?'#bbf7d0':'#bfdbfe'};font-size:12px;color:${crmErr?'#991b1b':hasPAT?'#166534':'#1e40af'};font-weight:600;text-align:left;">
+      ${crmErr
+        ? '⚠️ CRM monthly data failed to load — likely a CORS or auth issue. Open browser DevTools → Console to see the error. You may need the Prospect365 tab open in the same browser session.'
+        : crmLoading
+          ? '📡 Loading monthly sales from CRM… forecasts will appear momentarily.'
+          : hasPAT
+            ? '📡 Connecting to CRM…'
+            : '🔮 Forecast engine ready — add your CRM PAT in Admin (⚙) to activate predictions. Pre-configure predecessor SKUs below to prepare new-line forecasts.'}
     </td></tr>`;
 
   document.getElementById('saaTableHead').innerHTML = banner + `<tr>
@@ -19974,7 +19994,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v122 · 18 Sep 2026 · CRM monthly sales endpoint wired · SAA forecast live · seasonal indices · predecessor SKU · alt-SKU overrides';
+const TOOL_BUILD = 'v123 · 18 Sep 2026 · card labels · CRM error feedback · credentials:include';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
