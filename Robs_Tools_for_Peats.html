@@ -8263,7 +8263,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 139; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 140; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -8612,18 +8612,20 @@ function saaRenderForecastTable() {
     const trend = (series && series.length) ? saaComputeTrend(series) : null;
     let trendTd = `<td style="${TD}color:var(--muted);font-size:10px;">—</td>`;
     if (trend) {
-      const arrow = trend.direction === 'up' ? '↑' : '↓';
-      const col   = trend.direction === 'up' ? '#16a34a' : '#dc2626';
-      const sign  = trend.pct >= 0 ? '+' : '';
-      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%</td>`;
+      const arrow   = trend.direction === 'up' ? '↑' : '↓';
+      const col     = trend.direction === 'up' ? '#16a34a' : '#dc2626';
+      const sign    = trend.pct >= 0 ? '+' : '';
+      const viaSub  = altRaw ? `<div style="font-size:9px;color:#9ca3af;font-weight:500;font-family:monospace;margin-top:3px;">via ${escHtml(altRaw)}</div>` : '';
+      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${viaSub}</td>`;
     }
 
     const monthCols = nextMonths.map((nm, i) => {
       if (!fcst || !fcst[i]) return `<td style="${TD}color:var(--muted);font-size:10px;">—</td>`;
       const pred    = Math.round(fcst[i].predicted);
       const lyEntry = series ? series.find(e => e.year === nm.year - 1 && e.month === nm.month + 1) : null;
+      const predTag = altRaw ? ' <span style="color:#a78bfa;font-weight:600;">(pred.)</span>' : '';
       const lyHtml  = lyEntry
-        ? `<div style="font-size:9px;color:var(--muted);margin-top:1px;">LY: ${Math.round(lyEntry.qty).toLocaleString('en-IE')}</div>`
+        ? `<div style="font-size:9px;color:var(--muted);margin-top:1px;">LY: ${Math.round(lyEntry.qty).toLocaleString('en-IE')}${predTag}</div>`
         : `<div style="font-size:9px;color:#cbd5e1;margin-top:1px;">LY: —</div>`;
       return `<td style="${TD}"><div style="font-weight:700;">${pred.toLocaleString('en-IE')}</div>${lyHtml}</td>`;
     }).join('');
@@ -8645,7 +8647,7 @@ function saaRenderForecastTable() {
 
     return `<tr style="border-bottom:1px solid #d1d5db;">
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${altRaw ? `<div style="font-size:9px;color:#6d28d9;font-weight:600;font-family:monospace;margin-top:3px;">↩ ${escHtml(altRaw)}</div>` : ''}</td>
       <td style="padding:5px 10px;text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
       <td style="${TD}padding:4px 8px;">${statePill}</td>
       ${trendTd}
@@ -20352,7 +20354,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v139 · 18 Sep 2026 · 6-month YoY growth factor forecasting + Trend column';
+const TOOL_BUILD = 'v140 · 18 Sep 2026 · Predecessor attribution — code, trend and LY indicators';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
