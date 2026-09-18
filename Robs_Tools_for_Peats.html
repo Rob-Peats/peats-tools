@@ -8217,22 +8217,28 @@ async function saaFetchMonthlyData(sku) {
   const base = 'https://api-v1-westeurope.prospect365.com';
   // Fetch raw cube rows (one per year/month) — no aggregate() so Year & Month fields are preserved
   const applyVal = `filter(GroupingMonth eq 1 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 0 and GroupingYear eq 1 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')`;
-  const url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}&%24top=10000`;
+  let url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}`;
+  const allRows = [];
   try {
-    const resp = await fetch(url, {
-      credentials: 'include',
-      headers: { 'Authorization': 'Bearer ' + PAT, 'Accept': 'application/json' }
-    });
-    if (!resp.ok) { console.warn('[SAA] CRM fetch', resp.status, sku); return null; }
-    const data = await resp.json();
-    const rows = data.value || [];
-    if (rows.length) console.log('[SAA] raw CRM row (ALL fields):', JSON.stringify(rows[0]));
-    else { console.warn('[SAA] CRM returned empty value array for', sku); return []; }
+    while (url) {
+      const resp = await fetch(url, {
+        credentials: 'include',
+        headers: { 'Authorization': 'Bearer ' + PAT, 'Accept': 'application/json' }
+      });
+      if (!resp.ok) { console.warn('[SAA] CRM fetch', resp.status, sku); return null; }
+      const data = await resp.json();
+      const rows = data.value || [];
+      if (rows.length && allRows.length === 0) console.log('[SAA] raw CRM row (ALL fields):', JSON.stringify(rows[0]));
+      allRows.push(...rows);
+      url = data['@odata.nextLink'] || null;
+      if (url) console.log('[SAA] paginating', sku, '— rows so far:', allRows.length);
+    }
+    if (!allRows.length) { console.warn('[SAA] CRM returned empty value array for', sku); return []; }
 
     // Month/Year are null — date lives in RoundedDate ("2026-07-01T00:00:00Z")
     // Rows are per-customer; aggregate qty/value by year+month
     const monthMap = {};
-    for (const r of rows) {
+    for (const r of allRows) {
       if (!r.RoundedDate) continue;
       const d     = new Date(r.RoundedDate);
       const year  = d.getUTCFullYear();
@@ -8252,7 +8258,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 133; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 134; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -20285,7 +20291,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v133 · 18 Sep 2026 · CRM $top=10000 full fetch · animated reading message';
+const TOOL_BUILD = 'v134 · 18 Sep 2026 · CRM pagination via @odata.nextLink — all pages fetched';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
