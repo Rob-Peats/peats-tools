@@ -8184,11 +8184,13 @@ async function saaFetchMonthlyData(sku) {
     if (!resp.ok) { console.warn('[SAA] CRM fetch', resp.status, sku); return null; }
     const data = await resp.json();
     const rows = data.value || [];
+    if (rows.length) console.log('[SAA] raw CRM row (field names):', JSON.stringify(rows[0]));
+    else console.warn('[SAA] CRM returned empty value array for', sku);
     return rows.map(r => ({
-      year:  +(r.Year  || r.GroupingYear  || 0),
-      month: +(r.Month || r.GroupingMonth || 0),
-      qty:   +(r.QuantityOrderedsum || 0),
-      value: +(r.Valuesum           || 0)
+      year:  +(r.Year  || r.GroupingYear  || r.CalYear  || r.SalesYear  || 0),
+      month: +(r.Month || r.GroupingMonth || r.CalMonth || r.SalesMonth || 0),
+      qty:   +(r.QuantityOrderedsum || r.QuantityOrdered || r.Qty || 0),
+      value: +(r.Valuesum || r.Value || 0)
     })).filter(r => r.year && r.month);
   } catch(e) {
     console.warn('[SAA] saaFetchMonthlyData error', sku, e);
@@ -8278,9 +8280,15 @@ async function saaTriggerMonthlyLoad(rowsToLoad) {
     showToast(`📈 Monthly sales loaded for ${loaded} SKU${loaded===1?'':'s'} — forecasts updated.`);
   } else {
     saaCrmLoadState = 'error';
-    // Re-render so the banner updates to show the error
-    saaRenderForecastTable();
-    console.warn('[SAA] All CRM fetches failed — check browser console for CORS/auth errors');
+    console.warn('[SAA] All CRM fetches returned no usable data — check console for raw row format above');
+    // Update banner in place without re-rendering (avoids retriggering the load)
+    const bannerRow = document.querySelector('#saaTableHead tr:first-child td[colspan="8"]');
+    if (bannerRow) {
+      bannerRow.style.background = '#fef2f2';
+      bannerRow.style.borderBottomColor = '#fecaca';
+      bannerRow.style.color = '#991b1b';
+      bannerRow.textContent = '⚠️ CRM returned data but field names did not match — check DevTools Console (F12) for raw row structure. The fix will be quick once we see the field names.';
+    }
   }
 }
 
@@ -8315,7 +8323,7 @@ function saaRenderForecastTable() {
 
   const hasPAT = !!localStorage.getItem('peats_crm_pat');
   // Kick off background monthly-data load (will re-render when done; no-op if all cached)
-  if (!hasCrmData && hasPAT) setTimeout(() => saaTriggerMonthlyLoad(rows), 0);
+  if (!hasCrmData && hasPAT && saaCrmLoadState === 'idle') setTimeout(() => saaTriggerMonthlyLoad(rows), 0);
 
   const crmErr = saaCrmLoadState === 'error';
   const crmLoading = saaCrmLoadState === 'loading';
@@ -19994,7 +20002,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v123 · 18 Sep 2026 · card labels · CRM error feedback · credentials:include';
+const TOOL_BUILD = 'v124 · 18 Sep 2026 · loop fix · CRM field-name logging · broader fallbacks';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
