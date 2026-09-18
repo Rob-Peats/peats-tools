@@ -8168,16 +8168,44 @@ function saaSort(col) {
 // Load replacements map from catalog state — called when entering SAA tool
 function saaLoadReplacements() { saaReplacements = Object.assign({}, state.replacementsNewToOld || {}); }
 
-// ── CRM Monthly Sales Fetch (TODO: wire up when endpoint is confirmed) ───
-// Expected format from CRM: [{year:2024, month:10, qty:45}, ...]
+// ── CRM Monthly Sales Fetch ───────────────────────────────────────────────────
+// Prospect365 SalesTransactionsProductCube — aggregated month-by-month qty ordered
 async function saaFetchMonthlyData(sku) {
-  // TODO: replace stub once CRM monthly endpoint is confirmed:
-  // const PAT  = localStorage.getItem('peats_crm_pat') || '';
-  // const base = ...; // CRM base URL
-  // const resp = await fetch(`${base}/monthly-sales/${encodeURIComponent(sku)}`, { headers:{ Authorization:'Bearer '+PAT } });
-  // if (!resp.ok) return null;
-  // return await resp.json();
-  return null;
+  const PAT = localStorage.getItem('peats_crm_pat') || '';
+  if (!PAT) return null;
+  const base = 'https://api-v1-westeurope.prospect365.com';
+  const applyVal = `filter(GroupingMonth eq 1 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 0 and GroupingYear eq 1 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')/aggregate(Value with sum as Valuesum,QuantityOrdered with sum as QuantityOrderedsum,HomeCurrency/IsoCode with max as f_Valuesum_curriso)`;
+  const url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}`;
+  try {
+    const resp = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + PAT, 'Accept': 'application/json' }
+    });
+    if (!resp.ok) { console.warn('[SAA] CRM fetch', resp.status, sku); return null; }
+    const data = await resp.json();
+    const rows = data.value || [];
+    return rows.map(r => ({
+      year:  +(r.Year  || r.GroupingYear  || 0),
+      month: +(r.Month || r.GroupingMonth || 0),
+      qty:   +(r.QuantityOrderedsum || 0),
+      value: +(r.Valuesum           || 0)
+    })).filter(r => r.year && r.month);
+  } catch(e) {
+    console.warn('[SAA] saaFetchMonthlyData error', sku, e);
+    return null;
+  }
+}
+
+// Batch-load monthly data for a list of raw SKUs; skips already-cached entries.
+async function saaLoadMonthlyDataForSkus(skuList) {
+  let loaded = 0, failed = 0;
+  for (const sku of skuList) {
+    const norm = normCode(sku);
+    if (saaMonthlyDataMap[norm]) continue;   // already cached
+    const data = await saaFetchMonthlyData(sku);
+    if (data && data.length) { saaMonthlyDataMap[norm] = data; loaded++; }
+    else failed++;
+  }
+  return { loaded, failed };
 }
 
 // Seasonal index for each month 0-11 (Jan–Dec): business-wide demand multiplier.
@@ -8224,6 +8252,24 @@ function saaForecastNextMonths(r, nextMonthsArr) {
   });
 }
 
+// Trigger async monthly-data load for visible rows, then re-render once done.
+async function saaTriggerMonthlyLoad(rowsToLoad) {
+  if (!localStorage.getItem('peats_crm_pat')) return;  // no PAT — nothing to do
+  const skus = new Set();
+  for (const r of rowsToLoad) {
+    skus.add(r.code);
+    const norm = normCode(r.code);
+    const alt  = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
+    if (alt) skus.add(alt);
+  }
+  const { loaded } = await saaLoadMonthlyDataForSkus([...skus]);
+  if (loaded > 0) {
+    saaSeasonalIndices = saaComputeSeasonalIndices();
+    saaRenderForecastTable();   // re-render now that data arrived
+    showToast(`📈 Monthly sales loaded for ${loaded} SKU${loaded===1?'':'s'} — forecasts updated.`);
+  }
+}
+
 function saaRenderForecastTable() {
   saaRenderSummaryCards();
   const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
@@ -8253,9 +8299,15 @@ function saaRenderForecastTable() {
   const tableEl = document.getElementById('saaTable');
   tableEl.style.display = '';
 
+  const hasPAT = !!localStorage.getItem('peats_crm_pat');
+  // Kick off background monthly-data load (will re-render when done; no-op if all cached)
+  if (!hasCrmData && hasPAT) setTimeout(() => saaTriggerMonthlyLoad(rows), 0);
+
   const banner = hasCrmData ? '' :
-    `<tr><td colspan="8" style="padding:9px 16px;background:#eff6ff;border-bottom:1px solid #bfdbfe;font-size:12px;color:#1e40af;font-weight:600;text-align:left;">
-      🔮 Forecast engine ready — awaiting CRM monthly endpoint. Predicted columns will populate once connected. Pre-configure predecessor SKUs below now to prepare new-line forecasts.
+    `<tr><td colspan="8" style="padding:9px 16px;background:${hasPAT?'#f0fdf4':'#eff6ff'};border-bottom:1px solid ${hasPAT?'#bbf7d0':'#bfdbfe'};font-size:12px;color:${hasPAT?'#166534':'#1e40af'};font-weight:600;text-align:left;">
+      ${hasPAT
+        ? '📡 Loading monthly sales from CRM… forecasts will appear momentarily.'
+        : '🔮 Forecast engine ready — add your CRM PAT in Admin (⚙) to activate predictions. Pre-configure predecessor SKUs below to prepare new-line forecasts.'}
     </td></tr>`;
 
   document.getElementById('saaTableHead').innerHTML = banner + `<tr>
@@ -19922,7 +19974,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v121 · 18 Sep 2026 · Replacements tab · SAA forecast scaffold · predecessor SKU · seasonal indices · alt-SKU overrides';
+const TOOL_BUILD = 'v122 · 18 Sep 2026 · CRM monthly sales endpoint wired · SAA forecast live · seasonal indices · predecessor SKU · alt-SKU overrides';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
