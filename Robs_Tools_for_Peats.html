@@ -8286,7 +8286,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 152; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 153; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -8773,7 +8773,8 @@ function saaShowPredecessorModal() {
       </table>
     </div>
     <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;align-items:center;">
-      <span style="font-size:11px;color:var(--muted);margin-right:auto;">Changes saved to browser storage.</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:auto;">Save keeps in browser only — Push shares with all users via catalog.</span>
+      <button onclick="saaSaveReplacementsToCatalog()" style="padding:7px 18px;border-radius:8px;background:#065f46;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;" title="Merge all replacements into the catalog Replacements tab and push to GitHub">Push to Catalog</button>
       <button onclick="saaSavePredecessors()" style="padding:7px 20px;border-radius:8px;background:var(--brand);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;">Save Changes</button>
       <button onclick="document.getElementById('saaPredModal').remove()" style="padding:7px 16px;border-radius:8px;background:var(--light);color:var(--text);font-weight:600;font-size:13px;border:1px solid var(--border);cursor:pointer;">Cancel</button>
     </div>
@@ -8802,6 +8803,125 @@ function saaSavePredecessors() {
     });
   } else {
     saaRenderForecastTable();
+  }
+}
+
+async function saaSaveReplacementsToCatalog() {
+  // Flush any pending modal changes first (same logic as saaSavePredecessors)
+  const normFn = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  document.querySelectorAll('#saaPredModal input[data-sku]').forEach(inp => {
+    const norm = normFn(inp.getAttribute('data-sku'));
+    const val  = inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if (val) saaAltSkuOverrides[norm] = val;
+    else     delete saaAltSkuOverrides[norm];
+  });
+  try { localStorage.setItem('peats_saa_alt_skus', JSON.stringify(saaAltSkuOverrides)); } catch(e) {}
+
+  // Merge: catalog entries as base, user overrides on top
+  const allRepls = Object.assign({}, saaReplacements, saaAltSkuOverrides);
+  if (!Object.keys(allRepls).length) { showToast('ℹ No replacements to save.'); return; }
+  if (!state.catalogRawBuf) { showToast('⚠ Re-upload the catalog first, then try again.'); return; }
+
+  try {
+    const zip     = await JSZip.loadAsync(state.catalogRawBuf);
+    const esc     = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/[ --]/g,'');
+    const colL    = i => { let s2='',x=i+1; while(x){const r=(x-1)%26;s2=String.fromCharCode(65+r)+s2;x=Math.floor((x-1)/26);} return s2; };
+    const rxEsc   = t => t.replace(/[.*+?^${}()|[\]\]/g,'\$&');
+
+    let wbXml   = await zip.file('xl/workbook.xml').async('string');
+    let relsXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+    let ctXml   = await zip.file('[Content_Types].xml').async('string');
+
+    // Remove existing Replacements sheet if present
+    const existing = wbXml.match(new RegExp('<sheet[^>]*name="' + rxEsc(REPLACEMENTS_SHEET_NAME) + '"[^>]*/>'));
+    if (existing) {
+      const eRid = (existing[0].match(/r:id="([^"]+)"/) || [])[1];
+      const eTgt = eRid ? (relsXml.match(new RegExp('<Relationship[^>]*Id="' + rxEsc(eRid) + '"[^>]*Target="([^"]+)"')) || [])[1] : null;
+      wbXml = wbXml.replace(existing[0], '');
+      if (eRid)  relsXml = relsXml.replace(new RegExp('<Relationship[^>]*Id="' + rxEsc(eRid) + '"[^>]*/>'), '');
+      if (eTgt) { const part = 'xl/' + eTgt.replace(/^\.\//, ''); zip.remove(part); ctXml = ctXml.replace(new RegExp('<Override[^>]*PartName="/' + rxEsc(part) + '"[^>]*/>'), ''); }
+    }
+
+    // Build rows: OldSKU | NewSKU | Notes
+    const today    = new Date().toISOString().slice(0,10);
+    const dataRows = [['OldSKU','NewSKU','Notes']].concat(
+      Object.entries(allRepls).sort().map(([normNew, rawOld]) => {
+        const rawNew  = (state.catalogNorm && state.catalogNorm[normNew]) || normNew;
+        const fromUser = !!saaAltSkuOverrides[normNew];
+        const note    = fromUser ? `Added via forecast tool ${today}` : 'From catalog';
+        return [rawOld, rawNew, note];
+      })
+    );
+
+    let n = 1; while (zip.file('xl/worksheets/sheet' + n + '.xml')) n++;
+    const partPath = 'xl/worksheets/sheet' + n + '.xml';
+    let maxRid2 = 0; (relsXml.match(/Id="rId(\d+)"/g)||[]).forEach(m=>maxRid2=Math.max(maxRid2,parseInt(m.match(/\d+/)[0],10)));
+    const newRid = 'rId' + (maxRid2 + 1);
+    let maxSid = 0; (wbXml.match(/sheetId="(\d+)"/g)||[]).forEach(m=>maxSid=Math.max(maxSid,parseInt(m.match(/\d+/)[0],10)));
+
+    const cells = dataRows.map((row, ri) =>
+      '<row r="' + (ri+1) + '">' +
+      row.map((v, ci) => `<c r="${colL(ci)}${ri+1}" t="inlineStr"><is><t>${esc(v)}</t></is></c>`).join('') +
+      '</row>'
+    ).join('');
+
+    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${cells}</sheetData></worksheet>`;
+    zip.file(partPath, sheetXml);
+    relsXml = relsXml.replace('</Relationships>', `<Relationship Id="${newRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="./${partPath.replace('xl/','')}"/></Relationships>`);
+    wbXml   = wbXml.replace('</sheets>', `<sheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="${esc(REPLACEMENTS_SHEET_NAME)}" sheetId="${maxSid+1}" r:id="${newRid}"/></sheets>`);
+    ctXml   = ctXml.replace('</Types>', `<Override PartName="/${partPath}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`);
+
+    zip.file('xl/workbook.xml', wbXml);
+    zip.file('xl/_rels/workbook.xml.rels', relsXml);
+    zip.file('[Content_Types].xml', ctXml);
+
+    const blob = new Blob([await zip.generateAsync({ type:'arraybuffer', compression:'DEFLATE', compressionOptions:{ level:6 } })],
+      { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    state.catalogRawBuf = await blob.arrayBuffer();
+
+    const nPairs = dataRows.length - 1;
+    let pushOk = false;
+    if (GH_READY) {
+      showToast('⏳ Pushing replacements to GitHub…');
+      try {
+        await githubPushCatalog(blob);
+        pushOk = true;
+      } catch(ghErr) {
+        console.error('[GitHub] Replacements push failed:', ghErr);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download=state.catalogName; a.click(); URL.revokeObjectURL(url);
+        showToast('⚠ GitHub push failed — catalog downloaded locally. (' + ghErr.message + ')');
+      }
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=state.catalogName; a.click(); URL.revokeObjectURL(url);
+    }
+
+    // Update in-memory state so this session reflects the committed pairs
+    state.replacementsNewToOld = {};
+    state.replacementsOldToNew = {};
+    Object.entries(allRepls).forEach(([normNew, rawOld]) => {
+      const rawNew = (state.catalogNorm && state.catalogNorm[normNew]) || normNew;
+      state.replacementsNewToOld[normNew] = rawOld;
+      state.replacementsOldToNew[normFn(rawOld)] = rawNew;
+    });
+    saaLoadReplacements(); // sync saaReplacements from updated state
+
+    // Clear manual overrides that are now baked into the catalog
+    const covered = Object.keys(saaAltSkuOverrides).filter(k => allRepls[k]);
+    covered.forEach(k => delete saaAltSkuOverrides[k]);
+    try { localStorage.setItem('peats_saa_alt_skus', JSON.stringify(saaAltSkuOverrides)); } catch(e) {}
+
+    document.getElementById('saaPredModal')?.remove();
+
+    if (pushOk) {
+      showToast(`✔ ${nPairs} replacement${nPairs===1?'':'s'} pushed to catalog on GitHub — colleagues get them on next load.`);
+    } else if (!GH_READY) {
+      showToast(`✔ ${nPairs} replacement${nPairs===1?'':'s'} saved — re-upload this catalog to share with others.`);
+    }
+  } catch(err) {
+    showToast('✗ Could not save replacements: ' + err.message);
+    console.error('[saaSaveReplacementsToCatalog]', err);
   }
 }
 
@@ -20427,7 +20547,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v152 · 18 Sep 2026 · Fix forecast view re-entry crash (seasonal card ReferenceError)';
+const TOOL_BUILD = 'v153 · 18 Sep 2026 · Push replacement links to catalog GitHub tab';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
