@@ -8174,7 +8174,8 @@ async function saaFetchMonthlyData(sku) {
   const PAT = localStorage.getItem('peats_crm_pat') || '';
   if (!PAT) return null;
   const base = 'https://api-v1-westeurope.prospect365.com';
-  const applyVal = `filter(GroupingMonth eq 1 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 0 and GroupingYear eq 1 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')/aggregate(Value with sum as Valuesum,QuantityOrdered with sum as QuantityOrderedsum,HomeCurrency/IsoCode with max as f_Valuesum_curriso)`;
+  // Fetch raw cube rows (one per year/month) — no aggregate() so Year & Month fields are preserved
+  const applyVal = `filter(GroupingMonth eq 1 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 0 and GroupingYear eq 1 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')`;
   const url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}`;
   try {
     const resp = await fetch(url, {
@@ -8184,13 +8185,14 @@ async function saaFetchMonthlyData(sku) {
     if (!resp.ok) { console.warn('[SAA] CRM fetch', resp.status, sku); return null; }
     const data = await resp.json();
     const rows = data.value || [];
-    if (rows.length) console.log('[SAA] raw CRM row (field names):', JSON.stringify(rows[0]));
+    if (rows.length) console.log('[SAA] raw CRM row (ALL fields):', JSON.stringify(rows[0]));
     else console.warn('[SAA] CRM returned empty value array for', sku);
     return rows.map(r => ({
-      year:  +(r.Year  || r.GroupingYear  || r.CalYear  || r.SalesYear  || 0),
-      month: +(r.Month || r.GroupingMonth || r.CalMonth || r.SalesMonth || 0),
-      qty:   +(r.QuantityOrderedsum || r.QuantityOrdered || r.Qty || 0),
-      value: +(r.Valuesum || r.Value || 0)
+      // Try every plausible Year/Month field name — log above will confirm the right ones
+      year:  +(r.Year  || r.GroupingYear  || r.CalYear  || r.SalesYear  || r.TransactionYear  || 0),
+      month: +(r.Month || r.GroupingMonth || r.CalMonth || r.SalesMonth || r.TransactionMonth || 0),
+      qty:   +(r.QuantityOrdered || r.QuantityOrderedsum || r.Qty || 0),
+      value: +(r.Value || r.Valuesum || 0)
     })).filter(r => r.year && r.month);
   } catch(e) {
     console.warn('[SAA] saaFetchMonthlyData error', sku, e);
@@ -20002,7 +20004,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v124 · 18 Sep 2026 · loop fix · CRM field-name logging · broader fallbacks';
+const TOOL_BUILD = 'v125 · 18 Sep 2026 · drop aggregate · raw per-month cube rows · field discovery';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
