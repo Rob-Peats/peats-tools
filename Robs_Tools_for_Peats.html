@@ -950,11 +950,11 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <span class="hub-card-launch">Open →</span>
     </div>
 
-    <!-- Aged Stock — hidden until PIN unlocked -->
+    <!-- Aged & Slow Stock — hidden until PIN unlocked -->
     <div class="hub-card" id="hubCardAgedStock" style="display:none;" onclick="launchTool('agedstock')">
-      <div class="hub-card-icon">📦</div>
-      <h3>Aged Stock</h3>
-      <p>Find products with free stock but no sales in the last 12 months — apply discounts and export a clearance list.</p>
+      <div class="hub-card-icon">⏰</div>
+      <h3>Aged and Slow Stock</h3>
+      <p>Find products with no sales in 12 months or slow-moving excess stock — apply discounts and export a clearance list.</p>
       <span class="hub-card-launch">Open →</span>
     </div>
 
@@ -1028,30 +1028,35 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         <div style="background:var(--light);border:1px solid var(--border);border-radius:10px;padding:18px">
           <div style="font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:4px">Test Connection &amp; Explore API</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Test your token against the OData endpoint and discover available entity sets.</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
             <button onclick="crmTestConnection()" id="crmTestBtn"
               style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔗 Test Connection</button>
-            <button onclick="crmFetchMetadata()" id="crmMetaBtn"
-              style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔍 Discover Entity Sets</button>
-            <button onclick="crmProbeEntities()" id="crmProbeBtn"
-              style="background:#6b46b0;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📋 Probe Order Entities</button>
-            <button onclick="crmTestSalesOrderPost()" id="crmPostBtn"
-              style="background:#b8791d;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🚀 Test Order POST</button>
-            <button onclick="crmProbeStockFields()" id="crmStockProbeBtn"
-              style="background:#0f766e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔬 Probe Stock Fields</button>
-            <button onclick="crmProbeSalesLines()" id="crmSalesLinesProbeBtn"
-              style="background:#c2410c;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📈 Probe Sales Lines</button>
-            <button onclick="crmProbePurchaseTransactions()" id="crmPurchaseProbeBtn"
-              style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📦 Probe Purchase Transactions</button>
-            <button onclick="crmProbeProductImages()" id="crmImagesProbeBtn"
-              style="background:#0e7490;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🖼 Probe Product Images</button>
-            <button onclick="crmProbeAgedStockFields()" id="crmAgedStockProbeBtn"
-              style="background:#92400e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔎 Probe Aged Stock Fields</button>
-            <button onclick="crmProbePriceBands()" id="crmPriceBandProbeBtn"
-              style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">💷 Probe Price Bands</button>
-            <button onclick="crmProbeCustomerSales()" id="crmCustomerSalesProbeBtn"
-              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">👥 Probe Customer Sales</button>
           </div>
+          <details id="crmDevTools" style="margin-bottom:14px;">
+            <summary style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--light);user-select:none;list-style:none;">🛠 Developer Tools</summary>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+              <button onclick="crmFetchMetadata()" id="crmMetaBtn"
+                style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔍 Discover Entity Sets</button>
+              <button onclick="crmProbeEntities()" id="crmProbeBtn"
+                style="background:#6b46b0;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📋 Probe Order Entities</button>
+              <button onclick="crmTestSalesOrderPost()" id="crmPostBtn"
+                style="background:#b8791d;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🚀 Test Order POST</button>
+              <button onclick="crmProbeStockFields()" id="crmStockProbeBtn"
+                style="background:#0f766e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔬 Probe Stock Fields</button>
+              <button onclick="crmProbeSalesLines()" id="crmSalesLinesProbeBtn"
+                style="background:#c2410c;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📈 Probe Sales Lines</button>
+              <button onclick="crmProbePurchaseTransactions()" id="crmPurchaseProbeBtn"
+                style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">📦 Probe Purchase Transactions</button>
+              <button onclick="crmProbeProductImages()" id="crmImagesProbeBtn"
+                style="background:#0e7490;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🖼 Probe Product Images</button>
+              <button onclick="crmProbeAgedStockFields()" id="crmAgedStockProbeBtn"
+                style="background:#92400e;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🔎 Probe Aged Stock Fields</button>
+              <button onclick="crmProbePriceBands()" id="crmPriceBandProbeBtn"
+                style="background:#065f46;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">💷 Probe Price Bands</button>
+              <button onclick="crmProbeCustomerSales()" id="crmCustomerSalesProbeBtn"
+                style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">👥 Probe Customer Sales</button>
+            </div>
+          </details>
           <div id="crmApiOutput" style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:var(--text);white-space:pre-wrap;min-height:80px;max-height:400px;overflow-y:auto;line-height:1.6">
             <span style="color:var(--muted)">Output will appear here…</span>
           </div>
@@ -1132,6 +1137,42 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
      ══════════════════════════════════════════════════ -->
 <div id="tool-webimport" style="display:none;flex-direction:column;height:100%">
 
+  <!-- Toolbar (shown once catalog is loaded) -->
+  <div id="wiToolbar" style="display:none;flex-direction:row;align-items:stretch;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap;">
+
+    <!-- PILL 1: Brand dropdown -->
+    <div class="brand-filter-wrap" id="wiBrandWrap">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:5px 12px;gap:5px;min-width:160px;box-sizing:border-box;">
+        <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Brand</span>
+        <button id="wiBrandBtn" onclick="wiToggleBrandPanel()" class="brand-filter-btn" style="padding:3px 12px;font-size:12px;font-weight:700;min-width:110px;">Brands ▾</button>
+      </div>
+      <div id="wiBrandPanel" class="brand-filter-panel" style="display:none;min-width:290px;">
+        <input class="brand-search-inp" id="wiBrandSearch" placeholder="Search brands…" oninput="wiFilterBrandList(this.value)" autocomplete="off">
+        <div style="display:flex;gap:5px;padding:5px 8px 4px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+          <button onclick="wiSetAllBrands(true)"  style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer;color:var(--text);font-family:inherit;">Check all</button>
+          <button onclick="wiSetAllBrands(false)" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer;color:var(--text);font-family:inherit;">Uncheck all</button>
+          <button onclick="wiUncheckAvsl()"       style="background:#fef3c7;border:1px solid #fcd34d;border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer;color:#92400e;font-family:inherit;">Uncheck AVSL</button>
+        </div>
+        <div class="brand-list-scroll" id="wiBrandList" style="max-height:300px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
+      </div>
+    </div>
+
+    <!-- PILL 2: Sync -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:5px 12px;gap:4px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Sync</span>
+      <button onclick="wiStartSync(false)" id="wiSyncBtn" style="background:var(--brand);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;">🔄 Sync Web Data</button>
+      <button onclick="wiStartSync(true)" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 10px;font-size:10px;cursor:pointer;color:var(--muted);white-space:nowrap;font-family:inherit;">⚡ Force Refresh</button>
+    </div>
+
+    <!-- PILL 3: Count info -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:5px 14px;gap:2px;box-sizing:border-box;min-width:110px;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Products</span>
+      <span id="wiBrandCount" style="font-size:18px;font-weight:800;color:var(--text);line-height:1.15;">—</span>
+      <span style="font-size:9px;color:var(--muted);">selected for sync</span>
+    </div>
+
+  </div>
+
   <div class="controls" style="flex:1;overflow-y:auto;padding:20px 24px">
 
     <!-- Catalog status banner -->
@@ -1139,33 +1180,10 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       ⚠ No catalog loaded. Upload your product catalog using any other tool first, then come back here.
     </div>
 
-    <!-- Intro -->
-    <div style="margin-bottom:16px">
-      <p style="font-size:13px;color:var(--muted);margin:0">Select the brands you want to sync, then press <strong>Sync Web Data</strong>. Columns N–U (Web Description, Long Description, Image URLs 1–4, Barcode, Search Terms) are pulled from the CRM and stored in memory. Only products with missing data are fetched unless you use Force Refresh.</p>
-    </div>
-
-    <!-- Brand filter panel -->
-    <div id="wiBrandPanel" style="display:none;margin-bottom:18px;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap">
-        <span style="font-size:13px;font-weight:700;color:var(--text)">Brands to sync</span>
-        <div style="display:flex;gap:7px;flex-wrap:wrap">
-          <button onclick="wiSetAllBrands(true)"  style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--text)">Check all</button>
-          <button onclick="wiSetAllBrands(false)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--text)">Uncheck all</button>
-          <button onclick="wiUncheckAvsl()"       style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:#92400e">Uncheck AVSL</button>
-        </div>
-      </div>
-      <div id="wiBrandChecks" style="display:flex;flex-wrap:wrap;gap:6px 14px;max-height:180px;overflow-y:auto;padding-right:4px"></div>
-      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <button onclick="wiStartSync(false)" id="wiSyncBtn"
-          style="background:var(--brand);color:#fff;border:none;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;cursor:pointer">
-          🔄 Sync Web Data
-        </button>
-        <span id="wiBrandSummary" style="font-size:12px;color:var(--muted)"></span>
-      </div>
-    </div>
-
-    <!-- Hidden stubs kept for compat -->
+    <!-- Hidden stubs kept for compat (wiBrandPanel and wiBrandChecks referenced in old JS — now replaced) -->
     <span id="wiSyncStatus" style="display:none"></span>
+    <span id="wiBrandSummary" style="display:none"></span>
+    <div id="wiBrandChecks" style="display:none"></div>
     <div id="wiProgressWrap" style="display:none"><div id="wiProgressBar"></div><div id="wiProgressLabel"></div></div>
 
     <!-- Results / status (populated by wiUpdateSweepStatus) -->
@@ -1841,6 +1859,10 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <button class="search-x-btn" id="saaSearchX"
               onclick="_clearSearch('saaSearch','saaSearchX',saaRenderTable)" title="Clear">✕</button>
     </div>
+    <button id="saaExportBtn" onclick="saaExportExcel()" class="btn btn-green"
+      style="display:none;margin-left:10px;align-self:center;padding:6px 14px;font-size:12px;" disabled>
+      📊 Export Excel
+    </button>
   </div>
 
   <!-- Big summary cards (hidden until data loaded) — cards above tabs like backorder tool -->
@@ -1913,23 +1935,25 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- PILL 4: Price Bands (label on top, toggle rows below) -->
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:5px 14px;gap:5px;min-width:140px;box-sizing:border-box;">
+    <!-- PILL 4: Price Bands (label on top, Band C + F side-by-side) -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:5px 14px;gap:5px;min-width:200px;box-sizing:border-box;">
       <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Price Bands</span>
-      <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;width:100%;">
-        <span style="font-size:11px;font-weight:700;color:#0891b2;white-space:nowrap;">Band C</span>
-        <label class="tog teal" style="flex-shrink:0;">
-          <input type="checkbox" id="asBandCToggle" checked onchange="asToggleBandCol('C')">
-          <span class="tog-track"></span>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <span style="font-size:11px;font-weight:700;color:#0891b2;white-space:nowrap;">Band C</span>
+          <label class="tog teal" style="flex-shrink:0;">
+            <input type="checkbox" id="asBandCToggle" checked onchange="asToggleBandCol('C')">
+            <span class="tog-track"></span>
+          </label>
         </label>
-      </label>
-      <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;width:100%;">
-        <span style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Band F</span>
-        <label class="tog purple" style="flex-shrink:0;">
-          <input type="checkbox" id="asBandFToggle" checked onchange="asToggleBandCol('F')">
-          <span class="tog-track"></span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <span style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Band F</span>
+          <label class="tog purple" style="flex-shrink:0;">
+            <input type="checkbox" id="asBandFToggle" checked onchange="asToggleBandCol('F')">
+            <span class="tog-track"></span>
+          </label>
         </label>
-      </label>
+      </div>
     </div>
 
     <!-- PILL 5: Exclude New — v116 redesign -->
@@ -1959,6 +1983,9 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         <button onclick="asApplySelectedDiscount()"
           style="background:#92400e;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
           onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">Selected</button>
+        <button onclick="asResetDiscounts()"
+          style="background:#6b7280;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
+          onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'" title="Reset all discounts to 0">↺ Reset</button>
       </div>
     </div>
 
@@ -1966,7 +1993,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:5px 12px;gap:5px;min-width:140px;box-sizing:border-box;">
       <button id="asExportBtn" onclick="asExportExcel()" disabled
         class="btn"
-        style="background:#1a3c6e;color:#fff;font-size:12px;padding:5px 14px;width:100%;cursor:not-allowed;opacity:.38;">
+        style="background:var(--green);color:#fff;font-size:12px;padding:5px 14px;width:100%;cursor:not-allowed;opacity:.38;">
         ⬇ Export to Excel
       </button>
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;">
@@ -2013,9 +2040,9 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
     <!-- Aged Stock section -->
     <div id="asAgedSection" style="display:none;">
-      <div style="background:#1a3c6e;color:#fff;">
-        <div style="padding:6px 14px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.12);">📦 Aged Stock</div>
-        <div id="asAgedCards" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px;"></div>
+      <div style="background:#1a3c6e;color:#fff;display:flex;align-items:center;padding:4px 14px;gap:12px;min-height:36px;">
+        <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">📦 Aged and Slow Stock</span>
+        <div id="asAgedCards" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;justify-content:flex-end;align-items:center;"></div>
       </div>
       <table id="asTable" style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">
         <thead id="asTableHead"></thead>
@@ -2025,9 +2052,10 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
     <!-- Slow Moving section -->
     <div id="asSlowSection" style="display:none;">
-      <div style="background:#0891b2;color:#fff;">
-        <div style="padding:6px 14px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.12);">⏱ Slow Moving Stock</div>
-        <div id="asSlowCards" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px;"></div>
+      <div style="height:12px;background:var(--light);border-top:2px solid var(--border);"></div>
+      <div style="background:#0891b2;color:#fff;display:flex;align-items:center;padding:4px 14px;gap:12px;min-height:36px;">
+        <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">⏱ Slow Moving Stock</span>
+        <div id="asSlowCards" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;justify-content:flex-end;align-items:center;"></div>
       </div>
       <table id="asSlowTable" style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">
         <thead id="asSlowTableHead"></thead>
@@ -2077,6 +2105,16 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </select>
     </div>
 
+    <!-- PILL 4: Dormant After -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:5px 12px;gap:5px;min-width:120px;box-sizing:border-box;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Dormant After</span>
+      <div style="display:flex;align-items:center;gap:5px;">
+        <input type="number" id="beaDormantInput" min="1" max="120" value="18"
+          style="width:40px;border:1px solid var(--border);border-radius:5px;padding:2px 4px;font-size:12px;font-weight:800;text-align:center;font-family:inherit;background:var(--white);color:var(--text);">
+        <span style="font-size:11px;color:var(--muted);font-weight:700;">mo</span>
+      </div>
+    </div>
+
     <button id="beaRunBtn" onclick="beaRun()" class="btn btn-brand"
       style="align-self:center;padding:7px 18px;font-size:12px;display:flex;align-items:center;gap:6px;">
       ▶ Run Analysis
@@ -2093,6 +2131,16 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
   <!-- Summary chips -->
   <div id="beaSummaryBar" style="display:none;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;flex-wrap:wrap;align-items:center;">
+  </div>
+
+  <!-- BEA search row -->
+  <div id="beaSearchRow" style="display:none;padding:6px 16px;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div class="search-x-wrap">
+      <input type="search" id="beaSearch" placeholder="Filter by customer name or account…"
+             oninput="beaRenderTableBody()" style="width:280px;">
+      <button class="search-x-btn" id="beaSearchX"
+              onclick="document.getElementById('beaSearch').value='';beaRenderTableBody()" title="Clear">✕</button>
+    </div>
   </div>
 
   <!-- Results table -->
@@ -2637,6 +2685,7 @@ function onRetailerChange() {
   const sel = document.getElementById('retailerSelect');
   state.retailerId = sel.value;
   if (!state.retailerId) return;
+  try { localStorage.setItem('peats_last_retailer', state.retailerId); } catch(e) {}
   sel.classList.remove('unselected');
   const cfg = RETAILERS[state.retailerId];
   document.getElementById('dropRetailerLabel').textContent = cfg.name;
@@ -2960,6 +3009,7 @@ function parseCatalog(rows, name, wb, rawBuf) {
   if (imported) showToast(`✔ ${imported} saved code correction${imported === 1 ? '' : 's'} loaded from catalog.`);
   if (wb) importDiscFromWorkbook(wb);
   if (wb) importExcludedFromWorkbook(wb);
+  if (wb) importReplacementsFromWorkbook(wb);
 
   // Update UI
   ogUpdateCatalogTile();
@@ -2976,6 +3026,7 @@ function parseCatalog(rows, name, wb, rawBuf) {
   if (!count) {
     showToast('⚠ Catalog loaded but 0 products found — check the file format.');
   } else {
+    state.catalogLoadTime = new Date();
     showToast(`✓ Catalog loaded — ${count.toLocaleString()} products · code column: "${state.catalogCols.Code}"`);
   }
   if (state.rawRows.length) { renderSummary(); renderTable(); }
@@ -2993,6 +3044,9 @@ function clearCatalog() {
   state.catalogRawBuf = null;
   state.catalogName = '';
   state.catalogBrands = [];
+  state.catalogLoadTime = null;
+  state.replacementsOldToNew = {};
+  state.replacementsNewToOld = {};
   state.selectedBrands = new Set();
   ogUpdateCatalogTile();
   document.getElementById('priceToggles').style.display = 'none';
@@ -3633,6 +3687,7 @@ function normCode(s) {
 const CODE_ALIAS_KEY  = 'peats_code_aliases';
 const DISC_KEY        = 'peats_discontinued_v1';
 const DISC_SHEET_NAME = 'Discontinued';
+const REPLACEMENTS_SHEET_NAME = 'Replacements';
 
 // Discontinued codes are stored as a flat array of uppercase Peats/supplier codes
 // that are permanently gone and should not appear in export.
@@ -4394,7 +4449,10 @@ function ogUpdateCatalogTile() {
   if (!el) return;
   if (!state.catalogName) { el.innerHTML = ''; return; }
   const count = Object.keys(state.catalog).length;
-  el.innerHTML = `<div class="cat-loaded">Peats Catalog Loaded`
+  const _tStr = state.catalogLoadTime
+    ? ' · loaded ' + state.catalogLoadTime.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  el.innerHTML = `<div class="cat-loaded">Peats Catalog Loaded${_tStr}`
     + `<span id="wiSweepBadge"></span>`
     + `<button onclick="clearCatalog()" title="Remove catalog">×</button></div>`
     ;
@@ -6961,6 +7019,32 @@ function importExcludedFromWorkbook(wb) {
 }
 
 /**
+ * Read the "Replacements" sheet (OldSKU | NewSKU | Notes) and build bi-directional maps.
+ *   state.replacementsOldToNew[normOld] = rawNewSKU  → suggest replacement when old SKU ordered
+ *   state.replacementsNewToOld[normNew] = rawOldSKU  → borrow predecessor history for forecasting
+ */
+function importReplacementsFromWorkbook(wb) {
+  state.replacementsOldToNew = {};
+  state.replacementsNewToOld = {};
+  if (!wb || !wb.SheetNames) return;
+  const sheetName = wb.SheetNames.find(n => n.trim().toLowerCase() === REPLACEMENTS_SHEET_NAME.toLowerCase());
+  if (!sheetName) return;
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' });
+  if (!rows || rows.length < 2) return;
+  let n = 0;
+  for (let r = 1; r < rows.length; r++) {
+    const row    = rows[r];
+    const oldSku = String(row[0] || '').trim().toUpperCase();
+    const newSku = String(row[1] || '').trim().toUpperCase();
+    if (!oldSku || !newSku) continue;
+    state.replacementsOldToNew[normCode(oldSku)] = newSku;
+    state.replacementsNewToOld[normCode(newSku)] = oldSku;
+    n++;
+  }
+  if (n) showToast(`↩ ${n} SKU replacement${n===1?'':'s'} loaded from catalog.`);
+}
+
+/**
  * Write the current excluded set into the catalog file as an "Excluded Codes" sheet
  * (Retailer | Code | Added) and push to GitHub / download.
  */
@@ -7223,6 +7307,7 @@ function saaReset() {
   saaRenderBrandList('');
   document.getElementById('saaSummaryCards').style.display = 'none';
   document.getElementById('saaSearchWrap').style.display   = 'none';
+  const _saaExpR = document.getElementById('saaExportBtn'); if (_saaExpR) { _saaExpR.style.display = 'none'; _saaExpR.disabled = true; }
   document.getElementById('saaTable').style.display        = 'none';
   saaShowPickPrompt();
   showToast('↺ Stock analysis cleared.');
@@ -7345,7 +7430,7 @@ function launchTool(tool) {
     saaOnOpen();
   } else if (tool === 'agedstock') {
     document.getElementById('tool-agedstock').style.display = 'flex';
-    setToolName('Aged Stock');
+    setToolName('Aged and Slow Stock');
     asOnOpen();
   } else if (tool === 'brandengagement') {
     document.getElementById('tool-brandengagement').style.display = 'flex';
@@ -7397,12 +7482,27 @@ let saaSalesPeriod  = 3;           // months denominator for avg/month
 let saaStockMap     = new Map();    // SKU → stock data (accumulated incrementally)
 let saaLoadedBrands = new Set();    // brands whose stock has been fetched
 let saaFetching     = false;
+let saaReplacements    = {};   // normNewSku → rawOldSku (predecessor map from Replacements tab)
+let saaAltSkuOverrides = {};   // normCode → rawAltSku (manual user entries; localStorage)
+let saaMonthlyDataMap  = {};   // normCode → [{year,month,qty},...] (CRM monthly data; pending)
+let saaSeasonalIndices = null; // [12 floats] or null until monthly data loaded
+const SAA_ALT_SKU_KEY  = 'peats_saa_alt_skus';
+function saaLoadAltOverrides()  { try { return JSON.parse(localStorage.getItem(SAA_ALT_SKU_KEY) || '{}'); } catch(e) { return {}; } }
+function saaSaveAltOverrides(o) { try { localStorage.setItem(SAA_ALT_SKU_KEY, JSON.stringify(o)); } catch(e) {} }
+function saaSetAltSku(code, val) {
+  const norm = normCode(code);
+  const o    = saaLoadAltOverrides();
+  if (val && val.trim()) o[norm] = val.trim().toUpperCase(); else delete o[norm];
+  saaSaveAltOverrides(o); saaAltSkuOverrides = o;
+}
 // Cover thresholds (weeks) — read from toolbar inputs at runtime
 function saaCritWks()  { return parseInt(document.getElementById('saaCriticalWks')?.value  || '4',  10) || 4;  }
 function saaLowWks()   { return parseInt(document.getElementById('saaLowCoverWks')?.value  || '8',  10) || 8;  }
 function saaUpdateThresholds() { saaRebuildData(); if (saaData.length) saaRenderAll(); }
 
 function saaOnOpen() {
+  saaLoadReplacements();
+  saaAltSkuOverrides = saaLoadAltOverrides();
   const hasCat = state.catalog && Object.keys(state.catalog).length > 0;
   if (!hasCat) {
     document.getElementById('saaContent').style.display = 'block';
@@ -7423,6 +7523,7 @@ function saaOnOpen() {
 function saaShowPickPrompt() {
   document.getElementById('saaSummaryCards').style.display  = 'none';
   document.getElementById('saaSearchWrap').style.display    = 'none';
+  const _saaExpP = document.getElementById('saaExportBtn'); if (_saaExpP) { _saaExpP.style.display = 'none'; _saaExpP.disabled = true; }
   document.getElementById('saaTable').style.display         = 'none';
   document.getElementById('saaLoadingIndicator').style.display = 'none';
   const content = document.getElementById('saaContent');
@@ -7437,6 +7538,105 @@ function saaShowPickPrompt() {
       Use <strong>🏷 Brands</strong> above to pick which brands to check — stock is fetched on demand.
     </div>
   </div>`;
+}
+
+async function saaExportExcel() {
+  if (!saaData || !saaData.length) { showToast('No data to export.'); return; }
+  const btn = document.getElementById('saaExportBtn');
+  if (btn) { btn.textContent = '⏳ Exporting…'; btn.disabled = true; }
+  try {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Stock Analysis');
+    const critWks = saaCritWks(), lowWks = saaLowWks();
+
+    // Apply same TBD/EOL exclusions and search filter as the table
+    const q = (document.getElementById('saaSearch') ? document.getElementById('saaSearch').value : '').toLowerCase().trim();
+    const rows = saaData.filter(function(r) {
+      if (saaExcludeTBD && (r.crmName||r.desc).toUpperCase().startsWith('TBD')) return false;
+      if (saaExcludeEOL && (r.crmName||r.desc).toUpperCase().startsWith('EOL')) return false;
+      if (q) {
+        const d = (r.crmName||r.desc).toLowerCase();
+        if (!r.code.toLowerCase().includes(q) && !d.includes(q) && !r.brand.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+
+    ws.columns = [
+      { header: 'Code',        key: 'code',    width: 18 },
+      { header: 'Description', key: 'desc',    width: 40 },
+      { header: 'Brand',       key: 'brand',   width: 14 },
+      { header: 'Cost (€)',    key: 'cost',    width: 10 },
+      { header: 'Physical',    key: 'phys',    width: 10 },
+      { header: 'Sales',       key: 'sales',   width: 10 },
+      { header: 'Free',        key: 'free',    width: 10 },
+      { header: 'On Order',    key: 'onOrder', width: 10 },
+      { header: 'Projected',   key: 'proj',    width: 10 },
+      { header: 'Avg/Mo',      key: 'avg',     width: 10 },
+      { header: 'Wks Cover',   key: 'wks',     width: 10 },
+      { header: '3Mo Sales',   key: 'sales3',  width: 10 },
+      { header: 'Status',      key: 'status',  width: 14 },
+    ];
+
+    // Style header row
+    const hdr = ws.getRow(1);
+    hdr.height = 18;
+    hdr.eachCell(function(cell) {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Arial', size: 10 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+
+    const statusLabels = { 0: 'Critical', 1: 'Low Cover', 2: 'Healthy', 3: 'Over-stocked' };
+    const statusFills  = {
+      0: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } },
+      1: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } },
+      2: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } },
+    };
+
+    rows.forEach(function(r) {
+      const wksVal = r.weeksCover;
+      const row = ws.addRow({
+        code:   r.code,
+        desc:   r.crmName || r.desc,
+        brand:  r.brand,
+        cost:   r.cost != null ? r.cost : '',
+        phys:   r.phys,
+        sales:  r.sales,
+        free:   r.free,
+        onOrder:r.onOrder,
+        proj:   r.proj,
+        avg:    r.avgPerMonth != null ? Math.round(r.avgPerMonth * 10) / 10 : '',
+        wks:    wksVal != null ? Math.round(wksVal * 10) / 10 : '',
+        sales3: r.soldLast3Mo || 0,
+        status: statusLabels[r.status] || '',
+      });
+      row.font = { name: 'Arial', size: 10 };
+      if (statusFills[r.status]) {
+        row.getCell('status').fill = statusFills[r.status];
+      }
+      // Highlight free stock cell if critical/low
+      if (wksVal != null && wksVal < critWks) {
+        row.getCell('free').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+      } else if (wksVal != null && wksVal < lowWks) {
+        row.getCell('free').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
+      }
+    });
+
+    ws.autoFilter = { from: 'A1', to: { row: 1, column: ws.columns.length } };
+
+    const buf  = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'Stock_Analysis_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    a.click(); URL.revokeObjectURL(url);
+    showToast('✓ Stock analysis exported — ' + rows.length + ' rows.');
+  } catch(e) {
+    showToast('✗ Export failed: ' + e.message);
+    console.error('[saaExportExcel]', e);
+  } finally {
+    if (btn) { btn.textContent = '📊 Export Excel'; btn.disabled = false; }
+  }
 }
 
 function saaBuildBrands() {
@@ -7751,6 +7951,7 @@ function saaRenderAll() {
   saaRenderTable();
   document.getElementById('saaSummaryCards').style.display = 'flex';
   document.getElementById('saaSearchWrap').style.display   = 'flex';
+  const _saaExp = document.getElementById('saaExportBtn'); if (_saaExp) { _saaExp.style.display = ''; _saaExp.disabled = false; }
   document.getElementById('saaContent').style.display      = 'none';
   document.getElementById('saaTable').style.display        = 'table';
 }
@@ -7821,9 +8022,13 @@ function saaRenderSummaryCards() {
       val: eolItems.length,
       sub: 'EOL — consider removing',
       col:'#dc2626', onclick:"saaSetView('eol')" },
+    { label:'FORECAST',
+      val: '🔮',
+      sub: 'next 3 months demand',
+      col:'#6d28d9', onclick:"saaSetView('forecast')" },
   ];
 
-  const viewKey = { "saaSetView('all')":'all',"saaSetView('red')":'red',"saaSetView('yellow')":'yellow',"saaSetView('onorder')":'onorder',"saaSetView('nosales')":'nosales',"saaSetView('healthy')":'healthy',"saaSetView('recentsales')":'recentsales',"saaSetView('current')":'current',"saaSetView('tbd')":'tbd',"saaSetView('eol')":'eol' };
+  const viewKey = { "saaSetView('all')":'all',"saaSetView('red')":'red',"saaSetView('yellow')":'yellow',"saaSetView('onorder')":'onorder',"saaSetView('nosales')":'nosales',"saaSetView('healthy')":'healthy',"saaSetView('recentsales')":'recentsales',"saaSetView('current')":'current',"saaSetView('tbd')":'tbd',"saaSetView('eol')":'eol',"saaSetView('forecast')":'forecast' };
   document.getElementById('saaSummaryCards').innerHTML = cards.map(c => {
     const active = viewKey[c.onclick] === saaView;
     return `<div onclick="${c.onclick}" style="background:${active ? c.col : 'var(--white)'};border-radius:10px;padding:14px 20px;
@@ -7840,6 +8045,7 @@ function saaRenderSummaryCards() {
 
 function saaRenderTable() {
   if (!saaData.length) return;
+  if (saaView === 'forecast') { saaRenderForecastTable(); return; }
   saaRenderSummaryCards();
 
   const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
@@ -7959,6 +8165,141 @@ function saaSort(col) {
   saaRenderTable();
 }
 
+// Load replacements map from catalog state — called when entering SAA tool
+function saaLoadReplacements() { saaReplacements = Object.assign({}, state.replacementsNewToOld || {}); }
+
+// ── CRM Monthly Sales Fetch (TODO: wire up when endpoint is confirmed) ───
+// Expected format from CRM: [{year:2024, month:10, qty:45}, ...]
+async function saaFetchMonthlyData(sku) {
+  // TODO: replace stub once CRM monthly endpoint is confirmed:
+  // const PAT  = localStorage.getItem('peats_crm_pat') || '';
+  // const base = ...; // CRM base URL
+  // const resp = await fetch(`${base}/monthly-sales/${encodeURIComponent(sku)}`, { headers:{ Authorization:'Bearer '+PAT } });
+  // if (!resp.ok) return null;
+  // return await resp.json();
+  return null;
+}
+
+// Seasonal index for each month 0-11 (Jan–Dec): business-wide demand multiplier.
+// Returns null until saaMonthlyDataMap is populated for enough SKUs.
+function saaComputeSeasonalIndices() {
+  const allData = Object.values(saaMonthlyDataMap);
+  if (!allData.length) return null;
+  const totals = new Array(12).fill(0), counts = new Array(12).fill(0);
+  for (const series of allData) {
+    for (const { month, qty } of series) {
+      const m = (month - 1 + 12) % 12;   // CRM month is 1-based
+      totals[m] += qty; counts[m]++;
+    }
+  }
+  const avgs    = totals.map((t, i) => counts[i] ? t / counts[i] : 0);
+  const overall = avgs.reduce((a,b) => a+b, 0) / 12 || 1;
+  return avgs.map(v => v / overall);
+}
+
+// Forecast qty for a row for the next months listed in nextMonthsArr.
+// Returns [{month,year,predicted,shortfall},...] or null if data missing.
+function saaForecastNextMonths(r, nextMonthsArr) {
+  if (!saaSeasonalIndices) return null;
+  const norm     = normCode(r.code);
+  const altRaw   = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
+  const srcNorm  = altRaw ? normCode(altRaw) : norm;
+  const series   = saaMonthlyDataMap[srcNorm];
+  if (!series || !series.length) return null;
+  // Seasonally-adjusted trailing baseline from last 3 months actuals
+  const now = new Date();
+  const trailing = [];
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear(), m = d.getMonth() + 1;
+    const entry = series.find(e => e.year === y && e.month === m);
+    if (entry) { const idx = saaSeasonalIndices[d.getMonth()] || 1; trailing.push(entry.qty / idx); }
+  }
+  if (!trailing.length) return null;
+  const adjBase = trailing.reduce((a,b) => a+b, 0) / trailing.length;
+  return nextMonthsArr.map(({ month, year }) => {
+    const predicted = Math.round(adjBase * (saaSeasonalIndices[month] || 1));
+    const shortfall = predicted - Math.max(0, r.free || 0);
+    return { month, year, predicted, shortfall };
+  });
+}
+
+function saaRenderForecastTable() {
+  saaRenderSummaryCards();
+  const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
+
+  // Compute next 3 calendar months
+  const now    = new Date();
+  const MNAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const nextMonths = [1,2,3].map(i => {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    return { label: MNAMES[d.getMonth()] + " '" + String(d.getFullYear()).slice(2), month: d.getMonth(), year: d.getFullYear() };
+  });
+
+  const hasCrmData = saaSeasonalIndices != null;
+  const normFn     = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+  let rows = saaData.slice();
+  if (q) rows = rows.filter(r =>
+    r.code.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q) || r.brand.toLowerCase().includes(q)
+  );
+  rows.sort((a,b) => (a.brand+'|'+a.code).localeCompare(b.brand+'|'+b.code));
+
+  const TD     = 'padding:5px 10px;white-space:nowrap;text-align:center;';
+  const TH     = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center;';
+  const fmtNum = v => v != null ? Math.round(v).toLocaleString('en-IE') : '<span style="color:var(--muted);">—</span>';
+
+  document.getElementById('saaContent').style.display = 'none';
+  const tableEl = document.getElementById('saaTable');
+  tableEl.style.display = '';
+
+  const banner = hasCrmData ? '' :
+    `<tr><td colspan="8" style="padding:9px 16px;background:#eff6ff;border-bottom:1px solid #bfdbfe;font-size:12px;color:#1e40af;font-weight:600;text-align:left;">
+      🔮 Forecast engine ready — awaiting CRM monthly endpoint. Predicted columns will populate once connected. Pre-configure predecessor SKUs below now to prepare new-line forecasts.
+    </td></tr>`;
+
+  document.getElementById('saaTableHead').innerHTML = banner + `<tr>
+    <th style="${TH}text-align:left;">Brand</th>
+    <th style="${TH}text-align:left;">Code</th>
+    <th style="${TH}text-align:left;max-width:220px;">Description</th>
+    <th style="${TH}">Predecessor SKU<br><span style="font-weight:500;font-size:9px;letter-spacing:0;text-transform:none;color:var(--muted);">pre-filled from Replacements tab · editable</span></th>
+    <th style="${TH}">${nextMonths[0].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted</span></th>
+    <th style="${TH}">${nextMonths[1].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted</span></th>
+    <th style="${TH}">${nextMonths[2].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted</span></th>
+    <th style="${TH}">Free Stock</th>
+  </tr>`;
+
+  document.getElementById('saaTableBody').innerHTML = rows.map(r => {
+    const norm     = normFn(r.code);
+    const fromMap  = saaReplacements[norm] || '';
+    const override = saaAltSkuOverrides[norm] || '';
+    const predSku  = override || fromMap;
+    const fromTab  = !override && !!fromMap;
+    const fcst     = hasCrmData ? saaForecastNextMonths(r, nextMonths) : null;
+    const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700;' : '';
+    const freeVal   = r.free != null ? Math.round(r.free).toLocaleString('en-IE') : '—';
+    return `<tr style="border-bottom:1px solid #d1d5db;">
+      <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="padding:5px 10px;text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
+      <td style="${TD}">
+        <div style="display:inline-flex;align-items:center;gap:4px;">
+          ${fromTab ? '<span title="Pre-filled from Replacements tab" style="font-size:11px;color:#6d28d9;">↩</span>' : ''}
+          <input type="text" value="${escHtml(predSku)}" placeholder="none"
+            onchange="saaSetAltSku('${escHtml(r.code)}',this.value);this.style.border='1px solid var(--green)';"
+            style="width:130px;padding:3px 7px;font-size:11px;font-family:monospace;
+                   border:1px solid ${predSku?'#a78bfa':'var(--border)'};border-radius:4px;
+                   background:${predSku?'#faf5ff':'var(--white)'};color:${predSku?'#4c1d95':'var(--text)'};">
+        </div>
+      </td>
+      <td style="${TD}">${fcst ? fmtNum(fcst[0]?.predicted) : '<span style="color:var(--muted);font-size:10px;">—</span>'}</td>
+      <td style="${TD}">${fcst ? fmtNum(fcst[1]?.predicted) : '<span style="color:var(--muted);font-size:10px;">—</span>'}</td>
+      <td style="${TD}">${fcst ? fmtNum(fcst[2]?.predicted) : '<span style="color:var(--muted);font-size:10px;">—</span>'}</td>
+      <td style="${TD}${freeStyle}">${freeVal}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--muted)">No data loaded.</td></tr>';
+}
+
 function saaUpdateSalesPeriod() {
   const inp = document.getElementById('saaSalesPeriodInput');
   const v = parseInt(inp ? inp.value : '3');
@@ -8027,6 +8368,7 @@ let asLoadedBrands = new Set();   // brands whose data has been fetched (cache k
 let asCachedSkus   = new Set();   // SKU codes loaded from 7-day localStorage cache (⚡ indicator)
 let asFetching     = false;
 let asView         = 'all';       // 'all' | 'never' | 'over2yrs'
+let asSlowView     = 'slow_all';  // 'slow_all' | 'slow_12wks' | 'slow_26wks'
 let asBandCVisible = true;       // toggle Band C column
 let asBandFVisible = true;       // toggle Band F column
 
@@ -8058,8 +8400,12 @@ function asMonthsAgo(date) {
 // ── Brand Engagement Tool ────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════
 
-let beaRows = [];       // last computed result rows (for export)
-let beaNoteDiv = null;  // current division record for note modal
+let beaRows = [];            // last computed result rows (for export)
+let beaNoteDiv = null;       // current division record for note modal
+let beaSortCol = null;       // active sort column key (null = default order)
+let beaSortDir = 1;          // 1 = ascending, -1 = descending
+let beaStatusFilter = 'all'; // 'all' | 'active' | 'lapsed' | 'dormant'
+let beaLastRenderArgs = null; // cache of [brand,periodMo,activeMo,lapsedMo,allTime]
 
 function beaOnOpen() {
   // Populate brand selector from loaded catalog
@@ -8082,6 +8428,10 @@ function beaOnOpen() {
     const b = (item.CategoryId || item.brand || item.category || '').toUpperCase().trim();
     if (b) brands.add(b);
   });
+  // Add "All Brands" at the top of the list
+  const allOpt = document.createElement('option');
+  allOpt.value = 'ALL'; allOpt.textContent = '★ All Brands';
+  sel.appendChild(allOpt);
   [...brands].sort().forEach(function(b) {
     const opt = document.createElement('option');
     opt.value = b; opt.textContent = b;
@@ -8092,8 +8442,16 @@ function beaOnOpen() {
 function beaOnBrandChange() { /* nothing needed — just keeps UI reactive */ }
 
 function beaReset() {
-  beaRows    = [];
-  beaNoteDiv = null;
+  beaRows           = [];
+  beaNoteDiv        = null;
+  beaSortCol        = null;
+  beaSortDir        = 1;
+  beaStatusFilter   = 'all';
+  beaLastRenderArgs = null;
+  const sr = document.getElementById('beaSearchRow');
+  if (sr) { sr.style.display = 'none'; }
+  const si = document.getElementById('beaSearch');
+  if (si) si.value = '';
   const sel = document.getElementById('beaBrandSel');
   if (sel) sel.value = '';
   const status = document.getElementById('beaStatus');
@@ -8119,13 +8477,16 @@ async function beaRun() {
   const pat = getCrmPat();
   if (!pat) { alert('CRM API token not set — open Admin → Settings first.'); return; }
 
-  const brandSel  = document.getElementById('beaBrandSel');
-  const brand     = brandSel ? brandSel.value : '';
+  const brandSel      = document.getElementById('beaBrandSel');
+  const brand         = brandSel ? brandSel.value : '';
   if (!brand) { alert('Select a brand first.'); return; }
+  const allBrandsMode = (brand === 'ALL');
+  const brandLabel    = allBrandsMode ? 'All Brands' : brand;
 
   const periodMo  = parseInt(document.getElementById('beaPeriodSel').value,  10); // 0 = all time
   const activeMo  = parseInt(document.getElementById('beaActiveSel').value, 10) || 6;
-  const lapsedMo  = Math.max(activeMo + 1, 18); // lapsed = active..18 months; dormant = 18+
+  const dormantMo = parseInt((document.getElementById('beaDormantInput') || {value:'18'}).value, 10) || 18;
+  const lapsedMo  = Math.max(activeMo + 1, dormantMo); // lapsed = active+1..dormant-1 months; dormant = dormant+
   const allTime   = (periodMo === 0);
 
   const btn    = document.getElementById('beaRunBtn');
@@ -8138,11 +8499,15 @@ async function beaRun() {
   // Step 1: get all SKUs for this brand from the catalog
   const brandSkus = new Set();
   Object.entries(state.catalog || {}).forEach(function([sku, item]) {
-    const b = (item.CategoryId || item.brand || item.category || '').toUpperCase().trim();
-    if (b === brand) brandSkus.add(sku.toUpperCase());
+    if (allBrandsMode) {
+      brandSkus.add(sku.toUpperCase());
+    } else {
+      const b = (item.CategoryId || item.brand || item.category || '').toUpperCase().trim();
+      if (b === brand) brandSkus.add(sku.toUpperCase());
+    }
   });
   const periodLabel = allTime ? 'all time' : periodMo + ' months';
-  status.textContent = brand + ' — ' + brandSkus.size + ' SKUs in catalog. Fetching transactions (' + periodLabel + ')…';
+  status.textContent = brandLabel + ' — ' + brandSkus.size + ' SKUs in catalog. Fetching transactions (' + periodLabel + ')…';
 
   // Step 2: fetch SalesTransactions, paged (date-filtered or all time)
   const select  = '$select=Account,ProductItemId,TransactionDate,CalculatedLineValue,CalculatedInvoiceQuantity';
@@ -8181,7 +8546,7 @@ async function beaRun() {
     return;
   }
 
-  status.textContent = allTx.length + ' transactions fetched. Filtering to ' + brand + '…';
+  status.textContent = allTx.length + ' transactions fetched. Filtering to ' + brandLabel + '…';
 
   // Step 3: filter to brand SKUs and group by customer
   // For trend: "recent" = last half of period (or last 12mo if all-time)
@@ -8215,7 +8580,7 @@ async function beaRun() {
   });
 
   if (!customerMap.size) {
-    status.textContent = 'No transactions found for ' + brand + ' in the selected period.';
+    status.textContent = 'No transactions found for ' + brandLabel + ' in the selected period.';
     document.getElementById('beaTableWrap').style.display = 'none';
     document.getElementById('beaSummaryBar').style.display = 'none';
     document.getElementById('beaEmpty').style.display = 'block';
@@ -8299,50 +8664,123 @@ async function beaRun() {
     return a.lastDate - b.lastDate; // oldest purchase first within group
   });
 
-  beaRenderResults(brand, periodMo, activeMo, lapsedMo, allTime);
+  beaRenderResults(brandLabel, periodMo, activeMo, lapsedMo, allTime);
   btn.disabled = false; btn.textContent = '▶ Run Analysis';
 }
 
 function beaRenderResults(brand, periodMo, activeMo, lapsedMo, allTime) {
+  beaLastRenderArgs = [brand, periodMo, activeMo, lapsedMo, allTime];
+
   const counts = { active: 0, lapsed: 0, dormant: 0 };
   beaRows.forEach(function(r) { counts[r.status_cls] = (counts[r.status_cls] || 0) + 1; });
 
-  // Summary bar
+  // Summary bar — clickable filter chips (use &quot; to avoid quote nesting)
   const bar = document.getElementById('beaSummaryBar');
-  const chipStyle = function(bg, fg) {
-    return 'display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;background:' + bg + ';color:' + fg + ';';
-  };
   const pLabel = allTime ? 'all time' : 'last ' + periodMo + ' months';
+
+  function _chip(label, cls, bg, fg, n) {
+    const active = beaStatusFilter === cls;
+    return '<span onclick="beaSetFilter(&quot;' + cls + '&quot;)" ' +
+      'style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;' +
+      'font-size:12px;font-weight:700;background:' + bg + ';color:' + fg + ';cursor:pointer;' +
+      'border:2px solid ' + (active ? fg : 'transparent') + ';transition:all .15s;">' +
+      label + ': ' + n + '</span>';
+  }
+  function _chipAll() {
+    const active = beaStatusFilter === 'all';
+    return '<span onclick="beaSetFilter(&quot;all&quot;)" ' +
+      'style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;' +
+      'font-size:12px;font-weight:700;background:var(--surface);color:var(--text);cursor:pointer;' +
+      'border:2px solid ' + (active ? 'var(--text)' : 'transparent') + ';transition:all .15s;">' +
+      'All ' + beaRows.length + '</span>';
+  }
+
   bar.innerHTML =
-    '<span style="font-size:12px;color:var(--muted);font-weight:600;">' + brand + ' · ' + pLabel + ' · ' + beaRows.length + ' customers</span>' +
-    '<span style="' + chipStyle('#dcfce7','#166534') + '">● Active (≤' + activeMo + 'mo): ' + counts.active + '</span>' +
-    '<span style="' + chipStyle('#fef9c3','#854d0e') + '">● Lapsed (' + (activeMo+1) + '–' + lapsedMo + 'mo): ' + counts.lapsed + '</span>' +
-    '<span style="' + chipStyle('#fee2e2','#991b1b') + '">● Dormant (>' + lapsedMo + 'mo): ' + counts.dormant + '</span>';
+    '<span style="font-size:12px;color:var(--muted);font-weight:600;">' + brand + ' · ' + pLabel + '</span>' +
+    _chipAll() +
+    _chip('● Active (≤' + activeMo + 'mo)',                       'active',  '#dcfce7', '#166534', counts.active) +
+    _chip('● Lapsed (' + (activeMo + 1) + '–' + lapsedMo + 'mo)','lapsed',  '#fef9c3', '#854d0e', counts.lapsed) +
+    _chip('● Dormant (>' + lapsedMo + 'mo)',                       'dormant', '#fee2e2', '#991b1b', counts.dormant);
   bar.style.display = 'flex';
 
-  // Table
-  const statusColors = { active: '#16a34a', lapsed: '#ca8a04', dormant: '#dc2626' };
-  const statusBg     = { active: '#dcfce7', lapsed: '#fef9c3', dormant: '#fee2e2' };
+  // Sortable header (use &quot; in onclick to avoid quote nesting)
+  const TH_BASE = 'padding:8px 10px;font-size:11px;font-weight:700;color:var(--muted);' +
+    'border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;';
+  const TH_PLAIN = 'padding:8px 10px;font-size:11px;font-weight:700;color:var(--muted);' +
+    'border-bottom:2px solid var(--border);white-space:nowrap;';
 
-  const TH = 'padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;';
-  const TD = 'padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;';
+  function _th(label, col, extra) {
+    const arr = beaSortCol === col ? (beaSortDir === 1 ? ' ▲' : ' ▼') : '';
+    return '<th onclick="beaSort(&quot;' + col + '&quot;)" style="' + TH_BASE + (extra||'') + '">' +
+      label + '<span style="opacity:.4;font-size:10px;">' + arr + ' ⇅</span></th>';
+  }
 
   document.getElementById('beaTHead').innerHTML =
     '<tr>' +
-    '<th style="' + TH + '">Status</th>' +
-    '<th style="' + TH + '">Customer</th>' +
-    '<th style="' + TH + '">Account</th>' +
-    '<th style="' + TH + '">Phone</th>' +
-    '<th style="' + TH + '">Last Purchase</th>' +
-    '<th style="' + TH + '">Months Ago</th>' +
-    '<th style="' + TH + 'text-align:right;">Total Value (€)</th>' +
-    '<th style="' + TH + 'text-align:right;">Total Qty</th>' +
-    '<th style="' + TH + 'text-align:center;">Trend</th>' +
-    '<th style="' + TH + '">Manager</th>' +
-    '<th style="' + TH + '">CRM</th>' +
+    _th('Status',         'status_cls', '') +
+    _th('Customer',       'name',       '') +
+    _th('Account',        'acct',       '') +
+    '<th style="' + TH_PLAIN + '">Phone</th>' +
+    _th('Last Purchase',  'lastDate',   '') +
+    _th('Months Ago',     'monthsAgo',  'text-align:center;') +
+    _th('Total Value (€)','totalValue', 'text-align:right;') +
+    _th('Total Qty',      'totalQty',   'text-align:right;') +
+    _th('Trend',          'trend',      'text-align:center;') +
+    _th('Manager',        'mgr',        '') +
+    '<th style="' + TH_PLAIN + '">CRM</th>' +
     '</tr>';
 
-  document.getElementById('beaTBody').innerHTML = beaRows.map(function(r, idx) {
+  // Show search row
+  const sr = document.getElementById('beaSearchRow');
+  if (sr) sr.style.display = 'block';
+
+  beaRenderTableBody();
+
+  document.getElementById('beaTableWrap').style.display = 'block';
+  document.getElementById('beaEmpty').style.display = 'none';
+  document.getElementById('beaExportBtn').style.display = '';
+  document.getElementById('beaStatus').textContent = beaRows.length + ' customers found.';
+}
+
+function beaRenderTableBody() {
+  const searchEl = document.getElementById('beaSearch');
+  const q = searchEl ? searchEl.value.toLowerCase().trim() : '';
+  const statusColors = { active: '#16a34a', lapsed: '#ca8a04', dormant: '#dc2626' };
+  const statusBg     = { active: '#dcfce7', lapsed: '#fef9c3', dormant: '#fee2e2' };
+  const TD = 'padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;';
+
+  let rows = beaRows;
+
+  // Status filter
+  if (beaStatusFilter !== 'all') {
+    rows = rows.filter(function(r) { return r.status_cls === beaStatusFilter; });
+  }
+
+  // Text search (name or account)
+  if (q) {
+    rows = rows.filter(function(r) {
+      return r.name.toLowerCase().includes(q) || r.acct.toLowerCase().includes(q);
+    });
+  }
+
+  // Column sort
+  if (beaSortCol) {
+    rows = rows.slice().sort(function(a, b) {
+      let av = a[beaSortCol], bv = b[beaSortCol];
+      if (av instanceof Date) av = av.getTime();
+      if (bv instanceof Date) bv = bv.getTime();
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av == null) return  beaSortDir;
+      if (bv == null) return -beaSortDir;
+      if (av < bv)   return -beaSortDir;
+      if (av > bv)   return  beaSortDir;
+      return 0;
+    });
+  }
+
+  document.getElementById('beaTBody').innerHTML = rows.map(function(r, idx) {
+    const origIdx = beaRows.indexOf(r);
     const sc = statusColors[r.status_cls] || '#666';
     const sb = statusBg[r.status_cls]     || '#f3f4f6';
     const lastFmt = r.lastDate instanceof Date && r.lastDate.getFullYear() > 2000
@@ -8350,7 +8788,7 @@ function beaRenderResults(brand, periodMo, activeMo, lapsedMo, allTime) {
       : '—';
     const trendColor = r.trend === '↑' ? '#16a34a' : r.trend === '↓' ? '#dc2626' : '#6b7280';
     const crmBtn = r.divId
-      ? '<button onclick="beaOpenNote(' + idx + ')" title="Post CRM note" ' +
+      ? '<button onclick="beaOpenNote(' + origIdx + ')" title="Post CRM note" ' +
         'style="background:var(--brand);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📝 Note</button>'
       : '<span style="font-size:11px;color:var(--muted);">no CRM record</span>';
 
@@ -8368,11 +8806,17 @@ function beaRenderResults(brand, periodMo, activeMo, lapsedMo, allTime) {
       '<td style="' + TD + '">' + crmBtn + '</td>' +
       '</tr>';
   }).join('');
+}
 
-  document.getElementById('beaTableWrap').style.display = 'block';
-  document.getElementById('beaEmpty').style.display = 'none';
-  document.getElementById('beaExportBtn').style.display = '';
-  document.getElementById('beaStatus').textContent = beaRows.length + ' customers found.';
+function beaSort(col) {
+  if (beaSortCol === col) { beaSortDir = -beaSortDir; }
+  else { beaSortCol = col; beaSortDir = 1; }
+  if (beaLastRenderArgs) beaRenderResults.apply(null, beaLastRenderArgs);
+}
+
+function beaSetFilter(status) {
+  beaStatusFilter = status;
+  if (beaLastRenderArgs) beaRenderResults.apply(null, beaLastRenderArgs);
 }
 
 function beaOpenNote(idx) {
@@ -9093,7 +9537,7 @@ function asRebuildData() {
     const stockValue = (bandC ?? cost) != null ? (bandC ?? cost) * qty : null;
     // Clearance is based on Band C (trade price) when available, else Band A (retail)
     const basePrice  = bandC  != null ? bandC : retail;
-    const clearance  = basePrice != null ? basePrice * (1 - discount / 100) : null;
+    const clearance  = discount > 0 && basePrice != null ? basePrice * (1 - discount / 100) : null;
 
     rows.push({
       code,
@@ -9147,7 +9591,7 @@ function asRebuildData() {
       const stockValue = (crmBandC ?? cost) != null ? (crmBandC ?? cost) * qty : null;
       // Clearance from Band C when available, else Band A
       const crmBasePrice = crmBandC != null ? crmBandC : retail;
-      const clearance  = crmBasePrice != null ? crmBasePrice * (1 - discount / 100) : null;
+      const clearance  = discount > 0 && crmBasePrice != null ? crmBasePrice * (1 - discount / 100) : null;
 
       rows.push({
         code:        sku,
@@ -9265,7 +9709,8 @@ function asRefreshShowBtns() {
 
 // ── Summary cards ──────────────────────────────────────
 
-function asSetView(v) { asView = v; asRenderTable(); }
+function asSetView(v) { asView = v; asRenderTable(); asRenderSummaryCards(); }
+function asSetSlowView(v) { asSlowView = v; asRenderSlowTable(); asRenderSummaryCards(); }
 
 function asRenderSummaryCards() {
   // Aged stock cards
@@ -9288,35 +9733,37 @@ function asRenderSummaryCards() {
     { label: '2+ YRS DORMANT', val: over2yrs.length,                       sub: '',                   col: '#7c3aed', view: 'over2yrs' },
   ];
   const slowCards = [
-    { label: 'SLOW UNITS',     val: slowUnits.toLocaleString('en-IE'),     sub: 'units in stock',     col: '#1a3c6e', view: null },
-    { label: 'SLOW MOVING',    val: totalSlow.toLocaleString('en-IE'),     sub: '>8 weeks cover',     col: '#0891b2', view: null },
-    { label: '>12 WKS COVER',  val: over12wks.length,                      sub: '3 months+',          col: '#b45309', view: null },
-    { label: '>26 WKS COVER',  val: over26wks.length,                      sub: 'critical',           col: '#dc2626', view: null },
+    { label: 'SLOW UNITS',    val: slowUnits.toLocaleString('en-IE'),     sub: 'units in stock', col: '#1a3c6e', view: 'slow_all'  },
+    { label: 'ALL SLOW',      val: totalSlow.toLocaleString('en-IE'),     sub: '>8 wks cover',   col: '#0891b2', view: 'slow_all'  },
+    { label: '>12 WKS COVER', val: over12wks.length.toLocaleString('en-IE'), sub: '3 months+',  col: '#b45309', view: 'slow_12wks'},
+    { label: '>26 WKS COVER', val: over26wks.length.toLocaleString('en-IE'), sub: 'critical',   col: '#dc2626', view: 'slow_26wks'},
   ];
-  function _cardHtml(c, forDark) {
-    const active = c.view != null && asView === c.view;
+  function _cardHtml(c, forAged) {
+    const view = forAged ? asView : asSlowView;
+    const active = c.view != null && view === c.view;
     const clickable = c.view != null;
-    const bg  = active ? c.col : (forDark ? 'rgba(255,255,255,.15)' : 'var(--white)');
-    const txtCol = active ? '#fff' : (forDark ? '#fff' : c.col);
-    const subCol = active ? 'rgba(255,255,255,.75)' : (forDark ? 'rgba(255,255,255,.6)' : 'var(--muted)');
-    const shadow = active ? '0 4px 16px rgba(0,0,0,.18)' : (forDark ? 'none' : 'var(--shadow)');
-    const border = forDark ? `border-bottom:3px solid rgba(255,255,255,${active?'.9':'.3'});` : `border-bottom:3px solid ${c.col};`;
-    return `<div ${clickable ? `onclick="asSetView('${c.view}')"` : ''}
-       style="background:${bg};border-radius:8px;padding:8px 12px;${border}
-              box-shadow:${shadow};min-width:80px;flex:1;${clickable ? 'cursor:pointer;' : ''}transition:all .15s;"
-       ${clickable ? `onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.2)'"
-       onmouseout="this.style.boxShadow='${shadow}'"` : ''}>
-      <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
-                  color:${active ? 'rgba(255,255,255,.85)' : (forDark ? 'rgba(255,255,255,.7)' : c.col)};margin-bottom:3px;">${c.label}</div>
-      <div style="font-size:20px;font-weight:800;color:${txtCol};line-height:1.05;">${c.val}</div>
-      <div style="font-size:10px;color:${subCol};margin-top:2px;">${c.sub}</div>
-    </div>`;
+    const fn = forAged ? 'asSetView' : 'asSetSlowView';
+    // Deduplicate same view (multiple cards share 'slow_all')
+    const isFirstOfView = forAged
+      ? agedCards.indexOf(c) === agedCards.findIndex(x => x.view === c.view)
+      : slowCards.indexOf(c) === slowCards.findIndex(x => x.view === c.view);
+    const bg     = active ? 'rgba(255,255,255,.3)'  : 'rgba(255,255,255,.1)';
+    const border  = active ? '1px solid rgba(255,255,255,.75)' : '1px solid rgba(255,255,255,.2)';
+    const opacity = active ? '1' : '.82';
+    return `<span ${clickable ? `onclick="${fn}('${c.view}')"` : ''}
+      style="display:inline-flex;align-items:center;gap:5px;background:${bg};border:${border};
+             border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700;
+             ${clickable ? 'cursor:pointer;' : 'cursor:default;'}white-space:nowrap;
+             color:rgba(255,255,255,${opacity});transition:all .15s;user-select:none;">
+      <span style="font-weight:900;font-size:11px;">${c.val}</span>
+      <span style="font-size:9px;font-weight:600;">${c.label}</span>
+    </span>`;
   }
 
   const agedEl = document.getElementById('asAgedCards');
   if (agedEl) agedEl.innerHTML = agedCards.map(c => _cardHtml(c, true)).join('');
   const slowEl = document.getElementById('asSlowCards');
-  if (slowEl) slowEl.innerHTML = slowCards.map(c => _cardHtml(c, true)).join('');
+  if (slowEl) slowEl.innerHTML = slowCards.map(c => _cardHtml(c, false)).join('');
 }
 
 function asRenderAll() {
@@ -9332,7 +9779,7 @@ function asRenderAll() {
   if (agedEl) agedEl.style.display = asShowAged ? '' : 'none';
   if (slowEl) slowEl.style.display = asShowSlow ? '' : 'none';
   const btn = document.getElementById('asExportBtn');
-  if (btn) { btn.disabled = false; btn.style.cursor = ''; }
+  if (btn) { btn.disabled = false; btn.style.cursor = ''; btn.style.opacity = '1'; }
 }
 
 // ── Table render ───────────────────────────────────────
@@ -9405,7 +9852,7 @@ function asRenderAgedTable() {
     ['stockValue',  'Stock Value (€)'],
     ['lastSold',    'Last Sold'],
     ['dormant',     'Dormant'],
-    ['createdDate', 'Added to CRM'],
+    ['createdDate', 'Created'],
     ...(asBandCVisible ? [['bandC',  'Band C (€)']] : []),
     ...(asBandFVisible ? [['bandF',  'Band F (€)']] : []),
     ['discount',    'Discount %'],
@@ -9487,9 +9934,9 @@ function asRenderAgedTable() {
     const isChecked = asSelected.has(r.code);
     return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}${r.crmOnly ? 'border-left:2px solid #7c3aed;' : ''}${isChecked ? 'background:#fffbea !important;' : ''}">
       <td style="${TD}padding:4px 8px;"><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="asToggleSelect('${r.code.replace(/'/g,"\'")}')" style="cursor:pointer;"></td>
-      <td style="${TD}padding:4px 8px;">${stateBadge}</td>
+      <td style="${TD}padding:4px 8px;">${stateBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:10px;opacity:.65;vertical-align:middle;">⚡</span>' : ''}</td>
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${crmBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:11px;opacity:.75;">⚡</span>' : ''}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${crmBadge}</td>
       <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
@@ -9531,6 +9978,9 @@ function asRenderSlowTable() {
       r.brand.toLowerCase().includes(q)
     );
   }
+  // Slow view filter
+  if (asSlowView === 'slow_12wks') rows = rows.filter(r => r.weeksOfCoverage > 12);
+  else if (asSlowView === 'slow_26wks') rows = rows.filter(r => r.weeksOfCoverage > 26);
 
   const fmtWks = wks => {
     const rounded = Math.round(wks);
@@ -9548,15 +9998,15 @@ function asRenderSlowTable() {
 
   slowHead.innerHTML = `<tr>
     <th style="${CHK_TH}"><input type="checkbox" title="Select all" ${allChecked ? 'checked' : ''} onchange="asSelectAllSlow(this.checked)" style="cursor:pointer;"></th>
-    <th style="${W}color:var(--muted);width:72px;">State</th>
-    <th style="${W}color:var(--muted);text-align:left;width:80px;">Brand</th>
-    <th style="${W}color:var(--muted);width:110px;">Code</th>
-    <th style="${W}color:var(--muted);text-align:left;">Description</th>
+    <th style="${W}color:var(--text);width:72px;">State</th>
+    <th style="${W}color:var(--text);text-align:left;width:80px;">Brand</th>
+    <th style="${W}color:var(--text);width:110px;">Code</th>
+    <th style="${W}color:var(--text);text-align:left;">Description</th>
     <th style="${W}color:#1f6b3e;background:#e8f5e9;width:80px;">Free Stock</th>
-    <th style="${W}color:var(--muted);width:100px;">3mo Sales</th>
-    <th style="${W}color:var(--muted);width:80px;">Avg/Mo</th>
+    <th style="${W}color:var(--text);width:100px;">3mo Sales</th>
+    <th style="${W}color:var(--text);width:80px;">Avg/Mo</th>
     <th style="${W}color:#0891b2;width:100px;">Weeks Cover</th>
-    <th style="${W}color:var(--muted);width:100px;">Added to CRM</th>
+    <th style="${W}color:var(--text);width:100px;">Created</th>
     ${asBandCVisible ? `<th style="${W}color:#0891b2;width:90px;">Band C (€)</th>` : ''}
     ${asBandFVisible ? `<th style="${W}color:#7c3aed;width:90px;">Band F (€)</th>` : ''}
     <th style="${W}color:#b45309;width:90px;">Discount %</th>
@@ -9588,9 +10038,9 @@ function asRenderSlowTable() {
 
     return `<tr style="border-bottom:1px solid #d1d5db;${isSelected ? 'background:#fffbea;' : ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
       <td style="${TD}"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="asToggleSelectSlow('${r.code}')" style="cursor:pointer;"></td>
-      <td style="${TD}">${stateBadge}</td>
+      <td style="${TD}">${stateBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:10px;opacity:.65;vertical-align:middle;">⚡</span>' : ''}</td>
       <td style="${TD}font-size:11px;color:var(--muted);text-align:left;">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:11px;opacity:.75;">⚡</span>' : ''}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
       <td style="padding:5px 8px;text-align:left;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
@@ -9776,7 +10226,7 @@ function asSetRowDiscount(idx, pct) {
   const p = Math.min(99, Math.max(0, parseFloat(pct) || 0));
   const baseA = row.bandC ?? row.retail;
   row.discount  = p;
-  row.clearance = baseA != null ? baseA * (1 - p / 100) : null;
+  row.clearance = p > 0 && baseA != null ? baseA * (1 - p / 100) : null;
   asRenderAgedTable();
 }
 
@@ -9786,12 +10236,12 @@ function asApplyGlobalDiscount() {
   asData.forEach(r => {
     const base = r.bandC ?? r.retail;
     r.discount  = pct;
-    r.clearance = base != null ? base * (1 - pct / 100) : null;
+    r.clearance = pct > 0 && base != null ? base * (1 - pct / 100) : null;
   });
   asSlowData.forEach(r => {
     const base = r.bandC ?? r.retail;
     r.discount  = pct;
-    r.clearance = base != null ? base * (1 - pct / 100) : null;
+    r.clearance = pct > 0 && base != null ? base * (1 - pct / 100) : null;
   });
   if (asData.length) asRenderAgedTable();
   if (asSlowData.length) asRenderSlowTable();
@@ -9819,18 +10269,28 @@ function asApplySelectedDiscount() {
     if (!asSelected.has(r.code)) return;
     const base = r.bandC ?? r.retail;
     r.discount  = pct;
-    r.clearance = base != null ? base * (1 - pct / 100) : null;
+    r.clearance = pct > 0 && base != null ? base * (1 - pct / 100) : null;
   });
   asSlowData.forEach(r => {
     if (!asSlowSelected.has(r.code)) return;
     const base = r.bandC ?? r.retail;
     r.discount  = pct;
-    r.clearance = base != null ? base * (1 - pct / 100) : null;
+    r.clearance = pct > 0 && base != null ? base * (1 - pct / 100) : null;
   });
   const total = asSelected.size + asSlowSelected.size;
   if (asData.length) asRenderAgedTable();
   if (asSlowData.length) asRenderSlowTable();
   showToast('✓ Applied ' + pct + '% to ' + total + ' selected row' + (total === 1 ? '' : 's') + '.');
+}
+
+function asResetDiscounts() {
+  asData.forEach(function(r) { r.discount = 0; r.clearance = null; });
+  asSlowData.forEach(function(r) { r.discount = 0; r.clearance = null; });
+  const inp = document.getElementById('asGlobalDiscountInput');
+  if (inp) inp.value = '0';
+  if (asData.length) asRenderAgedTable();
+  if (asSlowData.length) asRenderSlowTable();
+  showToast('↺ All discounts reset to 0%.');
 }
 
 // ── Export to Excel ───────────────────────────────────
@@ -10049,9 +10509,10 @@ function asReset() {
   asShowSlow       = true;
   asSelected       = new Set();
   asView           = 'all';
+  asSlowView       = 'slow_all';
   asCrmMode        = true;   // default: All SKUs mode
-  asSortCol        = 'stockValue';
-  asSortDir        = -1;
+  asSortCol        = 'brand';
+  asSortDir        = 1;
 
   _asRefreshExcludePills();
 
@@ -10075,7 +10536,7 @@ function asReset() {
   if (agedElR) agedElR.style.display = 'none';
   if (slowElR) slowElR.style.display = 'none';
   const btn = document.getElementById('asExportBtn');
-  if (btn) { btn.disabled = true; btn.style.cursor = 'not-allowed'; btn.textContent = '⬇ Export to Excel'; }
+  if (btn) { btn.disabled = true; btn.style.cursor = 'not-allowed'; btn.style.opacity = '.38'; btn.textContent = '⬇ Export to Excel'; }
 
   asShowPickPrompt();
   showToast('↺ Aged stock cleared.');
@@ -14234,6 +14695,18 @@ const SOA_B64 = "PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CjxtZXRhIGN
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('retailerSelect').classList.add('unselected');
   document.getElementById('convRetailerSelect').classList.add('unselected');
+  // Restore last used retailer
+  try {
+    const lastR = localStorage.getItem('peats_last_retailer');
+    if (lastR) {
+      const sel = document.getElementById('retailerSelect');
+      if (sel && [...sel.options].some(o => o.value === lastR)) {
+        sel.value = lastR;
+        sel.classList.remove('unselected');
+        sel.dispatchEvent(new Event('change'));
+      }
+    }
+  } catch(e) {}
   // Hub is visible by default (tool divs are hidden)
 
   // Export iframe is initialised lazily in launchTool('export') so the catalog
@@ -14252,9 +14725,8 @@ document.addEventListener('DOMContentLoaded', () => {
 let wiExcludedBrands = new Set();
 
 function wiRenderBrandFilter() {
-  const panel  = document.getElementById('wiBrandPanel');
-  const checks = document.getElementById('wiBrandChecks');
-  if (!panel || !checks || !state.catalog) return;
+  const toolbar = document.getElementById('wiToolbar');
+  if (!state.catalog) return;
 
   // Gather unique brands from catalog
   const brandSet = new Set();
@@ -14264,78 +14736,133 @@ function wiRenderBrandFilter() {
   const brands = [...brandSet].sort();
   if (!brands.length) return;
 
-  // Split: AVSL sub-brands vs everything else
-  const avslBrands = brands.filter(b => AVSL_BRANDS.has(b));
-  const otherBrands = brands.filter(b => !AVSL_BRANDS.has(b));
+  // Default: exclude ALL brands (user must opt in)
+  wiExcludedBrands = new Set(brands);
 
-  // Default: exclude AVSL brands
-  wiExcludedBrands = new Set(avslBrands);
+  // Store brands for filtering
+  wiRenderBrandList_wi('');
 
-  function buildCheckbox(brand) {
+  if (toolbar) { toolbar.style.display = 'flex'; }
+  wiUpdateBrandCount();
+}
+
+function wiRenderBrandList_wi(filter) {
+  const listEl = document.getElementById('wiBrandList');
+  if (!listEl || !state.catalog) return;
+
+  const brandSet = new Set();
+  Object.values(state.catalog).forEach(function(e) {
+    if (e.brand) brandSet.add(String(e.brand).toUpperCase());
+  });
+  const brands = [...brandSet].sort();
+  const q = filter.toLowerCase().trim();
+  const filtered = q ? brands.filter(b => b.toLowerCase().includes(q)) : brands;
+
+  const avslBrands = filtered.filter(b => AVSL_BRANDS.has(b));
+  const otherBrands = filtered.filter(b => !AVSL_BRANDS.has(b));
+
+  function buildRow(brand) {
     const checked = !wiExcludedBrands.has(brand);
     const isAvsl  = AVSL_BRANDS.has(brand);
-    return '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;white-space:nowrap;'
+    return '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;white-space:nowrap;padding:2px 4px;'
       + (isAvsl ? 'color:#b45309;' : 'color:var(--text);') + '">'
       + '<input type="checkbox" data-wi-brand="' + brand + '" ' + (checked ? 'checked' : '')
-      + ' onchange="wiToggleBrand(this)" style="cursor:pointer;accent-color:var(--brand)">'
+      + ' onchange="wiToggleBrand(this)" style="cursor:pointer;accent-color:var(--brand);">'
       + brand + '</label>';
   }
 
   let html = '';
-  // Non-AVSL brands first
-  otherBrands.forEach(function(b) { html += buildCheckbox(b); });
-  // AVSL brands grouped with a divider
+  otherBrands.forEach(function(b) { html += buildRow(b); });
   if (avslBrands.length) {
     if (otherBrands.length) {
-      html += '<div style="width:100%;border-top:1px dashed var(--border);margin:4px 0;flex-basis:100%"></div>';
-      html += '<div style="width:100%;font-size:10px;font-weight:700;color:#b45309;letter-spacing:.05em;flex-basis:100%;margin-bottom:2px">AVSL BRANDS (unchecked by default)</div>';
+      html += '<div style="grid-column:1/-1;border-top:1px dashed var(--border);margin:3px 0;"></div>';
+      html += '<div style="grid-column:1/-1;font-size:9px;font-weight:700;color:#b45309;letter-spacing:.05em;padding:0 4px 2px;">AVSL BRANDS</div>';
     }
-    avslBrands.forEach(function(b) { html += buildCheckbox(b); });
+    avslBrands.forEach(function(b) { html += buildRow(b); });
   }
+  if (!html) html = '<div style="grid-column:1/-1;padding:8px;color:var(--muted);font-size:11px;">No brands found</div>';
+  listEl.innerHTML = html;
+}
 
-  checks.innerHTML = html;
-  panel.style.display = 'block';
-  wiUpdateBrandSummary();
+function wiFilterBrandList(val) {
+  wiRenderBrandList_wi(val);
+}
+
+function wiToggleBrandPanel() {
+  const panel = document.getElementById('wiBrandPanel');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  const btn = document.getElementById('wiBrandBtn');
+  if (btn) btn.textContent = open ? 'Brands ▾' : 'Brands ▴';
 }
 
 function wiToggleBrand(cb) {
   const brand = cb.dataset.wiBrand;
   if (cb.checked) { wiExcludedBrands.delete(brand); }
   else            { wiExcludedBrands.add(brand); }
-  wiUpdateBrandSummary();
+  wiUpdateBrandCount();
 }
 
 function wiSetAllBrands(checked) {
-  document.querySelectorAll('[data-wi-brand]').forEach(function(cb) {
-    cb.checked = checked;
-    const brand = cb.dataset.wiBrand;
-    if (checked) { wiExcludedBrands.delete(brand); }
-    else         { wiExcludedBrands.add(brand); }
+  if (!state.catalog) return;
+  Object.values(state.catalog).forEach(function(e) {
+    if (e.brand) {
+      const b = String(e.brand).toUpperCase();
+      if (checked) wiExcludedBrands.delete(b);
+      else         wiExcludedBrands.add(b);
+    }
   });
-  wiUpdateBrandSummary();
+  const q = document.getElementById('wiBrandSearch')?.value || '';
+  wiRenderBrandList_wi(q);
+  wiUpdateBrandCount();
 }
 
 function wiUncheckAvsl() {
-  document.querySelectorAll('[data-wi-brand]').forEach(function(cb) {
-    const brand = cb.dataset.wiBrand;
-    if (AVSL_BRANDS.has(brand)) {
-      cb.checked = false;
-      wiExcludedBrands.add(brand);
-    }
-  });
-  wiUpdateBrandSummary();
+  AVSL_BRANDS.forEach(function(b) { wiExcludedBrands.add(b); });
+  const q = document.getElementById('wiBrandSearch')?.value || '';
+  wiRenderBrandList_wi(q);
+  wiUpdateBrandCount();
 }
 
 function wiUpdateBrandSummary() {
-  const summary = document.getElementById('wiBrandSummary');
-  if (!summary || !state.catalog) return;
-  const totalSkus = Object.keys(state.catalog).length;
-  const inclSkus  = Object.keys(state.catalog).filter(function(k) {
+  wiUpdateBrandCount(); // compat alias
+}
+
+function wiUpdateBrandCount() {
+  if (!state.catalog) return;
+  const inclSkus = Object.keys(state.catalog).filter(function(k) {
     const brand = (state.catalog[k].brand || '').toUpperCase();
     return !wiExcludedBrands.has(brand);
   }).length;
-  summary.textContent = inclSkus.toLocaleString() + ' of ' + totalSkus.toLocaleString() + ' products will be synced';
+  const countEl = document.getElementById('wiBrandCount');
+  if (countEl) countEl.textContent = inclSkus.toLocaleString('en-IE');
+  const btn = document.getElementById('wiBrandBtn');
+  if (btn) {
+    const open = document.getElementById('wiBrandPanel')?.style.display !== 'none';
+    const selected = Object.values(state.catalog).reduce(function(acc, e) {
+      const b = (e.brand || '').toUpperCase();
+      return acc.add(b), acc;
+    }, new Set());
+    const inclBrands = [...selected].filter(b => !wiExcludedBrands.has(b));
+    btn.textContent = inclBrands.length === 0 ? 'No brands ▾' :
+      inclBrands.length === selected.size ? 'All Brands ▾' :
+      inclBrands.length + ' Brand' + (inclBrands.length !== 1 ? 's' : '') + (open ? ' ▴' : ' ▾');
+  }
 }
+
+// Close WDS brand panel on outside click
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('wiBrandWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const panel = document.getElementById('wiBrandPanel');
+    if (panel) panel.style.display = 'none';
+    const btn = document.getElementById('wiBrandBtn');
+    if (btn && !btn.textContent.endsWith('▾')) {
+      btn.textContent = btn.textContent.replace('▴', '▾');
+    }
+  }
+});
 
 function wiStartSync(forceAll) {
   // Disable button during sync to prevent double-click
@@ -14654,21 +15181,31 @@ function wiToggleGaps(btn) {
       panel.innerHTML = '<span style="color:#1e40af">No gaps — all catalog products are published on the website.</span>';
       return;
     }
+    const sorted = [..._wiGapsList].sort(function(a,b){
+      const ba = (a.brand||''), bb = (b.brand||'');
+      if (ba < bb) return -1; if (ba > bb) return 1;
+      return (a.code||'').localeCompare(b.code||'');
+    });
     panel.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
       + '<strong style="color:#1e40af;font-size:13px">Products in catalog but not on the Peats website (' + _wiGapsList.length + ')</strong>'
-      + '<button onclick="wiExportGaps()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer">📥 Export to CSV</button>'
+      + '<button onclick="wiExportGaps()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">📥 Export to CSV</button>'
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:5px;max-height:320px;overflow-y:auto;padding-right:4px">'
-      + _wiGapsList.map(function(g) {
-          return '<div style="background:#fff;border:1px solid #bfdbfe;border-radius:5px;padding:5px 8px">'
-            + '<div><span style="color:#1e40af;font-weight:700;font-size:12px">' + g.code + '</span>'
-            + (g.brand ? '<span style="color:#64748b;font-size:10px;margin-left:5px">(' + g.brand + ')</span>' : '')
-            + '</div>'
-            + '<div style="color:#374151;font-size:10px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + g.setup.replace(/"/g,'&quot;') + '">' + g.setup + '</div>'
-            + '</div>';
+      + '<div style="max-height:360px;overflow-y:auto;">'
+      + '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+      + '<thead><tr style="position:sticky;top:0;background:#eff6ff;">'
+      + '<th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e40af;border-bottom:2px solid #bfdbfe;width:90px;">Brand</th>'
+      + '<th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e40af;border-bottom:2px solid #bfdbfe;width:110px;">SKU</th>'
+      + '<th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e40af;border-bottom:2px solid #bfdbfe;">Description</th>'
+      + '</tr></thead><tbody>'
+      + sorted.map(function(g, i) {
+          return '<tr style="border-bottom:1px solid #e0e7ef;' + (i%2===1?'background:#f8faff;':'') + '">'
+            + '<td style="padding:4px 8px;color:#1e40af;font-size:11px;font-weight:600;white-space:nowrap;">' + (g.brand || '—') + '</td>'
+            + '<td style="padding:4px 8px;font-family:monospace;font-weight:700;font-size:11px;white-space:nowrap;">' + g.code + '</td>'
+            + '<td style="padding:4px 8px;color:#374151;font-size:11px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (g.setup||'').replace(/"/g,'&quot;') + '">' + (g.setup||'') + '</td>'
+            + '</tr>';
         }).join('')
-      + '</div>';
+      + '</tbody></table></div>';
   }
 }
 
@@ -19385,7 +19922,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v118 · 17 Sep 2026 · toolbar design consistency · SAA+BEA pill redesign · standardised buttons';
+const TOOL_BUILD = 'v121 · 18 Sep 2026 · Replacements tab · SAA forecast scaffold · predecessor SKU · seasonal indices · alt-SKU overrides';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
