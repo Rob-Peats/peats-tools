@@ -152,6 +152,10 @@ select { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
 select:focus { border-color: var(--brand); }
 select.unselected { border-color: var(--red); color: var(--red); font-weight: 700; animation: pulse-border 1.8s ease-in-out infinite; }
 @keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.3)} 50%{box-shadow:0 0 0 4px rgba(192,57,43,.15)} }
+@keyframes saa-dot-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+.saa-crm-dot { animation: saa-dot-blink 1.2s ease-in-out infinite; }
+.saa-crm-dot:nth-child(2) { animation-delay:.2s; }
+.saa-crm-dot:nth-child(3) { animation-delay:.4s; }
 input[type=range] { accent-color: var(--brand); width: 110px; }
 .range-val { font-size: 13px; font-weight: 700; color: var(--brand); min-width: 60px; }
 .sep { width: 1px; height: 30px; background: var(--border); flex-shrink: 0; }
@@ -8212,8 +8216,8 @@ async function saaFetchMonthlyData(sku) {
   if (!PAT) return null;
   const base = 'https://api-v1-westeurope.prospect365.com';
   // Fetch raw cube rows (one per year/month) — no aggregate() so Year & Month fields are preserved
-  const applyVal = `filter(GroupingMonth eq 1 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 1 and GroupingYear eq 1 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')`;
-  const url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}`;
+  const applyVal = `filter(GroupingMonth eq 1 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 0 and GroupingYear eq 1 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')`;
+  const url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}&%24top=10000`;
   try {
     const resp = await fetch(url, {
       credentials: 'include',
@@ -8481,13 +8485,13 @@ function saaRenderForecastTable() {
   const crmLoading = saaCrmLoadState === 'loading';
 
   const banner = hasCrmData ? '' :
-    `<tr><td colspan="${NCOLS}" style="padding:9px 16px;background:${crmErr?'#fef2f2':hasPAT?'#f0fdf4':'#eff6ff'};border-bottom:1px solid ${crmErr?'#fecaca':hasPAT?'#bbf7d0':'#bfdbfe'};font-size:12px;color:${crmErr?'#991b1b':hasPAT?'#166534':'#1e40af'};font-weight:600;text-align:left;">
+    `<tr><td colspan="${NCOLS}" style="padding:14px 16px;background:${crmErr?'#fef2f2':hasPAT?'#f0fdf4':'#eff6ff'};border-bottom:1px solid ${crmErr?'#fecaca':hasPAT?'#bbf7d0':'#bfdbfe'};font-size:15px;color:${crmErr?'#991b1b':hasPAT?'#166534':'#1e40af'};font-weight:700;text-align:center;">
       ${crmErr
         ? '⚠️ CRM monthly data failed to load — check browser DevTools → Console for CORS/auth errors.'
         : crmLoading
           ? '📡 Loading monthly sales from CRM… forecasts will appear momentarily.'
           : hasPAT
-            ? '📡 Connecting to CRM…'
+            ? '📡 Reading from CRM<span class=\"saa-crm-dot\">.</span><span class=\"saa-crm-dot\">.</span><span class=\"saa-crm-dot\">.</span>'
             : '🔮 Forecast engine ready — add your CRM PAT in Admin (⚙) to activate predictions.'}
     </td></tr>`;
 
@@ -20281,7 +20285,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v133 · 18 Sep 2026 · fix CRM totals — aggregate all customers not per-customer rows';
+const TOOL_BUILD = 'v133 · 18 Sep 2026 · CRM $top=10000 full fetch · animated reading message';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
