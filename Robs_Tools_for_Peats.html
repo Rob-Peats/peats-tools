@@ -7534,11 +7534,11 @@ let saaSeasonalIndices = null; // [12 floats] or null until monthly data loaded
 const SAA_ALT_SKU_KEY  = 'peats_saa_alt_skus';
 function saaLoadAltOverrides()  { try { return JSON.parse(localStorage.getItem(SAA_ALT_SKU_KEY) || '{}'); } catch(e) { return {}; } }
 function saaSaveAltOverrides(o) { try { localStorage.setItem(SAA_ALT_SKU_KEY, JSON.stringify(o)); } catch(e) {} }
-let saaSortCol = null;  // null | 'code' | 'state' | 'trend'
-let saaSortDir = 1;     // 1 = ascending, -1 = descending
+let saaFcstSortCol = null;  // null | 'code' | 'state' | 'trend'  (forecast table only)
+let saaFcstSortDir = 1;     // 1 = ascending, -1 = descending
 function saaSortBy(col) {
-  if (saaSortCol === col) saaSortDir *= -1;
-  else { saaSortCol = col; saaSortDir = 1; }
+  if (saaFcstSortCol === col) saaFcstSortDir *= -1;
+  else { saaFcstSortCol = col; saaFcstSortDir = 1; }
   saaRenderForecastTable();
 }
 
@@ -8284,7 +8284,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 146; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 147; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -8556,7 +8556,7 @@ function saaRenderForecastTable() {
   }
 
   // Apply column sort when a sort column is active (brand|code is the secondary/default order)
-  if (saaSortCol) {
+  if (saaFcstSortCol) {
     const _stVal = r => { const n=(r.crmName||r.desc||'').toUpperCase(); return n.startsWith('EOL')?2:n.startsWith('TBD')?1:0; };
     const _trVal = r => {
       const _n=normFn(r.code), _a=saaAltSkuOverrides[_n]||saaReplacements[_n]||'';
@@ -8568,9 +8568,9 @@ function saaRenderForecastTable() {
     };
     const _sec = (a,b) => (a.brand+'|'+a.code).localeCompare(b.brand+'|'+b.code);
     rows.sort((a,b) => {
-      if (saaSortCol==='code')  return saaSortDir*a.code.localeCompare(b.code)  || _sec(a,b);
-      if (saaSortCol==='state') return saaSortDir*(_stVal(a)-_stVal(b))         || _sec(a,b);
-      if (saaSortCol==='trend') return saaSortDir*(_trVal(a)-_trVal(b))         || _sec(a,b);
+      if (saaFcstSortCol==='code')  return saaFcstSortDir*a.code.localeCompare(b.code)  || _sec(a,b);
+      if (saaFcstSortCol==='state') return saaFcstSortDir*(_stVal(a)-_stVal(b))         || _sec(a,b);
+      if (saaFcstSortCol==='trend') return saaFcstSortDir*(_trVal(a)-_trVal(b))         || _sec(a,b);
       return 0;
     });
   }
@@ -8639,10 +8639,10 @@ function saaRenderForecastTable() {
 
   document.getElementById('saaTableHead').innerHTML = banner + indicesHtml + `<tr>
     <th style="${TH}width:80px;">Brand</th>
-    <th style="${TH}width:135px;cursor:pointer;user-select:none;" onclick="saaSortBy('code')" title="Sort by SKU code">Code${saaSortCol==='code'?(saaSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}</th>
+    <th style="${TH}width:135px;cursor:pointer;user-select:none;" onclick="saaSortBy('code')" title="Sort by SKU code">Code${saaFcstSortCol==='code'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}</th>
     <th style="${TH}text-align:left;width:150px;">Description</th>
-    <th style="${TH}width:75px;cursor:pointer;user-select:none;" onclick="saaSortBy('state')" title="Sort by state (Current / TBD / EOL)">State${saaSortCol==='state'?(saaSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}</th>
-    <th style="${TH}width:90px;cursor:pointer;user-select:none;" onclick="saaSortBy('trend')" title="Sort by 6-month YoY trend">Trend${saaSortCol==='trend'?(saaSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">6-month YoY</span></th>
+    <th style="${TH}width:75px;cursor:pointer;user-select:none;" onclick="saaSortBy('state')" title="Sort by state (Current / TBD / EOL)">State${saaFcstSortCol==='state'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}</th>
+    <th style="${TH}width:90px;cursor:pointer;user-select:none;" onclick="saaSortBy('trend')" title="Sort by 6-month YoY trend">Trend${saaFcstSortCol==='trend'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">6-month YoY</span></th>
     <th style="${TH}width:95px;">${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:95px;">${nextMonths[1].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:95px;">${nextMonths[2].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
@@ -20426,7 +20426,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v146 · 18 Sep 2026 · Sortable Code, State, Trend columns';
+const TOOL_BUILD = 'v147 · 18 Sep 2026 · Fix JS SyntaxError (duplicate let), sortable forecast columns';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
