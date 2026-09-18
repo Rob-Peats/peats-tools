@@ -1852,7 +1852,11 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
     <!-- PILL 5: Mode Toggle — shown after data loads -->
     <div id="saaModeToggle" style="display:none;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:7px 14px;gap:6px;box-sizing:border-box;flex-shrink:0;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">View Mode</span>
+      <div style="display:flex;align-items:center;gap:5px;line-height:1;">
+        <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">View Mode</span>
+        <span style="font-size:9px;font-weight:800;letter-spacing:.04em;color:var(--muted);">·</span>
+        <span id="saaModeLabel" style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--brand);">📊 STATE</span>
+      </div>
       <div style="display:flex;align-items:center;">
         <button id="saaModeAnalysis" onclick="saaSetView('all')"
           style="padding:7px 22px;border:1px solid var(--border);border-radius:6px 0 0 6px;background:var(--brand);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
@@ -7986,6 +7990,7 @@ function saaRenderAll() {
   const _pb = document.getElementById('saaPredPill'); if (_pb) _pb.style.display = 'none';
   const _ma = document.getElementById('saaModeAnalysis'); if (_ma) { _ma.style.background = 'var(--brand)'; _ma.style.color = '#fff'; _ma.style.borderColor = 'var(--border)'; }
   const _mf = document.getElementById('saaModeForecasting'); if (_mf) { _mf.style.background = 'var(--light)'; _mf.style.color = 'var(--text)'; _mf.style.borderColor = 'var(--border)'; }
+  const _ml = document.getElementById('saaModeLabel'); if (_ml) { _ml.textContent = '📊 STATE'; _ml.style.color = 'var(--brand)'; }
 }
 
 
@@ -8417,6 +8422,7 @@ function saaRenderForecastTable() {
   const _pb = document.getElementById('saaPredPill'); if (_pb) _pb.style.display = 'flex';
   const _ma = document.getElementById('saaModeAnalysis'); if (_ma) { _ma.style.background = 'var(--light)'; _ma.style.color = 'var(--text)'; _ma.style.borderColor = 'var(--border)'; }
   const _mf = document.getElementById('saaModeForecasting'); if (_mf) { _mf.style.background = '#6d28d9'; _mf.style.color = '#fff'; _mf.style.borderColor = '#6d28d9'; }
+  const _ml2 = document.getElementById('saaModeLabel'); if (_ml2) { _ml2.textContent = '🔮 FORECAST'; _ml2.style.color = '#6d28d9'; }
   const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
 
   const now    = new Date();
@@ -8453,6 +8459,20 @@ function saaRenderForecastTable() {
   document.getElementById('saaTable').style.display = '';
 
   const hasPAT = !!localStorage.getItem('peats_crm_pat');
+  // Show ⚡ cache indicator in toolbar loading area
+  const _li = document.getElementById('saaLoadingIndicator');
+  if (_li) {
+    if (hasCrmData) {
+      const raw = localStorage.getItem('peats_saa_crm_cache');
+      let cacheAge = '';
+      try { const { ts } = JSON.parse(raw||'{}'); if (ts) { const mins = Math.round((Date.now()-ts)/60000); cacheAge = mins < 60 ? mins+'m' : Math.round(mins/60)+'h'; } } catch(e) {}
+      _li.style.display = '';
+      _li.innerHTML = `<span style="font-size:11px;color:#16a34a;font-weight:700;" title="CRM data loaded from local cache — click to reload fresh">⚡ Cached${cacheAge?' ('+cacheAge+'ago)':''} <span onclick="saaClearCache()" style="cursor:pointer;color:#6b7280;font-weight:600;text-decoration:underline;">↺</span></span>`;
+    } else {
+      _li.style.display = 'none';
+      _li.textContent = '';
+    }
+  }
   if (!hasCrmData && hasPAT && saaCrmLoadState === 'idle') setTimeout(() => saaTriggerMonthlyLoad(saaData.slice()), 0);
 
   const crmErr     = saaCrmLoadState === 'error';
@@ -8495,15 +8515,15 @@ function saaRenderForecastTable() {
   }
 
   document.getElementById('saaTableHead').innerHTML = banner + indicesHtml + `<tr>
-    <th style="${TH}text-align:left;">Brand</th>
-    <th style="${TH}text-align:left;">Code</th>
-    <th style="${TH}text-align:left;max-width:220px;">Description</th>
-    <th style="${TH}">State</th>
-    <th style="${TH}">${nextMonths[0].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
-    <th style="${TH}">${nextMonths[1].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
-    <th style="${TH}">${nextMonths[2].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
-    <th style="${TH}">Shortfall<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">Oct vs free+order</span></th>
-    <th style="${TH}background:#e8f5e9;">Free Stock</th>
+    <th style="${TH}text-align:left;width:70px;">Brand</th>
+    <th style="${TH}text-align:left;width:110px;">Code</th>
+    <th style="${TH}text-align:left;">Description</th>
+    <th style="${TH}width:75px;">State</th>
+    <th style="${TH}width:85px;">${nextMonths[0].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
+    <th style="${TH}width:85px;">${nextMonths[1].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
+    <th style="${TH}width:85px;">${nextMonths[2].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
+    <th style="${TH}width:90px;">Shortfall<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">next mo vs free+order</span></th>
+    <th style="${TH}width:80px;background:#e8f5e9;">Free Stock</th>
   </tr>`;
 
   document.getElementById('saaTableBody').innerHTML = rows.map(r => {
@@ -20259,7 +20279,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v131 · 18 Sep 2026 · shortfall colours corrected (red=short, green=surplus)';
+const TOOL_BUILD = 'v132 · 18 Sep 2026 · dynamic mode label · forecast col widths · cache indicator';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
