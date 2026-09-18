@@ -1873,12 +1873,22 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
     <!-- Predecessors pill (forecast mode only) -->
-    <div id="saaPredPill" style="display:none;flex-direction:column;align-items:center;justify-content:center;border:1px solid #6d28d9;border-radius:8px;background:var(--light);padding:7px 14px;gap:6px;box-sizing:border-box;flex-shrink:0;">
-      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#6d28d9;line-height:1;">Predecessors</span>
+    <div id="saaPredPill" style="display:none;flex-direction:column;align-items:center;justify-content:center;border:1px solid #1d4ed8;border-radius:8px;background:var(--light);padding:7px 18px;gap:6px;box-sizing:border-box;flex-shrink:0;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8;line-height:1;white-space:nowrap;">Replacement Models</span>
       <button id="saaPredBtn" onclick="saaShowPredecessorModal()"
-        style="padding:7px 18px;border-radius:6px;border:1px solid #6d28d9;background:#6d28d9;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
-        ⚙ Manage
+        style="padding:7px 18px;border-radius:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+        ⚙ Manage Codes
       </button>
+    </div>
+    <div id="saaCachePill" style="display:none;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--light);padding:7px 14px;gap:6px;box-sizing:border-box;flex-shrink:0;">
+      <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1;">Cache</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="saaCacheAge" style="font-size:11px;color:#16a34a;font-weight:700;"></span>
+        <button onclick="saaClearCache()" title="Clear CRM cache and reload fresh data"
+          style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--white);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+          Clear Cache
+        </button>
+      </div>
     </div>
     <div id="saaLoadingIndicator" style="display:none;font-size:12px;color:var(--muted);align-self:center;">⏳ Loading…</div>
     <div style="flex:1"></div>
@@ -7342,6 +7352,7 @@ function saaReset() {
   document.getElementById('saaTable').style.display        = 'none';
   const _mtR = document.getElementById('saaModeToggle'); if (_mtR) _mtR.style.display = 'none';
   const _pbR = document.getElementById('saaPredPill'); if (_pbR) _pbR.style.display = 'none';
+  const _cpR = document.getElementById('saaCachePill'); if (_cpR) _cpR.style.display = 'none';
   saaShowPickPrompt();
   showToast('↺ Stock analysis cleared.');
 }
@@ -7561,6 +7572,7 @@ function saaShowPickPrompt() {
   document.getElementById('saaTable').style.display         = 'none';
   const _mtP = document.getElementById('saaModeToggle'); if (_mtP) _mtP.style.display = 'none';
   const _pbP = document.getElementById('saaPredPill'); if (_pbP) _pbP.style.display = 'none';
+  const _cpP = document.getElementById('saaCachePill'); if (_cpP) _cpP.style.display = 'none';
   document.getElementById('saaLoadingIndicator').style.display = 'none';
   const content = document.getElementById('saaContent');
   content.style.display = 'block';
@@ -7992,6 +8004,7 @@ function saaRenderAll() {
   document.getElementById('saaTable').style.display        = 'table';
   const _mt = document.getElementById('saaModeToggle'); if (_mt) _mt.style.display = 'flex';
   const _pb = document.getElementById('saaPredPill'); if (_pb) _pb.style.display = 'none';
+  const _cp2 = document.getElementById('saaCachePill'); if (_cp2) _cp2.style.display = 'none';
   const _ma = document.getElementById('saaModeAnalysis'); if (_ma) { _ma.style.background = 'var(--brand)'; _ma.style.color = '#fff'; _ma.style.borderColor = 'var(--border)'; }
   const _mf = document.getElementById('saaModeForecasting'); if (_mf) { _mf.style.background = 'var(--light)'; _mf.style.color = 'var(--text)'; _mf.style.borderColor = 'var(--border)'; }
   const _ml = document.getElementById('saaModeLabel'); if (_ml) { _ml.textContent = '📊 STATE'; _ml.style.color = 'var(--brand)'; }
@@ -8066,7 +8079,7 @@ function saaRenderSummaryCards() {
     { label:'FORECAST',
       val: '🔮',
       sub: 'next 3 months demand',
-      col:'#6d28d9', onclick:"saaSetView('forecast')" },
+      col:'#1d4ed8', onclick:"saaSetView('forecast')" },
   ];
 
   const viewKey = { "saaSetView('all')":'all',"saaSetView('red')":'red',"saaSetView('yellow')":'yellow',"saaSetView('onorder')":'onorder',"saaSetView('nosales')":'nosales',"saaSetView('healthy')":'healthy',"saaSetView('recentsales')":'recentsales',"saaSetView('current')":'current',"saaSetView('tbd')":'tbd',"saaSetView('eol')":'eol',"saaSetView('forecast')":'forecast' };
@@ -8263,7 +8276,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 140; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 143; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -8329,20 +8342,28 @@ function saaComputeSeasonalIndices() {
 
 // Compare last 6 calendar months vs same 6 months LY → YoY growth trend.
 // Returns { factor, pct, direction } or null if insufficient overlap.
-function saaComputeTrend(series) {
+function saaComputeTrend(series, freeAdj = 0) {
+  // freeAdj: outstanding backorder qty added to most recent month to correct for
+  // supply-constrained sales figures (unfulfilled demand looks like missing sales).
   const now = new Date();
-  let thisSum = 0, lySum = 0, count = 0;
+  let thisSum = 0, lySum = 0, count = 0, adjApplied = false;
   for (let i = 1; i <= 6; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const y = d.getFullYear(), m = d.getMonth() + 1; // 1-based month
     const thisEntry = series.find(e => e.year === y     && e.month === m);
     const lyEntry   = series.find(e => e.year === y - 1 && e.month === m);
-    if (thisEntry && lyEntry) { thisSum += thisEntry.qty; lySum += lyEntry.qty; count++; }
+    if (thisEntry && lyEntry) {
+      const adj = (!adjApplied && freeAdj > 0) ? freeAdj : 0;
+      adjApplied = adjApplied || adj > 0;
+      thisSum += thisEntry.qty + adj;
+      lySum   += lyEntry.qty;
+      count++;
+    }
   }
   if (!count || !lySum) return null;
   const factor = thisSum / lySum;
   const pct    = Math.round((factor - 1) * 100);
-  return { factor, pct, direction: factor >= 1 ? 'up' : 'down' };
+  return { factor, pct, direction: factor >= 1 ? 'up' : 'down', adjusted: adjApplied };
 }
 
 // Forecast qty for a row for the next months listed in nextMonthsArr.
@@ -8351,7 +8372,7 @@ function saaComputeTrend(series) {
 // 1. LY same month × 6-month YoY growth factor (primary — accounts for trend).
 // 2. LY same month directly (fallback when growth factor unavailable).
 // 3. Seasonal model (last resort — new products or no LY data).
-function saaForecastNextMonths(r, nextMonthsArr) {
+function saaForecastNextMonths(r, nextMonthsArr, freeAdj = 0) {
   const norm    = normCode(r.code);
   const altRaw  = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
   const srcNorm = altRaw ? normCode(altRaw) : norm;
@@ -8359,7 +8380,7 @@ function saaForecastNextMonths(r, nextMonthsArr) {
   if (!series || !series.length) return null;
 
   // 6-month YoY growth factor — clamp to 0.1–5.0 to avoid runaway outliers
-  const trend        = saaComputeTrend(series);
+  const trend        = saaComputeTrend(series, freeAdj);
   const growthFactor = trend ? Math.max(0.1, Math.min(5.0, trend.factor)) : null;
 
   // Trailing seasonal baseline (last resort only)
@@ -8481,9 +8502,10 @@ function saaRenderForecastTable() {
   // Show mode toggle, highlight Forecast button, show Predecessors in toolbar
   const _mt = document.getElementById('saaModeToggle'); if (_mt) _mt.style.display = 'flex';
   const _pb = document.getElementById('saaPredPill'); if (_pb) _pb.style.display = 'flex';
+  // saaCachePill visibility is set in saaRenderForecastTable based on hasCrmData
   const _ma = document.getElementById('saaModeAnalysis'); if (_ma) { _ma.style.background = 'var(--light)'; _ma.style.color = 'var(--text)'; _ma.style.borderColor = 'var(--border)'; }
-  const _mf = document.getElementById('saaModeForecasting'); if (_mf) { _mf.style.background = '#6d28d9'; _mf.style.color = '#fff'; _mf.style.borderColor = '#6d28d9'; }
-  const _ml2 = document.getElementById('saaModeLabel'); if (_ml2) { _ml2.textContent = '🔮 FORECAST'; _ml2.style.color = '#6d28d9'; }
+  const _mf = document.getElementById('saaModeForecasting'); if (_mf) { _mf.style.background = '#1d4ed8'; _mf.style.color = '#fff'; _mf.style.borderColor = '#1d4ed8'; }
+  const _ml2 = document.getElementById('saaModeLabel'); if (_ml2) { _ml2.textContent = '🔮 FORECAST'; _ml2.style.color = '#1d4ed8'; }
   const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
 
   const now    = new Date();
@@ -8513,6 +8535,10 @@ function saaRenderForecastTable() {
   });
   rows.sort((a,b) => (a.brand+'|'+a.code).localeCompare(b.brand+'|'+b.code));
 
+  // Free stock lookup by normalised code — used for backorder trend adjustment
+  const freeByNorm = {};
+  for (const _r of saaData) freeByNorm[normFn(_r.code)] = _r.free || 0;
+
   const TD  = 'padding:5px 10px;white-space:nowrap;text-align:center;';
   const TH  = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center;';
 
@@ -8520,18 +8546,18 @@ function saaRenderForecastTable() {
   document.getElementById('saaTable').style.display = '';
 
   const hasPAT = !!localStorage.getItem('peats_crm_pat');
-  // Show ⚡ cache indicator in toolbar loading area
-  const _li = document.getElementById('saaLoadingIndicator');
-  if (_li) {
+  // Show Cache pill when CRM data is available
+  const _cp = document.getElementById('saaCachePill');
+  if (_cp) {
     if (hasCrmData) {
       const raw = localStorage.getItem('peats_saa_crm_cache');
       let cacheAge = '';
       try { const { ts } = JSON.parse(raw||'{}'); if (ts) { const mins = Math.round((Date.now()-ts)/60000); cacheAge = mins < 60 ? mins+'m' : Math.round(mins/60)+'h'; } } catch(e) {}
-      _li.style.display = '';
-      _li.innerHTML = `<span style="font-size:11px;color:#16a34a;font-weight:700;" title="CRM data loaded from local cache — click to reload fresh">⚡ Cached${cacheAge?' ('+cacheAge+'ago)':''} <span onclick="saaClearCache()" style="cursor:pointer;color:#6b7280;font-weight:600;text-decoration:underline;">↺</span></span>`;
+      const _ca = document.getElementById('saaCacheAge');
+      if (_ca) _ca.textContent = cacheAge ? `⚡ ${cacheAge} ago` : '';
+      _cp.style.display = 'flex';
     } else {
-      _li.style.display = 'none';
-      _li.textContent = '';
+      _cp.style.display = 'none';
     }
   }
   if (!hasCrmData && hasPAT && saaCrmLoadState === 'idle') setTimeout(() => saaTriggerMonthlyLoad(saaData.slice()), 0);
@@ -8576,15 +8602,15 @@ function saaRenderForecastTable() {
   }
 
   document.getElementById('saaTableHead').innerHTML = banner + indicesHtml + `<tr>
-    <th style="${TH}text-align:left;width:70px;">Brand</th>
-    <th style="${TH}text-align:left;width:110px;">Code</th>
-    <th style="${TH}text-align:left;">Description</th>
+    <th style="${TH}width:80px;">Brand</th>
+    <th style="${TH}width:135px;">Code</th>
+    <th style="${TH}text-align:left;width:150px;">Description</th>
     <th style="${TH}width:75px;">State</th>
-    <th style="${TH}width:75px;">Trend<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">6-month YoY</span></th>
-    <th style="${TH}width:85px;">${nextMonths[0].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
-    <th style="${TH}width:85px;">${nextMonths[1].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
-    <th style="${TH}width:85px;">${nextMonths[2].label}<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">predicted · LY</span></th>
-    <th style="${TH}width:90px;">Shortfall<br><span style="font-weight:500;font-size:9px;text-transform:none;letter-spacing:0;color:var(--muted);">next mo vs free+order</span></th>
+    <th style="${TH}width:90px;">Trend<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">6-month YoY</span></th>
+    <th style="${TH}width:95px;">${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
+    <th style="${TH}width:95px;">${nextMonths[1].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
+    <th style="${TH}width:95px;">${nextMonths[2].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
+    <th style="${TH}width:90px;">Shortfall<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">next mo vs free+order</span></th>
     <th style="${TH}width:80px;background:#e8f5e9;">Free Stock</th>
   </tr>`;
 
@@ -8593,7 +8619,13 @@ function saaRenderForecastTable() {
     const altRaw  = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
     const srcNorm = altRaw ? normFn(altRaw) : norm;
     const series  = saaMonthlyDataMap[srcNorm];
-    const fcst    = hasCrmData ? saaForecastNextMonths(r, nextMonths) : null;
+    // Backorder adjustment: for supply-constrained products, outstanding backorders
+    // represent unfulfilled demand not captured in shipped-qty figures.
+    // Skip for EOL rows with no successor (product is dying — backorders are noise).
+    const _isEolRow = (r.crmName||r.desc||'').toUpperCase().startsWith('EOL');
+    const _srcFree  = freeByNorm[srcNorm] || 0;
+    const freeAdj   = (!_isEolRow || altRaw) && _srcFree < 0 ? Math.abs(_srcFree) : 0;
+    const fcst    = hasCrmData ? saaForecastNextMonths(r, nextMonths, freeAdj) : null;
     const freeVal = r.free != null ? Math.round(r.free).toLocaleString('en-IE') : '—';
     const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700;' : '';
 
@@ -8609,24 +8641,25 @@ function saaRenderForecastTable() {
 
     // Month columns: predicted + LY actuals
     // Trend cell
-    const trend = (series && series.length) ? saaComputeTrend(series) : null;
+    const trend = (series && series.length) ? saaComputeTrend(series, freeAdj) : null;
     let trendTd = `<td style="${TD}color:var(--muted);font-size:10px;">—</td>`;
     if (trend) {
       const arrow   = trend.direction === 'up' ? '↑' : '↓';
       const col     = trend.direction === 'up' ? '#16a34a' : '#dc2626';
       const sign    = trend.pct >= 0 ? '+' : '';
-      const viaSub  = altRaw ? `<div style="font-size:9px;color:#9ca3af;font-weight:500;font-family:monospace;margin-top:3px;">via ${escHtml(altRaw)}</div>` : '';
-      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${viaSub}</td>`;
+      const adjNote = trend.adjusted ? '<span style="font-size:8px;color:#f59e0b;font-weight:700;margin-left:3px;" title="Adjusted for outstanding backorder demand">adj.</span>' : '';
+      const viaSub  = altRaw ? `<div style="font-size:10px;color:#6b7280;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">via ${escHtml(altRaw)}</div>` : '';
+      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${adjNote}${viaSub}</td>`;
     }
 
     const monthCols = nextMonths.map((nm, i) => {
       if (!fcst || !fcst[i]) return `<td style="${TD}color:var(--muted);font-size:10px;">—</td>`;
       const pred    = Math.round(fcst[i].predicted);
       const lyEntry = series ? series.find(e => e.year === nm.year - 1 && e.month === nm.month + 1) : null;
-      const predTag = altRaw ? ' <span style="color:#a78bfa;font-weight:600;">(pred.)</span>' : '';
+      const basedOn  = altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:2px;white-space:normal;">Based on ${escHtml(altRaw)}</div>` : '';
       const lyHtml  = lyEntry
-        ? `<div style="font-size:9px;color:var(--muted);margin-top:1px;">LY: ${Math.round(lyEntry.qty).toLocaleString('en-IE')}${predTag}</div>`
-        : `<div style="font-size:9px;color:#cbd5e1;margin-top:1px;">LY: —</div>`;
+        ? `<div style="font-size:10px;color:#374151;font-weight:600;margin-top:2px;">LY: ${Math.round(lyEntry.qty).toLocaleString('en-IE')}</div>${basedOn}`
+        : `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">LY: —</div>`;
       return `<td style="${TD}"><div style="font-weight:700;">${pred.toLocaleString('en-IE')}</div>${lyHtml}</td>`;
     }).join('');
 
@@ -8647,8 +8680,8 @@ function saaRenderForecastTable() {
 
     return `<tr style="border-bottom:1px solid #d1d5db;">
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${altRaw ? `<div style="font-size:9px;color:#6d28d9;font-weight:600;font-family:monospace;margin-top:3px;">↩ ${escHtml(altRaw)}</div>` : ''}</td>
-      <td style="padding:5px 10px;text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaces ${escHtml(altRaw)}</div>` : ''}</td>
+      <td style="padding:5px 10px;text-align:left;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
       <td style="${TD}padding:4px 8px;">${statePill}</td>
       ${trendTd}
       ${monthCols}
@@ -8673,7 +8706,7 @@ function saaShowPredecessorModal() {
       <td style="padding:6px 10px;white-space:nowrap;">
         <input type="text" data-sku="${escHtml(r.code)}" value="${escHtml(current)}" placeholder="none"
           style="width:130px;padding:3px 7px;font-size:11px;font-family:monospace;border:1px solid ${current?'#a78bfa':'var(--border)'};border-radius:4px;background:${current?'#faf5ff':'var(--white)'};">
-        ${fromTab ? '<span style="font-size:10px;color:#6d28d9;margin-left:4px;">↩ Replacements</span>' : ''}
+        ${fromTab ? '<span style="font-size:10px;color:#1d4ed8;margin-left:4px;">↩ Replacements</span>' : ''}
       </td>
     </tr>`;
   }).join('');
@@ -20354,7 +20387,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v140 · 18 Sep 2026 · Predecessor attribution — code, trend and LY indicators';
+const TOOL_BUILD = 'v143 · 18 Sep 2026 · Replacement Models pill (blue), Cache pill, blue SKU notes';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
