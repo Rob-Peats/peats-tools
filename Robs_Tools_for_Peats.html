@@ -153,6 +153,8 @@ select:focus { border-color: var(--brand); }
 select.unselected { border-color: var(--red); color: var(--red); font-weight: 700; animation: pulse-border 1.8s ease-in-out infinite; }
 @keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.3)} 50%{box-shadow:0 0 0 4px rgba(192,57,43,.15)} }
 @keyframes saa-dot-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+@keyframes saa-crm-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+.saa-crm-banner-pulse { animation: saa-crm-pulse 2s ease-in-out infinite; }
 .saa-crm-dot { animation: saa-dot-blink 1.2s ease-in-out infinite; }
 .saa-crm-dot:nth-child(2) { animation-delay:.2s; }
 .saa-crm-dot:nth-child(3) { animation-delay:.4s; }
@@ -8284,7 +8286,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 147; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 151; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -8505,6 +8507,25 @@ function saaRenderForecastTable() {
         <div style="font-size:28px;font-weight:800;color:${active?'#fff':c.col};line-height:1.05;">${c.val}</div>
       </div>`;
     }).join('');
+    // Seasonal index wide card (appended after state cards when data is ready)
+    if (saaSeasonalIndices) {
+      const _M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const _curM = now.getMonth();
+      const _cells = saaSeasonalIndices.map((v, i) => {
+        const pct    = Math.round(v * 100);
+        const col    = v > 1.1 ? '#065f46' : v < 0.9 ? '#991b1b' : '#4b5563';
+        const bg     = i === _curM ? '#eff6ff' : 'transparent';
+        const bdr    = i === _curM ? 'border:1.5px solid #93c5fd;' : '';
+        return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:38px;padding:3px 4px;background:${bg};border-radius:5px;${bdr}">
+          <span style="font-size:10px;font-weight:800;color:#9ca3af;">${_M[i]}</span>
+          <span style="font-size:14px;font-weight:800;color:${col};">${pct}%</span>
+        </span>`;
+      }).join('');
+      _sc.innerHTML += `<div style="background:var(--white);border-radius:10px;padding:12px 18px;border-bottom:3px solid #93c5fd;box-shadow:var(--shadow);flex:3;min-width:0;cursor:default;" title="Computed across all loaded SKUs — reflects demand patterns for the brands you have loaded">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Seasonal Index <span style="font-weight:600;text-transform:none;letter-spacing:0;">(all loaded SKUs)</span></div>
+        <div style="display:flex;align-items:center;gap:3px;flex-wrap:nowrap;overflow-x:auto;">${_cells}</div>
+      </div>`;
+    }
     _sc.style.display = 'flex';
   }
   // Show mode toggle, highlight Forecast button, show Predecessors in toolbar
@@ -8525,7 +8546,7 @@ function saaRenderForecastTable() {
 
   const hasCrmData = saaSeasonalIndices != null;
   const normFn     = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const NCOLS      = 11; // Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Shortfall
+  const NCOLS      = 11; // Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Status
 
   // Filter by search + state tab
   let rows = saaData.slice();
@@ -8602,7 +8623,7 @@ function saaRenderForecastTable() {
   const crmLoading = saaCrmLoadState === 'loading';
 
   const banner = hasCrmData ? '' :
-    `<tr><td colspan="${NCOLS}" style="padding:14px 16px;background:${crmErr?'#fef2f2':hasPAT?'#f0fdf4':'#eff6ff'};border-bottom:1px solid ${crmErr?'#fecaca':hasPAT?'#bbf7d0':'#bfdbfe'};font-size:15px;color:${crmErr?'#991b1b':hasPAT?'#166534':'#1e40af'};font-weight:700;text-align:center;">
+    `<tr><td colspan="${NCOLS}" class="${(crmLoading||(!crmErr&&hasPAT))?'saa-crm-banner-pulse':''}" style="padding:14px 16px;background:${crmErr?'#fef2f2':hasPAT?'#f0fdf4':'#eff6ff'};border-bottom:1px solid ${crmErr?'#fecaca':hasPAT?'#bbf7d0':'#bfdbfe'};font-size:15px;color:${crmErr?'#991b1b':hasPAT?'#166534':'#1e40af'};font-weight:700;text-align:center;">
       ${crmErr
         ? '⚠️ CRM monthly data failed to load — check browser DevTools → Console for CORS/auth errors.'
         : crmLoading
@@ -8614,28 +8635,8 @@ function saaRenderForecastTable() {
 
   // (State filter tabs and Predecessors button are now in the top toolbar — see saaSummaryCards cards + #saaModeToggle / #saaPredBtn)
 
-  // Seasonal indices strip
-  let indicesHtml = '';
-  if (saaSeasonalIndices) {
-    const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const curM = now.getMonth();
-    const cells = saaSeasonalIndices.map((v, i) => {
-      const pct    = Math.round(v * 100);
-      const col    = v > 1.1 ? '#065f46' : v < 0.9 ? '#991b1b' : '#4b5563';
-      const bg     = i === curM ? '#eff6ff' : 'transparent';
-      const border = i === curM ? 'border:1.5px solid #93c5fd;' : '';
-      return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:44px;padding:4px 5px;background:${bg};border-radius:6px;${border}">
-        <span style="font-size:11px;font-weight:800;color:#9ca3af;">${M[i]}</span>
-        <span style="font-size:15px;font-weight:800;color:${col};">${pct}%</span>
-      </span>`;
-    }).join('');
-    indicesHtml = `<tr><td colspan="${NCOLS}" style="padding:8px 12px;background:#f8fafc;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:nowrap;overflow-x:auto;">
-        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap;margin-right:10px;" title="Computed across all loaded SKUs — reflects demand patterns for the brands you have loaded">Seasonal Index (all loaded SKUs)</span>
-        ${cells}
-      </div>
-    </td></tr>`;
-  }
+  // Seasonal index is now rendered as a wide card in saaSummaryCards (see above)
+  const indicesHtml = '';
 
   document.getElementById('saaTableHead').innerHTML = banner + indicesHtml + `<tr>
     <th style="${TH}width:80px;">Brand</th>
@@ -8648,7 +8649,7 @@ function saaRenderForecastTable() {
     <th style="${TH}width:95px;">${nextMonths[2].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:80px;background:#e8f5e9;">Free Stock</th>
     <th style="${TH}width:80px;background:#e3f0fb;">On Order</th>
-    <th style="${TH}width:105px;">Shortfall for ${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted vs free+order</span></th>
+    <th style="${TH}width:105px;">Status for ${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted vs free+order</span></th>
   </tr>`;
 
   document.getElementById('saaTableBody').innerHTML = rows.map(r => {
@@ -8686,7 +8687,7 @@ function saaRenderForecastTable() {
       const col     = trend.direction === 'up' ? '#16a34a' : '#dc2626';
       const sign    = trend.pct >= 0 ? '+' : '';
       const basedSub = altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Based on ${escHtml(altRaw)}</div>` : '';
-      const adjSub  = trend.adjusted ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;margin-top:2px;">Adj. for BOs</div>` : '';
+      const adjSub  = trend.adjusted ? `<div style="font-size:10px;color:#d97706;font-weight:600;margin-top:2px;">Adj. for BOs</div>` : '';
       trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${basedSub}${adjSub}</td>`;
     }
 
@@ -20426,7 +20427,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v147 · 18 Sep 2026 · Fix JS SyntaxError (duplicate let), sortable forecast columns';
+const TOOL_BUILD = 'v151 · 18 Sep 2026 · Shortfall column renamed to Status for [Month YY]';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
