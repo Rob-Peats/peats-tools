@@ -8186,14 +8186,22 @@ async function saaFetchMonthlyData(sku) {
     const data = await resp.json();
     const rows = data.value || [];
     if (rows.length) console.log('[SAA] raw CRM row (ALL fields):', JSON.stringify(rows[0]));
-    else console.warn('[SAA] CRM returned empty value array for', sku);
-    return rows.map(r => ({
-      // Try every plausible Year/Month field name — log above will confirm the right ones
-      year:  +(r.Year  || r.GroupingYear  || r.CalYear  || r.SalesYear  || r.TransactionYear  || 0),
-      month: +(r.Month || r.GroupingMonth || r.CalMonth || r.SalesMonth || r.TransactionMonth || 0),
-      qty:   +(r.QuantityOrdered || r.QuantityOrderedsum || r.Qty || 0),
-      value: +(r.Value || r.Valuesum || 0)
-    })).filter(r => r.year && r.month);
+    else { console.warn('[SAA] CRM returned empty value array for', sku); return []; }
+
+    // Month/Year are null — date lives in RoundedDate ("2026-07-01T00:00:00Z")
+    // Rows are per-customer; aggregate qty/value by year+month
+    const monthMap = {};
+    for (const r of rows) {
+      if (!r.RoundedDate) continue;
+      const d     = new Date(r.RoundedDate);
+      const year  = d.getUTCFullYear();
+      const month = d.getUTCMonth() + 1;   // 1-based
+      const key   = year * 100 + month;
+      if (!monthMap[key]) monthMap[key] = { year, month, qty: 0, value: 0 };
+      monthMap[key].qty   += +(r.QuantityOrdered || 0);
+      monthMap[key].value += +(r.Value           || 0);
+    }
+    return Object.values(monthMap).filter(e => e.qty > 0);
   } catch(e) {
     console.warn('[SAA] saaFetchMonthlyData error', sku, e);
     return null;
@@ -20004,7 +20012,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v125 · 18 Sep 2026 · drop aggregate · raw per-month cube rows · field discovery';
+const TOOL_BUILD = 'v126 · 18 Sep 2026 · RoundedDate parser · monthly aggregation · forecasts live';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
