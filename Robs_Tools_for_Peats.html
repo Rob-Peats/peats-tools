@@ -8276,7 +8276,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 143; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 145; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -8461,7 +8461,7 @@ async function saaTriggerMonthlyLoad(rowsToLoad) {
     saaCrmLoadState = 'error';
     console.warn('[SAA] All CRM fetches returned no usable data — check console for raw row format above');
     // Update banner in place without re-rendering (avoids retriggering the load)
-    const bannerRow = document.querySelector('#saaTableHead tr:first-child td[colspan="10"]');
+    const bannerRow = document.querySelector('#saaTableHead tr:first-child td[colspan="11"]');
     if (bannerRow) {
       bannerRow.style.background = '#fef2f2';
       bannerRow.style.borderBottomColor = '#fecaca';
@@ -8517,7 +8517,7 @@ function saaRenderForecastTable() {
 
   const hasCrmData = saaSeasonalIndices != null;
   const normFn     = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const NCOLS      = 10; // Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Shortfall | Free Stock
+  const NCOLS      = 11; // Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Shortfall
 
   // Filter by search + state tab
   let rows = saaData.slice();
@@ -8538,6 +8538,14 @@ function saaRenderForecastTable() {
   // Free stock lookup by normalised code — used for backorder trend adjustment
   const freeByNorm = {};
   for (const _r of saaData) freeByNorm[normFn(_r.code)] = _r.free || 0;
+
+  // Reverse replacement map: normOldSku → rawNewSku — lets old SKU rows show "Replaced by X"
+  const replacedByMap = {};
+  for (const _r of saaData) {
+    const _nrm = normFn(_r.code);
+    const _rawOld = saaAltSkuOverrides[_nrm] || saaReplacements[_nrm] || '';
+    if (_rawOld) replacedByMap[normFn(_rawOld)] = _r.code;
+  }
 
   const TD  = 'padding:5px 10px;white-space:nowrap;text-align:center;';
   const TH  = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center;';
@@ -8610,8 +8618,9 @@ function saaRenderForecastTable() {
     <th style="${TH}width:95px;">${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:95px;">${nextMonths[1].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:95px;">${nextMonths[2].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
-    <th style="${TH}width:90px;">Shortfall<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">next mo vs free+order</span></th>
     <th style="${TH}width:80px;background:#e8f5e9;">Free Stock</th>
+    <th style="${TH}width:80px;background:#e3f0fb;">On Order</th>
+    <th style="${TH}width:105px;">Shortfall for ${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted vs free+order</span></th>
   </tr>`;
 
   document.getElementById('saaTableBody').innerHTML = rows.map(r => {
@@ -8625,6 +8634,7 @@ function saaRenderForecastTable() {
     const _isEolRow = (r.crmName||r.desc||'').toUpperCase().startsWith('EOL');
     const _srcFree  = freeByNorm[srcNorm] || 0;
     const freeAdj   = (!_isEolRow || altRaw) && _srcFree < 0 ? Math.abs(_srcFree) : 0;
+    const replacedBy = replacedByMap[norm] || ''; // raw new SKU that replaced this one (if any)
     const fcst    = hasCrmData ? saaForecastNextMonths(r, nextMonths, freeAdj) : null;
     const freeVal = r.free != null ? Math.round(r.free).toLocaleString('en-IE') : '—';
     const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700;' : '';
@@ -8647,9 +8657,9 @@ function saaRenderForecastTable() {
       const arrow   = trend.direction === 'up' ? '↑' : '↓';
       const col     = trend.direction === 'up' ? '#16a34a' : '#dc2626';
       const sign    = trend.pct >= 0 ? '+' : '';
-      const adjNote = trend.adjusted ? '<span style="font-size:8px;color:#f59e0b;font-weight:700;margin-left:3px;" title="Adjusted for outstanding backorder demand">adj.</span>' : '';
-      const viaSub  = altRaw ? `<div style="font-size:10px;color:#6b7280;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">via ${escHtml(altRaw)}</div>` : '';
-      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${adjNote}${viaSub}</td>`;
+      const basedSub = altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Based on ${escHtml(altRaw)}</div>` : '';
+      const adjSub  = trend.adjusted ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;margin-top:2px;">Adj. for BOs</div>` : '';
+      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${basedSub}${adjSub}</td>`;
     }
 
     const monthCols = nextMonths.map((nm, i) => {
@@ -8680,13 +8690,14 @@ function saaRenderForecastTable() {
 
     return `<tr style="border-bottom:1px solid #d1d5db;">
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaces ${escHtml(altRaw)}</div>` : ''}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${replacedBy ? `<span style="text-decoration:line-through;opacity:.5;">${escHtml(r.code)}</span>` : escHtml(r.code)}${altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaces ${escHtml(altRaw)}</div>` : ''}${replacedBy ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaced by ${escHtml(replacedBy)}</div>` : ''}</td>
       <td style="padding:5px 10px;text-align:left;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
       <td style="${TD}padding:4px 8px;">${statePill}</td>
       ${trendTd}
       ${monthCols}
-      ${shortfallTd}
       <td style="${TD}background:#e8f5e9;${freeStyle}">${freeVal}</td>
+      <td style="${TD}background:#e3f0fb;color:${r.onOrder>0?'#1a6ea8':'var(--muted)'};font-weight:${r.onOrder>0?'700':'400'};">${r.onOrder>0?Math.round(r.onOrder).toLocaleString('en-IE'):'—'}</td>
+      ${shortfallTd}
     </tr>`;
   }).join('') || `<tr><td colspan="${NCOLS}" style="padding:30px;text-align:center;color:var(--muted)">No data loaded.</td></tr>`;
 }
@@ -20387,7 +20398,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v143 · 18 Sep 2026 · Replacement Models pill (blue), Cache pill, blue SKU notes';
+const TOOL_BUILD = 'v145 · 18 Sep 2026 · On Order column, Shortfall moved to end with dynamic month label';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
