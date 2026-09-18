@@ -8215,8 +8215,10 @@ async function saaFetchMonthlyData(sku) {
   const PAT = localStorage.getItem('peats_crm_pat') || '';
   if (!PAT) return null;
   const base = 'https://api-v1-westeurope.prospect365.com';
-  // GroupingSalesLedgerId=1: server aggregates all customers into one row per month — matches CRM screen totals
-  const applyVal = `filter(GroupingMonth eq 1 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 1 and GroupingYear eq 1 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')`;
+  // GroupingMonth=0, GroupingYear=0: expand by month+year (one row per calendar month).
+  // GroupingSalesLedgerId=1: aggregate all customers into each month's total.
+  // Month and Year fields populated; RoundedDate is 1st of each month.
+  const applyVal = `filter(GroupingMonth eq 0 and GroupingOperatingCompanyCode eq 0 and GroupingProductItemId eq 0 and GroupingSalesLedgerId eq 1 and GroupingYear eq 0 and OperatingCompanyCode eq 'A' and ProductItemId eq '${sku}')`;
   let url = `${base}/SalesTransactionsProductCube?%24apply=${encodeURIComponent(applyVal)}`;
   const allRows = [];
   try {
@@ -8235,14 +8237,17 @@ async function saaFetchMonthlyData(sku) {
     }
     if (!allRows.length) { console.warn('[SAA] CRM returned empty value array for', sku); return []; }
 
-    // GroupingSalesLedgerId=1: server aggregates all customers into one row per month.
-    // SalesLedgerId is null (aggregated); RoundedDate holds the month date; Month/Year fields stay null.
+    // GroupingMonth=0 + GroupingYear=0: Month and Year fields populated, one row per calendar month.
+    // GroupingSalesLedgerId=1: all customers aggregated. Fallback to RoundedDate if Month/Year absent.
     const monthMap = {};
     for (const r of allRows) {
-      if (!r.RoundedDate) continue;
-      const d     = new Date(r.RoundedDate);
-      const year  = d.getUTCFullYear();
-      const month = d.getUTCMonth() + 1;   // 1-based
+      let year, month;
+      if (r.Month && r.Year) {
+        year = r.Year; month = r.Month;
+      } else if (r.RoundedDate) {
+        const d = new Date(r.RoundedDate);
+        year = d.getUTCFullYear(); month = d.getUTCMonth() + 1;
+      } else { continue; }
       const key   = year * 100 + month;
       if (!monthMap[key]) monthMap[key] = { year, month, qty: 0, value: 0 };
       monthMap[key].qty   += +(r.QuantityOrdered || 0);
@@ -8258,7 +8263,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 136; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 137; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -20291,7 +20296,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v136 · 18 Sep 2026 · CRM GroupingSalesLedgerId=1 + RoundedDate parsing — correct monthly totals';
+const TOOL_BUILD = 'v137 · 18 Sep 2026 · CRM GroupingMonth=0+Year=0+LedgerId=1 — one row per month, all customers summed';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
