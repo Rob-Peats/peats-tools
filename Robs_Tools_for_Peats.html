@@ -8286,7 +8286,7 @@ async function saaFetchMonthlyData(sku) {
 // ── CRM monthly-data localStorage cache (TTL: 24 h) ─────────────────────────
 const SAA_CACHE_KEY = 'peats_saa_crm_cache';
 const SAA_CACHE_TTL = 24 * 60 * 60 * 1000;
-const SAA_CACHE_VERSION = 153; // bump when query changes to bust stale cache // 24 hours in ms
+const SAA_CACHE_VERSION = 154; // bump when query changes to bust stale cache // 24 hours in ms
 
 function saaSaveCache() {
   try {
@@ -8823,64 +8823,76 @@ async function saaSaveReplacementsToCatalog() {
   if (!state.catalogRawBuf) { showToast('⚠ Re-upload the catalog first, then try again.'); return; }
 
   try {
-    const zip     = await JSZip.loadAsync(state.catalogRawBuf);
-    const esc     = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/[ --]/g,'');
-    const colL    = i => { let s2='',x=i+1; while(x){const r=(x-1)%26;s2=String.fromCharCode(65+r)+s2;x=Math.floor((x-1)/26);} return s2; };
-    const rxEsc   = t => t.replace(/[.*+?^${}()|[\]\]/g,'\$&');
+    const zip   = await JSZip.loadAsync(state.catalogRawBuf);
+    // Safe XML escaper — no control chars in SKU codes so just cover the XML specials
+    const esc   = v => String(v == null ? '' : v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // Regex-special escaper — uses array reduce to avoid Python/JS backslash confusion
+    const rxEsc = t => ['\\','.','+','*','?','[',']','{','}','(',')','|','^','$']
+      .reduce(function(s,c){ return s.split(c).join('\\'+c); }, t);
+    const colL  = function(i){ var s='',x=i+1; while(x){var r=(x-1)%26;s=String.fromCharCode(65+r)+s;x=Math.floor((x-1)/26);} return s; };
 
-    let wbXml   = await zip.file('xl/workbook.xml').async('string');
-    let relsXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
-    let ctXml   = await zip.file('[Content_Types].xml').async('string');
+    var wbXml   = await zip.file('xl/workbook.xml').async('string');
+    var relsXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+    var ctXml   = await zip.file('[Content_Types].xml').async('string');
 
     // Remove existing Replacements sheet if present
-    const existing = wbXml.match(new RegExp('<sheet[^>]*name="' + rxEsc(REPLACEMENTS_SHEET_NAME) + '"[^>]*/>'));
+    var existing = wbXml.match(new RegExp('<sheet[^>]*name="' + rxEsc(REPLACEMENTS_SHEET_NAME) + '"[^>]*/>'));
     if (existing) {
-      const eRid = (existing[0].match(/r:id="([^"]+)"/) || [])[1];
-      const eTgt = eRid ? (relsXml.match(new RegExp('<Relationship[^>]*Id="' + rxEsc(eRid) + '"[^>]*Target="([^"]+)"')) || [])[1] : null;
+      var eRid = (existing[0].match(/r:id="([^"]+)"/) || [])[1];
+      var eTgt = eRid ? (relsXml.match(new RegExp('<Relationship[^>]*Id="' + rxEsc(eRid) + '"[^>]*Target="([^"]+)"')) || [])[1] : null;
       wbXml = wbXml.replace(existing[0], '');
       if (eRid)  relsXml = relsXml.replace(new RegExp('<Relationship[^>]*Id="' + rxEsc(eRid) + '"[^>]*/>'), '');
-      if (eTgt) { const part = 'xl/' + eTgt.replace(/^\.\//, ''); zip.remove(part); ctXml = ctXml.replace(new RegExp('<Override[^>]*PartName="/' + rxEsc(part) + '"[^>]*/>'), ''); }
+      if (eTgt) { var part = 'xl/' + eTgt.replace(/^\.\//, ''); zip.remove(part); ctXml = ctXml.replace(new RegExp('<Override[^>]*PartName="/' + rxEsc(part) + '"[^>]*/>'), ''); }
     }
 
     // Build rows: OldSKU | NewSKU | Notes
-    const today    = new Date().toISOString().slice(0,10);
-    const dataRows = [['OldSKU','NewSKU','Notes']].concat(
-      Object.entries(allRepls).sort().map(([normNew, rawOld]) => {
-        const rawNew  = (state.catalogNorm && state.catalogNorm[normNew]) || normNew;
-        const fromUser = !!saaAltSkuOverrides[normNew];
-        const note    = fromUser ? `Added via forecast tool ${today}` : 'From catalog';
+    var today    = new Date().toISOString().slice(0,10);
+    var dataRows = [['OldSKU','NewSKU','Notes']].concat(
+      Object.entries(allRepls).sort().map(function(e){
+        var normNew  = e[0], rawOld = e[1];
+        var rawNew   = (state.catalogNorm && state.catalogNorm[normNew]) || normNew;
+        var fromUser = !!saaAltSkuOverrides[normNew];
+        var note     = fromUser ? 'Added via forecast tool ' + today : 'From catalog';
         return [rawOld, rawNew, note];
       })
     );
 
-    let n = 1; while (zip.file('xl/worksheets/sheet' + n + '.xml')) n++;
-    const partPath = 'xl/worksheets/sheet' + n + '.xml';
-    let maxRid2 = 0; (relsXml.match(/Id="rId(\d+)"/g)||[]).forEach(m=>maxRid2=Math.max(maxRid2,parseInt(m.match(/\d+/)[0],10)));
-    const newRid = 'rId' + (maxRid2 + 1);
-    let maxSid = 0; (wbXml.match(/sheetId="(\d+)"/g)||[]).forEach(m=>maxSid=Math.max(maxSid,parseInt(m.match(/\d+/)[0],10)));
+    var n = 1; while (zip.file('xl/worksheets/sheet' + n + '.xml')) n++;
+    var partPath = 'xl/worksheets/sheet' + n + '.xml';
+    var maxRid2 = 0; (relsXml.match(/Id="rId(\d+)"/g)||[]).forEach(function(m){maxRid2=Math.max(maxRid2,parseInt(m.match(/\d+/)[0],10));});
+    var newRid = 'rId' + (maxRid2 + 1);
+    var maxSid = 0; (wbXml.match(/sheetId="(\d+)"/g)||[]).forEach(function(m){maxSid=Math.max(maxSid,parseInt(m.match(/\d+/)[0],10));});
 
-    const cells = dataRows.map((row, ri) =>
-      '<row r="' + (ri+1) + '">' +
-      row.map((v, ci) => `<c r="${colL(ci)}${ri+1}" t="inlineStr"><is><t>${esc(v)}</t></is></c>`).join('') +
-      '</row>'
-    ).join('');
+    var cells = dataRows.map(function(row, ri){
+      return '<row r="' + (ri+1) + '">' +
+        row.map(function(v, ci){
+          return '<c r="' + colL(ci) + (ri+1) + '" t="inlineStr"><is><t>' + esc(v) + '</t></is></c>';
+        }).join('') +
+        '</row>';
+    }).join('');
 
-    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${cells}</sheetData></worksheet>`;
+    var sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<sheetData>' + cells + '</sheetData></worksheet>';
     zip.file(partPath, sheetXml);
-    relsXml = relsXml.replace('</Relationships>', `<Relationship Id="${newRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="./${partPath.replace('xl/','')}"/></Relationships>`);
-    wbXml   = wbXml.replace('</sheets>', `<sheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="${esc(REPLACEMENTS_SHEET_NAME)}" sheetId="${maxSid+1}" r:id="${newRid}"/></sheets>`);
-    ctXml   = ctXml.replace('</Types>', `<Override PartName="/${partPath}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`);
+    relsXml = relsXml.replace('</Relationships>',
+      '<Relationship Id="' + newRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="./' + partPath.replace('xl/','') + '"/></Relationships>');
+    wbXml = wbXml.replace('</sheets>',
+      '<sheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="' + esc(REPLACEMENTS_SHEET_NAME) + '" sheetId="' + (maxSid+1) + '" r:id="' + newRid + '"/></sheets>');
+    ctXml = ctXml.replace('</Types>',
+      '<Override PartName="/' + partPath + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
 
     zip.file('xl/workbook.xml', wbXml);
     zip.file('xl/_rels/workbook.xml.rels', relsXml);
     zip.file('[Content_Types].xml', ctXml);
 
-    const blob = new Blob([await zip.generateAsync({ type:'arraybuffer', compression:'DEFLATE', compressionOptions:{ level:6 } })],
+    var blob = new Blob([await zip.generateAsync({ type:'arraybuffer', compression:'DEFLATE', compressionOptions:{ level:6 } })],
       { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     state.catalogRawBuf = await blob.arrayBuffer();
 
-    const nPairs = dataRows.length - 1;
-    let pushOk = false;
+    var nPairs = dataRows.length - 1;
+    var pushOk = false;
     if (GH_READY) {
       showToast('⏳ Pushing replacements to GitHub…');
       try {
@@ -8888,43 +8900,43 @@ async function saaSaveReplacementsToCatalog() {
         pushOk = true;
       } catch(ghErr) {
         console.error('[GitHub] Replacements push failed:', ghErr);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href=url; a.download=state.catalogName; a.click(); URL.revokeObjectURL(url);
+        var u1 = URL.createObjectURL(blob);
+        var a1 = document.createElement('a'); a1.href=u1; a1.download=state.catalogName; a1.click(); URL.revokeObjectURL(u1);
         showToast('⚠ GitHub push failed — catalog downloaded locally. (' + ghErr.message + ')');
       }
     } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download=state.catalogName; a.click(); URL.revokeObjectURL(url);
+      var u2 = URL.createObjectURL(blob);
+      var a2 = document.createElement('a'); a2.href=u2; a2.download=state.catalogName; a2.click(); URL.revokeObjectURL(u2);
     }
 
     // Update in-memory state so this session reflects the committed pairs
     state.replacementsNewToOld = {};
     state.replacementsOldToNew = {};
-    Object.entries(allRepls).forEach(([normNew, rawOld]) => {
-      const rawNew = (state.catalogNorm && state.catalogNorm[normNew]) || normNew;
+    Object.entries(allRepls).forEach(function(e){
+      var normNew = e[0], rawOld = e[1];
+      var rawNew = (state.catalogNorm && state.catalogNorm[normNew]) || normNew;
       state.replacementsNewToOld[normNew] = rawOld;
       state.replacementsOldToNew[normFn(rawOld)] = rawNew;
     });
     saaLoadReplacements(); // sync saaReplacements from updated state
 
     // Clear manual overrides that are now baked into the catalog
-    const covered = Object.keys(saaAltSkuOverrides).filter(k => allRepls[k]);
-    covered.forEach(k => delete saaAltSkuOverrides[k]);
+    Object.keys(saaAltSkuOverrides).filter(function(k){ return allRepls[k]; })
+      .forEach(function(k){ delete saaAltSkuOverrides[k]; });
     try { localStorage.setItem('peats_saa_alt_skus', JSON.stringify(saaAltSkuOverrides)); } catch(e) {}
 
-    document.getElementById('saaPredModal')?.remove();
+    document.getElementById('saaPredModal') && document.getElementById('saaPredModal').remove();
 
     if (pushOk) {
-      showToast(`✔ ${nPairs} replacement${nPairs===1?'':'s'} pushed to catalog on GitHub — colleagues get them on next load.`);
+      showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' pushed to catalog on GitHub — colleagues get them on next load.');
     } else if (!GH_READY) {
-      showToast(`✔ ${nPairs} replacement${nPairs===1?'':'s'} saved — re-upload this catalog to share with others.`);
+      showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' saved — re-upload this catalog to share with others.');
     }
   } catch(err) {
     showToast('✗ Could not save replacements: ' + err.message);
     console.error('[saaSaveReplacementsToCatalog]', err);
   }
 }
-
 function saaUpdateSalesPeriod() {
   const inp = document.getElementById('saaSalesPeriodInput');
   const v = parseInt(inp ? inp.value : '3');
@@ -20547,7 +20559,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v153 · 18 Sep 2026 · Push replacement links to catalog GitHub tab';
+const TOOL_BUILD = 'v154 · 18 Sep 2026 · Fix SyntaxError in saaSaveReplacementsToCatalog';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
