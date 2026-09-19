@@ -20867,7 +20867,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v195 · 19 Sep 2026 · Customer special prices probe added (Exchequer Discounts tab entity discovery)';
+const TOOL_BUILD = 'v196 · 19 Sep 2026 · Smart 3-stage customer special prices probe (service root scan + SalesLedger nav)';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -26777,9 +26777,13 @@ async function crmProbePriceBandsForSku() {
 }
 
 // ── Customer Special Prices Probe ─────────────────────────────────────────────
-// Exchequer "Discounts" tab per customer has rows with:
-//   Stock Code (SKU), Type (P=unit price, B=band), U/Price, Band, Disc%, etc.
-// We need to find the OData entity that exposes this, keyed by customer account ref.
+// Exchequer "Discounts" tab per customer: Stock Code, Type (P=price/B=band),
+// U/Price, Band, Disc%. Customer keyed by account code e.g. MBR02H.
+// Strategy:
+//   Stage 1 — fetch service root to enumerate ALL entity sets, then scan every
+//              entity whose name contains discount/price/special/ledger/exchequer.
+//   Stage 2 — check ExchequerSpecialPricebands for a hidden account ref field.
+//   Stage 3 — check SalesLedgers navigation properties / $expand possibilities.
 async function crmProbeCustomerPrices() {
   const btn = document.getElementById('crmCustomerPricesProbeBtn');
   btn.disabled = true; btn.textContent = '⏳ Probing…';
@@ -26791,166 +26795,266 @@ async function crmProbeCustomerPrices() {
   }
 
   const CRM = CRM_ODATA_BASE;
-
-  // What the Exchequer "Discounts" tab shows (per screenshot):
-  //   Stock Code (the SKU), Type (P = unit price override, B = band assignment),
-  //   U/Price (the special unit price), Band (band code if Type=B),
-  //   Disc%, Disc(val), MU/Mg%, Effective
-  // Customer identified by account code in the title bar (e.g. MBR02H)
-
-  // Candidate entity names most likely to hold customer-specific discount lines
-  const candidates = [
-    'ExchequerDiscountLines',
-    'ExchequerCustomerDiscounts',
-    'ExchequerCustomerPrices',
-    'ExchequerSpecialPrices',         // (ExchequerSpecialPricebands is the per-band table — different)
-    'CustomerDiscountLines',
-    'CustomerSpecialPrices',
-    'CustomerPrices',
-    'DiscountLines',
-    'SpecialPriceLines',
-    'CustomerPriceOverrides',
-    'PriceOverrides',
-    'CustomerDiscounts',
-    'SalesLedgerDiscounts',
-    'ExchequerSalesLedgerDiscounts',
-    'ExchequerPriceOverrides',
-  ];
-
-  // Known test account code from the screenshot (Expert Briscoe Drogheda)
-  const testAccRef = 'MBR02H';
-
-  // FK field names we expect to find for the customer account reference
+  const testAccRef = 'MBR02H'; // Expert Briscoe Drogheda — known customer with special prices
   const acctFkCandidates = [
-    'AccountRef', 'AccountCode', 'AccountId', 'DivisionId', 'SalesLedgerId',
-    'CustomerRef', 'CustomerCode', 'CustomerId', 'SalesAccountRef', 'CustRef',
-    'CompanyRef', 'ExchequerRef', 'DivisionRef'
+    'AccountRef','AccountCode','AccountId','DivisionId','SalesLedgerId',
+    'CustomerRef','CustomerCode','CustomerId','SalesAccountRef','CustRef',
+    'CompanyRef','ExchequerRef','DivisionRef','DivisionCode','ParentId'
   ];
 
-  let out = '🎯 Customer Special Prices — Entity Discovery\n' + '═'.repeat(54) + '\n\n';
-  out += 'Based on Exchequer "Discounts" tab: looking for entity with\n';
-  out += '  • Customer account field (e.g. AccountRef = "MBR02H")\n';
-  out += '  • Stock code / SKU field\n';
-  out += '  • Type field (P = unit price, B = band)\n';
-  out += '  • Unit price field\n\n';
-  out += 'Sweeping ' + candidates.length + ' candidate entity names…\n\n';
+  let out = '🎯 Customer Special Prices — Smart Entity Discovery\n' + '═'.repeat(56) + '\n\n';
   crmApiLog(out);
 
-  let found = [];
+  // ── Stage 1: enumerate all entity sets from service root ──────────────────
+  out += '── Stage 1: Fetching full entity list from service root ──\n';
+  crmApiLog(out);
 
-  for (const entity of candidates) {
+  let allEntities = [];
+  try {
+    const sr = await fetch(CRM + '/', {
+      headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+    });
+    if (sr.ok) {
+      const sd = await sr.json();
+      allEntities = (sd.value || []).map(e => e.name || e.Name).filter(Boolean);
+      out += '✓ Service root returned ' + allEntities.length + ' entity sets.\n\n';
+      out += 'ALL ENTITIES:\n';
+      allEntities.forEach(e => { out += '  • ' + e + '\n'; });
+      out += '\n';
+    } else {
+      out += '⚠ Service root returned HTTP ' + sr.status + '. Falling back to targeted probe.\n\n';
+    }
+  } catch(e) {
+    out += '⚠ Service root error: ' + e.message + '\n\n';
+  }
+  crmApiLog(out);
+
+  // Filter entity names that might relate to discounts / prices / customer pricing
+  const discountRx = /discount|special.?price|price.?override|cust.?price|price.?band|ledger.?price|exchequer.*price|exchequer.*disc|markup|margin.?price/i;
+  const scanList = allEntities.length > 0
+    ? allEntities.filter(n => discountRx.test(n))
+    : []; // no fallback needed — we saw all 404s already
+
+  out += '── Stage 1b: Entities matching price/discount keywords ──\n';
+  if (scanList.length === 0 && allEntities.length > 0) {
+    out += '⚠ No entity names matched the price/discount pattern.\n';
+    out += 'Showing ALL Exchequer* entities for manual inspection:\n';
+    allEntities.filter(n => /exchequer/i.test(n)).forEach(e => { out += '  • ' + e + '\n'; });
+    out += '\nAlso showing everything with "price", "disc", "band", "ledger" in the name:\n';
+    allEntities.filter(n => /price|disc|band|ledger|special|override/i.test(n)).forEach(e => { out += '  • ' + e + '\n'; });
+  } else if (scanList.length > 0) {
+    out += 'Found ' + scanList.length + ' candidate(s): ' + scanList.join(', ') + '\n';
+  }
+  out += '\n';
+  crmApiLog(out);
+
+  // Probe each candidate
+  let found = [];
+  const toProbe = scanList.length > 0 ? scanList : [];
+
+  for (const entity of toProbe) {
+    await new Promise(r => setTimeout(r, 80));
     try {
       const r = await fetch(CRM + '/' + entity + '?$top=5', {
         headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
       });
       if (r.ok) {
-        const d    = await r.json();
+        const d = await r.json();
         const recs = d.value || [];
-        const rec  = recs[0];
-        out += '✅ ' + entity + ' — EXISTS';
+        const rec = recs[0];
+        out += '✅ ' + entity;
         if (rec) {
           const keys = Object.keys(rec);
-          out += ' (' + keys.length + ' fields)\n';
-          out += '   Fields: ' + keys.join(', ') + '\n';
-
-          // Classify fields
-          const hasAcct  = keys.some(k => /account|customer|division|sales.?ledger|cust|debtor/i.test(k));
+          const hasAcct  = keys.some(k => /account|customer|division|ledger|cust|debtor/i.test(k));
           const hasSku   = keys.some(k => /stock|product|sku|item|code|referece|reference/i.test(k));
           const hasPrice = keys.some(k => /price|cost|amount|value|discount|disc/i.test(k));
           const hasType  = keys.some(k => /^type$/i.test(k));
-
-          let score = 0;
-          if (hasAcct)  score++;
-          if (hasSku)   score++;
-          if (hasPrice) score++;
-          if (hasType)  score++;
-
-          out += '   Match score: ' + score + '/4';
-          if (hasAcct)  out += ' ✓ acct';
-          if (hasSku)   out += ' ✓ sku';
-          if (hasPrice) out += ' ✓ price';
-          if (hasType)  out += ' ✓ type';
-          out += '\n';
-
-          // Show sample rows
-          out += '\n   Sample rows (up to 5):\n';
-          recs.slice(0, 5).forEach(row => {
-            out += '      ';
-            Object.entries(row).forEach(([k, v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+          out += ' (' + keys.length + ' fields, score:' + ([hasAcct,hasSku,hasPrice,hasType].filter(Boolean).length) + '/4)\n';
+          out += '   Fields: ' + keys.join(', ') + '\n';
+          recs.slice(0,5).forEach(row => {
+            out += '   ';
+            Object.entries(row).forEach(([k,v]) => { if (v!=null&&v!=='') out += k+'='+v+'  '; });
             out += '\n';
           });
-
-          // If it has an account field, try filtering by the test account code
           if (hasAcct) {
-            out += '\n   🔍 Filtering by account ref "' + testAccRef + '"…\n';
             for (const fk of acctFkCandidates) {
               const actualKey = keys.find(k => k.toLowerCase() === fk.toLowerCase());
               if (!actualKey) continue;
-              try {
-                const fr = await fetch(
-                  CRM + '/' + entity + '?$filter=' + encodeURIComponent(`${actualKey} eq '${testAccRef}'`) + '&$top=8',
-                  { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
-                );
-                if (fr.ok) {
-                  const fd = await fr.json();
-                  const rows = fd.value || [];
-                  if (rows.length) {
-                    out += '   🎯 Filter ' + actualKey + ' eq "' + testAccRef + '" → ' + rows.length + ' row(s):\n';
-                    rows.slice(0, 8).forEach(row => {
-                      out += '      ';
-                      Object.entries(row).forEach(([k, v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
-                      out += '\n';
-                    });
-                    found.push({ entity, fk: actualKey, rows });
-                  } else {
-                    out += '   Filter ' + actualKey + ' eq "' + testAccRef + '" → 0 rows\n';
-                  }
+              const fr = await fetch(
+                CRM + '/' + entity + '?$filter=' + encodeURIComponent(`${actualKey} eq '${testAccRef}'`) + '&$top=8',
+                { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+              ).catch(() => null);
+              if (fr && fr.ok) {
+                const fd = await fr.json();
+                const rows = fd.value || [];
+                if (rows.length) {
+                  out += '   🎯 ' + actualKey + ' eq "' + testAccRef + '" → ' + rows.length + ' row(s):\n';
+                  rows.slice(0,8).forEach(row => {
+                    out += '      ';
+                    Object.entries(row).forEach(([k,v]) => { if (v!=null&&v!=='') out += k+'='+v+'  '; });
+                    out += '\n';
+                  });
+                  found.push({ entity, fk: actualKey, rows });
                 }
-              } catch(ef) { /* skip */ }
-              crmApiLog(out);
+              }
             }
           }
         } else {
-          out += ' (empty table)\n';
+          out += ' (empty)\n';
         }
-        out += '\n';
-      } else if (r.status === 404 || r.status === 400) {
-        out += '  ' + entity + ' — not found (' + r.status + ')\n';
       } else {
         out += '  ' + entity + ' — HTTP ' + r.status + '\n';
       }
-    } catch(e) {
-      out += '  ' + entity + ' — error: ' + e.message + '\n';
-    }
+    } catch(e2) { out += '  ' + entity + ' — ' + e2.message + '\n'; }
     crmApiLog(out);
-    await new Promise(r => setTimeout(r, 100));
   }
 
-  out += '\n' + '═'.repeat(54) + '\n';
+  // ── Stage 2: check ExchequerSpecialPricebands for account ref field ────────
+  out += '\n── Stage 2: ExchequerSpecialPricebands — full field dump ──\n';
+  crmApiLog(out);
+  try {
+    const r2 = await fetch(CRM + '/ExchequerSpecialPricebands?$top=3', {
+      headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+    });
+    if (r2.ok) {
+      const d2 = await r2.json();
+      const recs2 = d2.value || [];
+      if (recs2.length) {
+        const keys2 = Object.keys(recs2[0]);
+        out += 'Fields (' + keys2.length + '): ' + keys2.join(', ') + '\n\n';
+        out += 'Sample rows:\n';
+        recs2.slice(0,3).forEach(row => {
+          out += '  ';
+          Object.entries(row).forEach(([k,v]) => { if (v!=null&&v!=='') out += k+'='+v+'  '; });
+          out += '\n';
+        });
+        // Check if there's an account-like field we haven't used
+        const acctField = keys2.find(k => /account|customer|division|ledger|cust|debtor/i.test(k));
+        if (acctField) {
+          out += '\n⚠ ExchequerSpecialPricebands HAS an account-like field: ' + acctField + '\n';
+          out += 'Trying filter by ' + acctField + ' eq "' + testAccRef + '"…\n';
+          const fr2 = await fetch(
+            CRM + '/ExchequerSpecialPricebands?$filter=' + encodeURIComponent(`${acctField} eq '${testAccRef}'`) + '&$top=8',
+            { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } }
+          ).catch(() => null);
+          if (fr2 && fr2.ok) {
+            const fd2 = await fr2.json();
+            const rows2 = fd2.value || [];
+            if (rows2.length) {
+              out += '🎉 FOUND! ExchequerSpecialPricebands filtered by ' + acctField + ' → ' + rows2.length + ' row(s):\n';
+              rows2.slice(0,8).forEach(row => {
+                out += '  ';
+                Object.entries(row).forEach(([k,v]) => { if (v!=null&&v!=='') out += k+'='+v+'  '; });
+                out += '\n';
+              });
+              found.push({ entity: 'ExchequerSpecialPricebands', fk: acctField, rows: rows2 });
+            } else {
+              out += '0 rows for that account ref.\n';
+            }
+          }
+        } else {
+          out += '→ No account/customer field found — this entity is SKU-only (no customer key).\n';
+        }
+      } else {
+        out += '(empty)\n';
+      }
+    } else {
+      out += 'HTTP ' + r2.status + '\n';
+    }
+  } catch(e3) { out += 'Error: ' + e3.message + '\n'; }
+  crmApiLog(out);
+
+  // ── Stage 3: probe SalesLedgers for navigation hints ──────────────────────
+  out += '\n── Stage 3: SalesLedgers — look for discount navigation ──\n';
+  crmApiLog(out);
+  try {
+    const r3 = await fetch(CRM + '/SalesLedgers?$filter=' + encodeURIComponent(`ExternalRef eq '${testAccRef}'`) + '&$top=1', {
+      headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+    });
+    if (r3.ok) {
+      const d3 = await r3.json();
+      const recs3 = d3.value || [];
+      if (recs3.length) {
+        const rec3 = recs3[0];
+        out += '✓ Found SalesLedger for ' + testAccRef + ': Id=' + (rec3.Id||rec3.id||'?') + '\n';
+        out += 'All fields: ' + Object.keys(rec3).join(', ') + '\n\n';
+        // Try fetching discounts via Id
+        const slId = rec3.Id || rec3.id;
+        if (slId) {
+          // Try common expand/navigation patterns
+          const navTests = [
+            '/SalesLedgers(' + slId + ')/Discounts',
+            '/SalesLedgers(' + slId + ')/DiscountLines',
+            '/SalesLedgers(' + slId + ')/SpecialPrices',
+            '/SalesLedgers(' + slId + ')/CustomerDiscounts',
+            '/SalesLedgers(' + slId + ')/PriceOverrides',
+          ];
+          for (const nav of navTests) {
+            const rn = await fetch(CRM + nav + '?$top=3', {
+              headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+            }).catch(() => null);
+            if (rn && rn.ok) {
+              const dn = await rn.json();
+              const rows = dn.value || [];
+              out += '  ✅ Navigation: ' + nav + ' → ' + rows.length + ' row(s)\n';
+              if (rows.length) {
+                out += '     Fields: ' + Object.keys(rows[0]).join(', ') + '\n';
+                rows.forEach(row => {
+                  out += '     ';
+                  Object.entries(row).forEach(([k,v]) => { if (v!=null&&v!=='') out += k+'='+v+'  '; });
+                  out += '\n';
+                });
+                found.push({ entity: nav, fk: 'SalesLedgerId=' + slId, rows });
+              }
+            } else {
+              const status = rn ? rn.status : 'net err';
+              out += '  ✗ ' + nav.split('/').pop() + ' — ' + status + '\n';
+            }
+            crmApiLog(out);
+            await new Promise(r => setTimeout(r, 80));
+          }
+        }
+      } else {
+        out += 'SalesLedger with ExternalRef "' + testAccRef + '" not found — trying AccountRef…\n';
+        const r3b = await fetch(CRM + '/SalesLedgers?$filter=' + encodeURIComponent(`AccountRef eq '${testAccRef}'`) + '&$top=1', {
+          headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+        }).catch(() => null);
+        if (r3b && r3b.ok) {
+          const d3b = await r3b.json();
+          if (d3b.value && d3b.value.length) {
+            out += '✓ Found via AccountRef. Id=' + (d3b.value[0].Id||'?') + '\n';
+          } else {
+            out += '0 results. The account code format may differ in SalesLedgers.\n';
+          }
+        }
+      }
+    } else {
+      out += 'SalesLedgers probe returned HTTP ' + r3.status + '\n';
+    }
+  } catch(e4) { out += 'SalesLedgers error: ' + e4.message + '\n'; }
+  crmApiLog(out);
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  out += '\n' + '═'.repeat(56) + '\n';
   if (found.length > 0) {
-    out += '🎉 ENTITIES WITH DATA FOR ACCOUNT ' + testAccRef + ':\n\n';
+    out += '🎉 DATA FOUND for account ' + testAccRef + ':\n\n';
     found.forEach(f => {
-      out += '  ★ Entity: ' + f.entity + '\n';
-      out += '    Account FK: ' + f.fk + '\n';
-      out += '    Sample rows (' + f.rows.length + '):\n';
-      f.rows.slice(0, 5).forEach(row => {
-        // Highlight likely key fields
-        const stockField = Object.keys(row).find(k => /stock|product|sku|item|referece|reference|code/i.test(k));
-        const priceField = Object.keys(row).find(k => /price|amount|value/i.test(k));
-        const typeField  = Object.keys(row).find(k => /^type$/i.test(k));
-        const stock = stockField ? row[stockField] : '?';
-        const price = priceField ? row[priceField] : '?';
-        const type  = typeField  ? row[typeField]  : '?';
-        out += '      SKU=' + stock + '  Type=' + type + '  Price=' + price + '\n';
+      out += '  ★ ' + f.entity + '  (key: ' + f.fk + ')\n';
+      f.rows.slice(0,3).forEach(row => {
+        const sk = Object.keys(row).find(k => /stock|product|sku|item|referece|reference|code/i.test(k));
+        const pr = Object.keys(row).find(k => /price|amount|value/i.test(k));
+        const ty = Object.keys(row).find(k => /^type$/i.test(k));
+        out += '    SKU=' + (sk?row[sk]:'?') + '  Type=' + (ty?row[ty]:'?') + '  Price=' + (pr?row[pr]:'?') + '\n';
       });
       out += '\n';
     });
-    out += 'Share this output to wire customer special prices into the SOA tool.\n';
   } else {
-    out += '⚠ No entity found with data matching account "' + testAccRef + '".\n';
-    out += 'The entity may exist but use a different key format — share the full output above.\n';
-    out += '\nTIP: Also try the "🔍 Discover Entity Sets" button and look for any entry\n';
-    out += 'containing "discount", "price", "customer" or "ledger" in the name.\n';
+    out += '⚠ No customer-specific price data found.\n\n';
+    out += 'NEXT STEPS — paste this full output into chat.\n';
+    out += 'Key info needed from above:\n';
+    out += '  1. The full ALL ENTITIES list (Stage 1)\n';
+    out += '  2. Any Exchequer* entity names not yet tried\n';
+    out += '  3. The ExchequerSpecialPricebands field list\n';
   }
 
   crmApiLog(out);
