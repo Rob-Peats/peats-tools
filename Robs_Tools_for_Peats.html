@@ -7412,8 +7412,10 @@ window.addEventListener('message', function(e) {
       const codeEans   = e.data.codeEans  || {};   // normCode → EAN for more precise search
       const codeDescs  = e.data.codeDescs || {};   // normCode → first 3 desc words
       const brandName  = (e.data.brandName || '').trim();
-      const topMap     = {};   // nc → [{price, source}, ...] sorted cheapest first, max 4
-      const TOP_N      = 4;   // keep top N cheapest results per model
+      const topMap     = {};   // nc → [{price, source}, ...] priority retailers first, max 5
+      const TOP_N      = 5;   // show up to 5 results; priority retailers always surface first
+      // Priority retailers — always shown first if they have a price for the product
+      const PRIORITY_SOURCES = ['currys', 'harvey norman', 'did', 'euronics', 'amazon'];
       let done         = 0;
       let firstSources = [];
       let firstErrMsg  = null;
@@ -7441,33 +7443,39 @@ window.addEventListener('message', function(e) {
         const data = await resp.json();
         return (data.shopping_results || []).concat(data.inline_shopping_results || []);
       };
-      // Fold a results array into topMap for a given nc
+      // Fold a results array into topMap for a given nc.
+      // Collects cheapest price per source, then sorts: priority retailers first, then by price.
       const processResults = function(nc, results) {
         var srcList = [];
+        var bySource = {};   // sourceName → cheapest price seen
         results.forEach(function(row) {
           const src    = (row.source || '').toLowerCase();
           const rawExt = row.extracted_price;
           const price  = (rawExt != null && rawExt !== '')
             ? parseFloat(rawExt)
             : parseFloat(String(row.price || '').replace(/[^0-9.]/g, ''));
-          console.log('[SerpAPI row] ' + nc + ': src="' + (row.source||'') + '" extracted=' + rawExt + ' price="' + row.price + '" parsed=' + price);
-          if (src && firstSources.indexOf(row.source || src) < 0 && firstSources.length < 20)
-            firstSources.push(row.source || src);
-          if (src) srcList.push(row.source || src);
+          const sourceName = row.source || src;
+          console.log('[SerpAPI row] ' + nc + ': src="' + sourceName + '" extracted=' + rawExt + ' price="' + row.price + '" parsed=' + price);
+          if (src && firstSources.indexOf(sourceName) < 0 && firstSources.length < 20)
+            firstSources.push(sourceName);
+          if (src) srcList.push(sourceName);
           if (isNaN(price) || price <= 0) return;
-          if (!topMap[nc]) topMap[nc] = [];
-          var existingIdx = -1;
-          for (var j = 0; j < topMap[nc].length; j++) {
-            if (topMap[nc][j].source === (row.source || src)) { existingIdx = j; break; }
-          }
-          if (existingIdx >= 0) {
-            if (price < topMap[nc][existingIdx].price) topMap[nc][existingIdx].price = price;
-          } else {
-            topMap[nc].push({price: price, source: row.source || src});
-          }
-          topMap[nc].sort(function(a, b){ return a.price - b.price; });
-          if (topMap[nc].length > TOP_N) topMap[nc] = topMap[nc].slice(0, TOP_N);
+          // Keep cheapest price seen per source
+          if (bySource[sourceName] == null || price < bySource[sourceName])
+            bySource[sourceName] = price;
         });
+        // Build entries array and sort: priority retailers first (by price within priority),
+        // then remaining IE retailers by price
+        var entries = Object.keys(bySource).map(function(s) { return {source: s, price: bySource[s]}; });
+        entries.sort(function(a, b) {
+          const al = (a.source||'').toLowerCase(), bl = (b.source||'').toLowerCase();
+          const ap = PRIORITY_SOURCES.some(function(p){ return al.includes(p); });
+          const bp = PRIORITY_SOURCES.some(function(p){ return bl.includes(p); });
+          if (ap && !bp) return -1;
+          if (!ap && bp) return  1;
+          return a.price - b.price;
+        });
+        topMap[nc] = entries.slice(0, TOP_N);
         return srcList;
       };
       try {
@@ -20857,7 +20865,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v191 · 19 Sep 2026 · SOA v2: fmpPopup null fix, IE-only market prices, zero-result EAN fallback';
+const TOOL_BUILD = 'v192 · 19 Sep 2026 · SOA v2: priority retailers (Currys/HN/DID/Euronics/Amazon) always surface, TOP_N=5';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
