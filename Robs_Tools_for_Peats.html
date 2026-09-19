@@ -1170,6 +1170,20 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           </div>
           <div id="serpPatStatus" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>
         </div>
+        <div style="background:var(--light);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:4px">🔁 CORS Proxy URL (Cloudflare Worker)</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Paste your Worker URL here. The Worker holds your SerpAPI key as a secret — requests route through it with full CORS support, so market prices work from any browser or location, including local files. If set, this takes priority over the API key above.</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="serpProxyInput" placeholder="https://peats-serp-proxy.your-subdomain.workers.dev"
+              autocomplete="off" data-lpignore="true"
+              style="flex:1;min-width:240px;font-family:monospace;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--white);color:var(--text)" />
+            <button onclick="saveSerpProxy()"
+              style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">💾 Save URL</button>
+            <button onclick="clearSerpProxy()"
+              style="background:transparent;color:var(--red);border:1px solid var(--border);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 Clear</button>
+          </div>
+          <div id="serpProxyStatus" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>
+        </div>
       </div>
     </div>
 
@@ -2632,6 +2646,11 @@ function _ghTokenSaved() {
 const SERP_TOKEN_KEY = 'peats_serp_pat';
 function getSerpToken() {
   try { return localStorage.getItem(SERP_TOKEN_KEY) || ''; } catch(e) { return ''; }
+}
+// SerpAPI CORS proxy (Cloudflare Worker) — stored in localStorage
+const SERP_PROXY_KEY = 'peats_serp_proxy_url';
+function getSerpProxy() {
+  try { return (localStorage.getItem(SERP_PROXY_KEY) || '').trim().replace(/\/+$/, ''); } catch(e) { return ''; }
 }
 
 // ── Auto-load catalog from GitHub on startup ──────────────────────────
@@ -7368,20 +7387,21 @@ window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'peats-serp-request') {
     const soa2F2 = document.getElementById('soa2Frame');
     const serpToken = getSerpToken();
-    if (!serpToken) {
+    const serpProxy = getSerpProxy();
+    if (!serpProxy && !serpToken) {
       if (soa2F2 && soa2F2.contentWindow)
-        soa2F2.contentWindow.postMessage({type:'peats-serp-result', error:'No SerpAPI key configured'}, '*');
+        soa2F2.contentWindow.postMessage({type:'peats-serp-result', error:'No SerpAPI key or proxy URL configured — go to Settings to add one'}, '*');
       return;
     }
     (async function() {
-      // file:// origin cannot make CORS fetch calls to external APIs.
-      // Detect it immediately and return a clear, actionable message.
-      if (location.protocol === 'file:') {
+      // file:// origin cannot make CORS fetch calls to external APIs unless
+      // routing via a CORS proxy (Cloudflare Worker) which adds the right headers.
+      if (location.protocol === 'file:' && !serpProxy) {
         if (soa2F2 && soa2F2.contentWindow)
           soa2F2.contentWindow.postMessage({
             type: 'peats-serp-result',
             topMap: {}, done: 0, total: 0, sampleSources: [],
-            firstErrMsg: 'Opened as a local file — market prices need HTTPS. Either push to GitHub Pages or run: python -m http.server 8080 in this folder and open http://localhost:8080'
+            firstErrMsg: 'Opened as a local file — go to Settings → SerpAPI and add a Cloudflare Worker proxy URL, or push to GitHub Pages'
           }, '*');
         return;
       }
@@ -7406,9 +7426,11 @@ window.addEventListener('message', function(e) {
           if (soa2F2 && soa2F2.contentWindow)
             soa2F2.contentWindow.postMessage({type:'peats-serp-progress', current:i+1, total:codeList.length}, '*');
           try {
-            const url = 'https://serpapi.com/search.json?engine=google_shopping&q=' +
-              encodeURIComponent(searchQuery) + '&gl=ie&hl=en&api_key=' + encodeURIComponent(serpToken);
-            console.log('[SerpAPI proxy] fetch ' + (i+1) + '/' + codeList.length + ': ' + searchQuery);
+            const url = serpProxy
+              ? serpProxy + '?q=' + encodeURIComponent(searchQuery)
+              : 'https://serpapi.com/search.json?engine=google_shopping&q=' +
+                encodeURIComponent(searchQuery) + '&gl=ie&hl=en&api_key=' + encodeURIComponent(serpToken);
+            console.log('[SerpAPI proxy] fetch ' + (i+1) + '/' + codeList.length + ': ' + searchQuery + (serpProxy ? ' [via Worker]' : ''));
             const resp = await fetch(url);
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const data = await resp.json();
@@ -20795,7 +20817,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v186 · 19 Sep 2026 · SOA v2: file:// detected early — clear instructions + clean fetch for HTTPS';
+const TOOL_BUILD = 'v187 · 19 Sep 2026 · SOA v2: Cloudflare Worker CORS proxy — market prices work from anywhere';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -25609,6 +25631,22 @@ function crmSettingsOnOpen() {
   if (ghSt) ghSt.innerHTML = ghSaved
     ? '<span style="color:var(--green)">✔ GitHub token saved in localStorage</span>'
     : '<span style="color:#dc2626;font-weight:700">⚠ No GitHub token saved — catalog push will fail until you paste one here.</span>';
+  // Sync SerpAPI key UI
+  const serpSaved = !!getSerpToken();
+  const serpInp = document.getElementById('serpPatInput');
+  if (serpInp) serpInp.value = serpSaved ? '••••••••••••••••' : '';
+  const serpSt = document.getElementById('serpPatStatus');
+  if (serpSt) serpSt.innerHTML = serpSaved
+    ? '<span style="color:var(--green)">✔ SerpAPI key saved in localStorage</span>'
+    : '<span style="color:var(--muted)">No key saved yet.</span>';
+  // Sync SerpAPI proxy URL UI
+  const proxyVal = getSerpProxy();
+  const proxyInp = document.getElementById('serpProxyInput');
+  if (proxyInp) proxyInp.value = proxyVal || '';
+  const proxySt = document.getElementById('serpProxyStatus');
+  if (proxySt) proxySt.innerHTML = proxyVal
+    ? '<span style="color:var(--green)">✔ Proxy URL saved — market prices route via Worker</span>'
+    : '<span style="color:var(--muted)">No proxy URL saved yet.</span>';
 }
 
 // ── GitHub PAT helpers ────────────────────────────────────────────────────────
@@ -25651,6 +25689,22 @@ function clearSerpPat() {
   document.getElementById('serpPatInput').value = '';
   document.getElementById('serpPatStatus').innerHTML = '<span style="color:var(--muted)">Key cleared.</span>';
   showToast('SerpAPI key cleared.');
+}
+function saveSerpProxy() {
+  const val = (document.getElementById('serpProxyInput').value || '').trim().replace(/\/+$/, '');
+  if (!val) { showToast('⚠ Paste your Worker URL first.'); return; }
+  if (!val.startsWith('https://')) { showToast('⚠ URL must start with https://'); return; }
+  try {
+    localStorage.setItem(SERP_PROXY_KEY, val);
+    document.getElementById('serpProxyStatus').innerHTML = '<span style="color:var(--green)">✔ Proxy URL saved — market prices will route via Worker.</span>';
+    showToast('✔ Proxy URL saved.');
+  } catch(e) { showToast('✗ Could not save: ' + e.message); }
+}
+function clearSerpProxy() {
+  try { localStorage.removeItem(SERP_PROXY_KEY); } catch(e) {}
+  document.getElementById('serpProxyInput').value = '';
+  document.getElementById('serpProxyStatus').innerHTML = '<span style="color:var(--muted)">URL cleared.</span>';
+  showToast('Proxy URL cleared.');
 }
 
 async function testGhPat() {
