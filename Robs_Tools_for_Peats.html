@@ -7379,7 +7379,7 @@ window.addEventListener('message', function(e) {
         if (soa2F2 && soa2F2.contentWindow)
           soa2F2.contentWindow.postMessage({type:'peats-serp-progress', current:i+1, total:codeList.length}, '*');
         try {
-          const url = 'https://serpapi.com/search.json?engine=google_shopping&q=' +
+          const url = 'https://serpapi.com/search.json?engine=google&q=' +
             encodeURIComponent(nc) + '&gl=ie&hl=en&api_key=' + encodeURIComponent(serpToken);
           const resp = await fetch(url);
           if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -20762,7 +20762,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v171 · 19 Sep 2026 · SOA v2: catalog description always wins (col D always used)';
+const TOOL_BUILD = 'v172 · 19 Sep 2026 · SOA v2: market price search uses engine=google (finds inline shopping results)';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
