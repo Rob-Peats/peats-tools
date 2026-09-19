@@ -7380,13 +7380,43 @@ window.addEventListener('message', function(e) {
       const TOP_N      = 4;   // keep top N cheapest results per model
       let done         = 0;
       let firstSources = [];
-      let firstErrMsg  = null;   // first fetch error, relayed to iframe for diagnosis
-      console.log('[SerpAPI proxy] starting: codeList.length=' + codeList.length + ' token=' + (serpToken ? serpToken.slice(0,8) + '…' : 'EMPTY'));
+      let firstErrMsg  = null;
+      console.log('[SerpAPI proxy] starting: codeList.length=' + codeList.length);
       if (!codeList.length) {
         if (soa2F2 && soa2F2.contentWindow)
           soa2F2.contentWindow.postMessage({type:'peats-serp-result', topMap:{}, done:0, total:0, sampleSources:[], firstErrMsg:'No model codes to search'}, '*');
         return;
       }
+
+      // serpApiRequest: tries fetch() first (works from HTTPS origins), falls
+      // back to JSONP script-tag injection if fetch fails with CORS / network
+      // error (e.g. page opened as file:// URL).
+      function serpApiRequest(url) {
+        return fetch(url)
+          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .catch(function(fetchErr) {
+            var msg = String(fetchErr.message || fetchErr);
+            if (msg.indexOf('Failed to fetch') < 0 && msg.indexOf('NetworkError') < 0 &&
+                msg.indexOf('Load failed') < 0) throw fetchErr;   // not CORS — re-throw
+            console.warn('[SerpAPI proxy] fetch CORS/network error, trying JSONP:', msg);
+            return new Promise(function(resolve, reject) {
+              var cb = '__saCb' + (Date.now() % 1000000000).toString(36) +
+                       Math.floor(Math.random() * 99999).toString(36);
+              var timer = setTimeout(function() { cleanup(); reject(new Error('JSONP timeout (90s)')); }, 90000);
+              window[cb] = function(data) { cleanup(); resolve(data); };
+              var script = document.createElement('script');
+              script.onerror = function() { cleanup(); reject(new Error('JSONP load error')); };
+              function cleanup() {
+                clearTimeout(timer);
+                try { delete window[cb]; } catch(ex) {}
+                try { if (script.parentNode) script.parentNode.removeChild(script); } catch(ex) {}
+              }
+              script.src = url + '&callback=' + cb;
+              (document.head || document.body).appendChild(script);
+            });
+          });
+      }
+
       try {
         for (let i = 0; i < codeList.length; i++) {
           const nc = codeList[i];
@@ -7396,12 +7426,10 @@ window.addEventListener('message', function(e) {
           try {
             const url = 'https://serpapi.com/search.json?engine=google_shopping&q=' +
               encodeURIComponent(searchQuery) + '&gl=ie&hl=en&api_key=' + encodeURIComponent(serpToken);
-            console.log('[SerpAPI proxy] fetch ' + (i+1) + '/' + codeList.length + ': ' + searchQuery);
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const data = await resp.json();
+            console.log('[SerpAPI proxy] request ' + (i+1) + '/' + codeList.length + ': ' + searchQuery);
+            const data = await serpApiRequest(url);
             const results = (data.shopping_results || []).concat(data.inline_shopping_results || []);
-            console.log('[SerpAPI proxy] ' + nc + ' (query=' + searchQuery + '): ' + results.length + ' results');
+            console.log('[SerpAPI proxy] ' + nc + ': ' + results.length + ' results');
             var srcList = [];
             results.forEach(function(row) {
               const src    = (row.source || '').toLowerCase();
@@ -7414,9 +7442,7 @@ window.addEventListener('message', function(e) {
                 firstSources.push(row.source || src);
               if (src) srcList.push(row.source || src);
               if (isNaN(price) || price <= 0) return;
-              // Add to topMap for this nc, keeping sorted cheapest-first, max TOP_N entries
               if (!topMap[nc]) topMap[nc] = [];
-              // Avoid duplicate sources — keep cheapest for same source
               var existingIdx = -1;
               for (var j = 0; j < topMap[nc].length; j++) {
                 if (topMap[nc][j].source === (row.source || src)) { existingIdx = j; break; }
@@ -7434,7 +7460,7 @@ window.addEventListener('message', function(e) {
               const cheapest = topMap[nc][0];
               console.log('[SerpAPI proxy] ' + nc + ': best €' + cheapest.price + ' @ ' + cheapest.source + ' | sources: ' + srcList.join(' | '));
             } else {
-              console.log('[SerpAPI proxy] ' + nc + ': ' + results.length + ' results | no prices captured');
+              console.log('[SerpAPI proxy] ' + nc + ': no prices captured');
             }
           } catch(err) {
             console.warn('[SerpAPI proxy] ' + nc + ' error:', err.message);
@@ -20785,7 +20811,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v184 · 19 Sep 2026 · SOA v2: fetch error surfacing — diagnose instant 0/N failure';
+const TOOL_BUILD = 'v185 · 19 Sep 2026 · SOA v2: JSONP fallback — market prices now work from file:// and GitHub Pages';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
