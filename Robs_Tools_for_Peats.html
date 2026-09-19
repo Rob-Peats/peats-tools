@@ -1675,6 +1675,26 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           </div>
         </div>
 
+        <!-- Backorder file drop zone -->
+        <div class="cat-section" id="convBoSection" style="flex:0 1 auto;min-width:0;align-self:stretch;justify-content:center;">
+          <div id="convBoDropZone" class="cat-section"
+            style="border:1.5px dashed #94a3b8;border-radius:7px;padding:6px 10px;cursor:pointer;text-align:center;font-size:11px;color:var(--muted);background:#f8faff;min-width:110px;"
+            title="Drop the Exchequer backorder file here to flag any SKUs already on backorder for this account"
+            onclick="document.getElementById('convBoFileInput').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--brand)'"
+            ondragleave="this.style.borderColor='#94a3b8'"
+            ondrop="event.preventDefault();this.style.borderColor='#94a3b8';convBoHandleDrop(event)">
+            📋 Drop Backorder File
+          </div>
+          <div id="convBoPill" style="display:none;align-items:center;gap:6px;font-size:11px;">
+            <span style="font-size:14px;">📋</span>
+            <span id="convBoFileName" style="font-weight:600;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            <span id="convBoCount" style="color:var(--muted);"></span>
+            <button onclick="convBoReset()" title="Clear backorder file" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;padding:0 2px;">✕</button>
+          </div>
+        </div>
+        <input type="file" id="convBoFileInput" accept=".xlsx,.xls" onchange="convBoHandleFile(event)" style="display:none">
+
         <!-- Export Order pill -->
         <div class="dl-section" style="flex-shrink:0;flex-direction:column;align-items:center;justify-content:center;gap:5px;align-self:stretch">
           <button class="btn btn-blue" id="convExportBtn" disabled onclick="showCrmPushQueue()" style="font-size:12px;padding:5px 14px;white-space:nowrap">📦 Export Order(s)</button>
@@ -5896,6 +5916,120 @@ async function _downloadExcelSections(cfg) {
 //                     I=8 Qty Req  J=9 On Order  K=10 Net Total
 //  We add:            L=11 Status    M=12 Comment
 // ════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════
+// CONV BACKORDER OVERLAY
+// Parse the same Exchequer BO file format as the BO tool.
+// convBoMap: { [accountCode]: { [SKU_UPPER]: qtyRequired } }
+// ════════════════════════════════════════════════════
+let convBoMap = {};   // populated when user drops a BO file
+
+function convBoHandleFile(e) {
+  const f = e.target.files[0];
+  if (f) convBoProcess(f);
+  e.target.value = '';
+}
+function convBoHandleDrop(e) {
+  const f = e.dataTransfer.files[0];
+  if (f) convBoProcess(f);
+}
+
+function convBoProcess(file) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb   = XLSX.read(ev.target.result, { type: 'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Find header row (contains 'stock code' in col 5)
+      const hdrIdx = rows.findIndex(function(r) {
+        return r && String(r[5] || '').toLowerCase().trim() === 'stock code';
+      });
+      if (hdrIdx < 0) { showToast('⚠️ Backorder file: could not find header row (expected "Stock Code" in column F).'); return; }
+
+      const map = {};
+      let curAc = '';
+      for (let i = hdrIdx + 1; i < rows.length; i++) {
+        const r  = rows[i];
+        const ac = String(r[0] || '').trim();
+        if (ac) curAc = ac;
+        const sku = String(r[5] || '').trim().toUpperCase();
+        const qty = parseFloat(r[8]) || 0;
+        if (!sku || !curAc) continue;
+        if (!map[curAc]) map[curAc] = {};
+        map[curAc][sku] = (map[curAc][sku] || 0) + qty;
+      }
+
+      convBoMap = map;
+      const totalSkus = Object.values(map).reduce(function(s, m){ return s + Object.keys(m).length; }, 0);
+      const acCodes   = Object.keys(map);
+
+      document.getElementById('convBoDropZone').style.display = 'none';
+      const pill = document.getElementById('convBoPill');
+      pill.style.display = 'flex';
+      document.getElementById('convBoFileName').textContent = file.name;
+      document.getElementById('convBoCount').textContent    = acCodes.length + ' accs · ' + totalSkus + ' SKUs';
+
+      // Re-render to inject badges immediately
+      injectConvBoBadges();
+      showToast('✓ Backorder file loaded — ' + totalSkus + ' SKU lines across ' + acCodes.length + ' accounts.');
+    } catch(err) {
+      showToast('⚠️ Could not read backorder file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function convBoReset() {
+  convBoMap = {};
+  document.getElementById('convBoDropZone').style.display = '';
+  document.getElementById('convBoPill').style.display     = 'none';
+  injectConvBoBadges();
+}
+
+/** Call after any conv preview render to stamp BO badges on matching SKUs. */
+function injectConvBoBadges() {
+  const tbody = document.getElementById('convTableBody');
+  if (!tbody) return;
+
+  // Remove any existing badges first
+  tbody.querySelectorAll('.conv-bo-badge').forEach(function(el){ el.remove(); });
+
+  if (!convBoMap || !convState) return;
+  const retailerEntry = (typeof CONV_SPECIAL_ACCOUNTS !== 'undefined') && CONV_SPECIAL_ACCOUNTS[convState.retailerId];
+  const acCode = retailerEntry ? retailerEntry.code : null;
+  if (!acCode || !convBoMap[acCode]) return;
+
+  const skuMap = convBoMap[acCode];
+
+  // Most renderers use <input data-orig="SKU"> for editable SKU cells
+  tbody.querySelectorAll('input[data-orig]').forEach(function(inp) {
+    const rawSku = (inp.dataset.orig || '').trim().toUpperCase();
+    if (!rawSku || skuMap[rawSku] === undefined) return;
+    const qty  = skuMap[rawSku];
+    const badge = document.createElement('span');
+    badge.className = 'conv-bo-badge';
+    badge.title     = 'Already on backorder for this account: ' + qty + ' unit' + (qty !== 1 ? 's' : '') + ' outstanding';
+    badge.style.cssText = 'display:inline-block;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:4px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:5px;vertical-align:middle;white-space:nowrap;';
+    badge.textContent   = 'BO ' + qty;
+    inp.parentNode.appendChild(badge);
+  });
+
+  // Some renderers write SKUs as plain text in td[data-sku] — support that too
+  tbody.querySelectorAll('td[data-sku]').forEach(function(td) {
+    const rawSku = (td.dataset.sku || '').trim().toUpperCase();
+    if (!rawSku || skuMap[rawSku] === undefined) return;
+    if (td.querySelector('.conv-bo-badge')) return;
+    const qty   = skuMap[rawSku];
+    const badge = document.createElement('span');
+    badge.className = 'conv-bo-badge';
+    badge.title     = 'Already on backorder for this account: ' + qty + ' unit' + (qty !== 1 ? 's' : '') + ' outstanding';
+    badge.style.cssText = 'display:inline-block;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:4px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:5px;vertical-align:middle;white-space:nowrap;';
+    badge.textContent   = 'BO ' + qty;
+    td.appendChild(badge);
+  });
+}
 
 const BO = { C_AC:0, C_DATE:1, C_TAG:2, C_ORDER:3, C_REF:4, C_CODE:5, C_STK:6,
              C_DESC:7, C_REQ:8, C_ONORD:9, C_VAL:10, C_STATUS:11, C_COMMENT:12 };
@@ -11803,6 +11937,7 @@ function rerenderConvPreview() {
     const _vlines = getConvOrderLines ? getConvOrderLines() : [];
     if (_vlines.length) updateValuePill(convState.stockLevels, _vlines);
   }
+  injectConvBoBadges();
 }
 
 function toggleConvLine(sku, cb) {
@@ -12204,6 +12339,10 @@ function updateConvDownloadBtn() {
 }
 
 function renderConvTable() {
+  _renderConvTableCore();
+  injectConvBoBadges();
+}
+function _renderConvTableCore() {
   // Multi-file view — show summary across all files
   if (convState.parsedFiles.length > 1) {
     renderMultiFilePreview(convState.parsedFiles);
@@ -20948,7 +21087,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v204 · 19 Sep 2026 · SOA: Advertisement column toggleable pill';
+const TOOL_BUILD = 'v205 · 19 Sep 2026 · Order conv: backorder file overlay — BO badges on matched SKUs';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
