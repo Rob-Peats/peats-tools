@@ -8797,30 +8797,33 @@ function saaComputeSeasonalIndices() {
   return avgs.map(v => v / overall);
 }
 
-// Compare last 6 calendar months vs same 6 months LY → YoY growth trend.
-// Returns { factor, pct, direction } or null if insufficient overlap.
+// Average of per-month YoY ratios across the last 6 calendar months.
+// Each month's ratio = (this year qty) / (LY same month qty), then averaged.
+// This is seasonal-safe: each month is only compared to itself 12 months prior,
+// so peak/trough periods don't distort the growth rate — unlike a simple sum
+// comparison which can be skewed by which months fall in the comparison window.
+// Returns { factor, pct, direction } or null if insufficient data.
 function saaComputeTrend(series, freeAdj = 0) {
   // freeAdj: outstanding backorder qty added to most recent month to correct for
-  // supply-constrained sales figures (unfulfilled demand looks like missing sales).
+  // supply-constrained sales (unfulfilled demand looks like missing sales).
   const now = new Date();
-  let thisSum = 0, lySum = 0, count = 0, adjApplied = false;
+  const ratios = [];
+  let adjApplied = false;
   for (let i = 1; i <= 6; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const y = d.getFullYear(), m = d.getMonth() + 1; // 1-based month
     const thisEntry = series.find(e => e.year === y     && e.month === m);
     const lyEntry   = series.find(e => e.year === y - 1 && e.month === m);
-    if (thisEntry && lyEntry) {
+    if (thisEntry && lyEntry && lyEntry.qty > 0) {
       const adj = (!adjApplied && freeAdj > 0) ? freeAdj : 0;
       adjApplied = adjApplied || adj > 0;
-      thisSum += thisEntry.qty + adj;
-      lySum   += lyEntry.qty;
-      count++;
+      ratios.push((thisEntry.qty + adj) / lyEntry.qty);
     }
   }
-  if (!count || !lySum) return null;
-  const factor = thisSum / lySum;
+  if (!ratios.length) return null;
+  const factor = ratios.reduce((a, b) => a + b, 0) / ratios.length;
   const pct    = Math.round((factor - 1) * 100);
-  return { factor, pct, direction: factor >= 1 ? 'up' : 'down', adjusted: adjApplied };
+  return { factor, pct, direction: factor >= 1 ? 'up' : 'down', adjusted: adjApplied, months: ratios.length };
 }
 
 // Forecast qty for a row for the next months listed in nextMonthsArr.
@@ -8918,7 +8921,7 @@ async function saaTriggerMonthlyLoad(rowsToLoad) {
     saaCrmLoadState = 'error';
     console.warn('[SAA] All CRM fetches returned no usable data — check console for raw row format above');
     // Update banner in place without re-rendering (avoids retriggering the load)
-    const bannerRow = document.querySelector('#saaTableHead tr:first-child td[colspan="11"]');
+    const bannerRow = document.querySelector('#saaTableHead tr:first-child td[colspan="13"]');
     if (bannerRow) {
       bannerRow.style.background = '#fef2f2';
       bannerRow.style.borderBottomColor = '#fecaca';
@@ -8993,7 +8996,7 @@ function saaRenderForecastTable() {
 
   const hasCrmData = saaSeasonalIndices != null;
   const normFn     = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const NCOLS      = 11; // Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Status
+  const NCOLS      = 13; // Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Sug. Order | 80/20 | Status
 
   // Filter by search + state tab
   let rows = saaData.slice();
@@ -9043,6 +9046,38 @@ function saaRenderForecastTable() {
     });
   }
 
+  // ── Forecast cache + 80/20 pre-computation ────────────────────────────────
+  // Compute forecasts once for all loaded SKUs. The 80/20 ranking is done across
+  // ALL loaded data (not just the current filtered view) so the Key/— badge is
+  // consistent regardless of search or state filter.
+  const fcstCache   = new Map(); // r.code → fcst[] | null
+  const eighty20set = new Set(); // r.code → is in top 80% of Q4 forecast qty
+  if (hasCrmData) {
+    const _freeByNorm80 = {};
+    for (const _r of saaData) _freeByNorm80[normFn(_r.code)] = _r.free || 0;
+    const totals = [];
+    for (const _r of saaData) {
+      const _nm  = normFn(_r.code);
+      const _alt = saaAltSkuOverrides[_nm] || saaReplacements[_nm] || '';
+      const _sn  = _alt ? normFn(_alt) : _nm;
+      const _isE = (_r.crmName||_r.desc||'').toUpperCase().startsWith('EOL');
+      const _sf  = _freeByNorm80[_sn] || 0;
+      const _fa  = (!_isE || _alt) && _sf < 0 ? Math.abs(_sf) : 0;
+      const _f   = saaForecastNextMonths(_r, nextMonths, _fa);
+      fcstCache.set(_r.code, _f);
+      const _tot = _f ? _f.reduce((s, x) => s + (x && x.predicted != null ? x.predicted : 0), 0) : 0;
+      if (_tot > 0) totals.push({ code: _r.code, total: _tot });
+    }
+    totals.sort((a, b) => b.total - a.total);
+    const grandTotal = totals.reduce((s, x) => s + x.total, 0);
+    let cumulative = 0;
+    for (const x of totals) {
+      cumulative += x.total;
+      eighty20set.add(x.code);
+      if (grandTotal > 0 && cumulative / grandTotal >= 0.8) break;
+    }
+  }
+
   const TD  = 'padding:5px 10px;white-space:nowrap;text-align:center;';
   const TH  = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center;';
 
@@ -9090,12 +9125,14 @@ function saaRenderForecastTable() {
     <th style="${TH}width:135px;cursor:pointer;user-select:none;" onclick="saaSortBy('code')" title="Sort by SKU code">Code${saaFcstSortCol==='code'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}</th>
     <th style="${TH}text-align:left;width:150px;">Description</th>
     <th style="${TH}width:75px;cursor:pointer;user-select:none;" onclick="saaSortBy('state')" title="Sort by state (Current / TBD / EOL)">State${saaFcstSortCol==='state'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}</th>
-    <th style="${TH}width:90px;cursor:pointer;user-select:none;" onclick="saaSortBy('trend')" title="Sort by 6-month YoY trend">Trend${saaFcstSortCol==='trend'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">6-month YoY</span></th>
+    <th style="${TH}width:90px;cursor:pointer;user-select:none;" onclick="saaSortBy('trend')" title="Average of monthly YoY ratios (this month ÷ LY same month) across the last 6 months — seasonal-safe growth rate">Trend${saaFcstSortCol==='trend'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">avg monthly YoY</span></th>
     <th style="${TH}width:95px;">${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:95px;">${nextMonths[1].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:95px;">${nextMonths[2].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:80px;background:#e8f5e9;">Free Stock</th>
     <th style="${TH}width:80px;background:#e3f0fb;">On Order</th>
+    <th style="${TH}width:100px;background:#fef9c3;" title="Suggested order quantity = max(0, Q4 forecast total − (free stock + on order))">Sug. Order<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#92400e;">Q4 total gap</span></th>
+    <th style="${TH}width:70px;" title="80/20 rule: SKUs whose combined Q4 forecast accounts for 80% of total predicted demand across all loaded brands">80/20</th>
     <th style="${TH}width:105px;">Status for ${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted vs free+order</span></th>
   </tr>`;
 
@@ -9111,7 +9148,7 @@ function saaRenderForecastTable() {
     const _srcFree  = freeByNorm[srcNorm] || 0;
     const freeAdj   = (!_isEolRow || altRaw) && _srcFree < 0 ? Math.abs(_srcFree) : 0;
     const replacedBy = replacedByMap[norm] || ''; // raw new SKU that replaced this one (if any)
-    const fcst    = hasCrmData ? saaForecastNextMonths(r, nextMonths, freeAdj) : null;
+    const fcst    = hasCrmData ? (fcstCache.has(r.code) ? fcstCache.get(r.code) : saaForecastNextMonths(r, nextMonths, freeAdj)) : null;
     const freeVal = r.free != null ? Math.round(r.free).toLocaleString('en-IE') : '—';
     const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700;' : '';
 
@@ -9135,7 +9172,8 @@ function saaRenderForecastTable() {
       const sign    = trend.pct >= 0 ? '+' : '';
       const basedSub = altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Based on ${escHtml(altRaw)}</div>` : '';
       const adjSub  = trend.adjusted ? `<div style="font-size:10px;color:#d97706;font-weight:600;margin-top:2px;">Adj. for BOs</div>` : '';
-      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${basedSub}${adjSub}</td>`;
+      const mSub    = trend.months && trend.months < 6 ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">${trend.months}mo avg</div>` : '';
+      trendTd = `<td style="${TD}font-weight:700;color:${col};font-size:13px;">${arrow} ${sign}${trend.pct}%${basedSub}${adjSub}${mSub}</td>`;
     }
 
     const monthCols = nextMonths.map((nm, i) => {
@@ -9148,6 +9186,27 @@ function saaRenderForecastTable() {
         : `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">LY: —</div>`;
       return `<td style="${TD}"><div style="font-weight:700;">${pred.toLocaleString('en-IE')}</div>${lyHtml}</td>`;
     }).join('');
+
+    // Suggested Order Qty — Q4 total forecast gap vs available stock
+    const q4Total   = fcst ? fcst.reduce((s, f) => s + (f && f.predicted != null ? f.predicted : 0), 0) : 0;
+    const available = Math.max(0, (r.free || 0) + (r.onOrder || 0));
+    const sugQty    = fcst ? Math.max(0, q4Total - available) : null;
+    let sugOrderTd  = `<td style="${TD}background:#fef9c3;color:var(--muted);font-size:10px;">—</td>`;
+    if (sugQty !== null) {
+      if (sugQty > 0) {
+        sugOrderTd = `<td style="${TD}background:#fef9c3;color:#b45309;font-weight:700;" title="Order ${Math.round(sugQty).toLocaleString('en-IE')} units to cover Q4 forecast of ${q4Total.toLocaleString('en-IE')}">${Math.round(sugQty).toLocaleString('en-IE')}</td>`;
+      } else {
+        sugOrderTd = `<td style="${TD}background:#fef9c3;color:#16a34a;font-weight:700;" title="Stock covers Q4 forecast of ${q4Total.toLocaleString('en-IE')}">✓</td>`;
+      }
+    }
+
+    // 80/20 badge — is this SKU in the top 80% of Q4 forecast qty across all loaded data?
+    const is80    = eighty20set.has(r.code);
+    const eighty20Td = hasCrmData
+      ? (is80
+          ? `<td style="${TD}"><span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">⭐ Key</span></td>`
+          : `<td style="${TD}color:var(--muted);font-size:10px;">—</td>`)
+      : `<td style="${TD}color:var(--muted);font-size:10px;">—</td>`;
 
     // Shortfall column (predicted month 1 minus free stock)
     let shortfallTd = `<td style="${TD}color:var(--muted);font-size:10px;">—</td>`;
@@ -9173,6 +9232,8 @@ function saaRenderForecastTable() {
       ${monthCols}
       <td style="${TD}background:#e8f5e9;${freeStyle}">${freeVal}</td>
       <td style="${TD}background:#e3f0fb;color:${r.onOrder>0?'#1a6ea8':'var(--muted)'};font-weight:${r.onOrder>0?'700':'400'};">${r.onOrder>0?Math.round(r.onOrder).toLocaleString('en-IE'):'—'}</td>
+      ${sugOrderTd}
+      ${eighty20Td}
       ${shortfallTd}
     </tr>`;
   }).join('') || `<tr><td colspan="${NCOLS}" style="padding:30px;text-align:center;color:var(--muted)">No data loaded.</td></tr>`;
@@ -21089,7 +21150,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v215 · 20 Sep 2026 · fix brand dropdown clipped by toolbar overflow';
+const TOOL_BUILD = 'v216 · 20 Sep 2026 · seasonal-safe trend (avg monthly YoY), Suggested Order Qty, 80/20 flag';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
