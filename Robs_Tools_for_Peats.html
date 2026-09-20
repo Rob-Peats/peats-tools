@@ -148,7 +148,7 @@ header { background: linear-gradient(135deg, #0f2a4e 0%, #1a4f8a 45%, #2176c7 80
 .controls-top::-webkit-scrollbar { height: 4px; }
 .controls-top::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 /* ── Unified toolbar pill — used by all tools ── */
-.t-pill { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; border: 1px solid var(--border); border-radius: 8px; background: var(--light); padding: 8px 12px; gap: 5px; box-sizing: border-box; flex-shrink: 0; }
+.t-pill { display: flex; flex-direction: column; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 8px; background: var(--light); padding: 8px 12px; gap: 5px; box-sizing: border-box; flex-shrink: 0; }
 /* ── Unified toolbar label (9px uppercase above controls) ── */
 .t-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); line-height: 1; white-space: nowrap; }
 /* ── Consistent toolbar button height across all tools ── */
@@ -246,7 +246,7 @@ html[data-theme="dark"] .tile-drop.drag-over { background: rgba(255,255,255,.08)
 .tile-drop small { opacity: .8; }
 @media (max-width: 1100px) { .tile-row { grid-template-columns: 1fr; } }
 
-.dl-section { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; flex-shrink: 0; }
+.dl-section { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 6px; flex-shrink: 0; }
 .dl-section .dl-label { font-size: 9px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
 html[data-theme="dark"] .dl-section { background: var(--white) !important; border-color: var(--border) !important; }
 html[data-theme="dark"] .dl-section .dl-label { color: var(--muted); }
@@ -255,7 +255,7 @@ html[data-theme="dark"] .dl-section .dl-label { color: var(--muted); }
 html[data-theme="dark"] .crm-tog-label { color: #22d3ee; }
 
 /* ── Catalog section ── */
-.cat-section { background: #fef8f0; border: 1px solid #f5d6a8; border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 5px; flex-shrink: 0; }
+.cat-section { background: #fef8f0; border: 1px solid #f5d6a8; border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 5px; flex-shrink: 0; }
 .cat-loaded { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--orange); }
 .cat-loaded small { font-weight: 400; font-size: 11px; color: #b45309; }
 .cat-loaded button { background: none; border: none; cursor: pointer; color: var(--orange); font-size: 15px; line-height: 1; opacity: .55; padding: 0 2px; margin-left: auto; }
@@ -280,10 +280,10 @@ html[data-theme="dark"] .crm-tog-label { color: #22d3ee; }
 .brand-filter-btn:hover { border-color: var(--brand); color: var(--brand); }
 .brand-filter-panel { position: fixed; z-index: 9000; background: #fef8f0; border: 1px solid #f5d6a8; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.14); min-width: 260px; max-width: 320px; padding: 12px; }
 .brand-search-inp { width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; margin-bottom: 8px; background: var(--white); color: var(--text); }
-.brand-list-scroll { max-height: 320px; overflow-y: auto; border-top: 1px solid var(--border); margin-top: 3px; padding-top: 5px; }
+.brand-list-scroll { max-height: 320px; overflow-y: auto; border-top: 1px solid var(--border); margin-top: 3px; padding-top: 5px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 4px; }
 .brand-chk-row { display: flex; align-items: center; gap: 8px; padding: 5px 7px; cursor: pointer; border-radius: 5px; font-size: 13px; user-select: none; }
 .brand-chk-row:hover { background: var(--light); }
-.brand-chk-row.brand-all-row { font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 3px; }
+.brand-chk-row.brand-all-row { font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 3px; grid-column: 1 / -1; }
 .brand-chk-row input { margin: 0; cursor: pointer; }
 
 /* ── Main area ── */
@@ -927,7 +927,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" onclick="launchTool('conversion')">
       <div class="hub-card-icon">🔀</div>
       <h3>Order Conversion</h3>
-      <p>Drop a retailer PO, select the retailer, and convert it to CRM-ready files for direct import.</p>
+      <p>Drop a retailer PO, match it to the Peats catalogue, and generate CRM import files — branch orders and customer backorders — ready for direct upload.</p>
       <span class="hub-card-launch">Open Tool →</span>
     </div>
 
@@ -935,7 +935,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" onclick="launchTool('generator')">
       <div class="hub-card-icon">📝</div>
       <h3>Order Generator</h3>
-      <p>Upload a retailer stock report to generate a suggested replenishment order with CRM output files.</p>
+      <p>Upload a retailer stock report to calculate a suggested replenishment order. Shows fill rates, stock cover, and exports branch order and backorder files for CRM import.</p>
       <span class="hub-card-launch">Open Tool →</span>
     </div>
 
@@ -943,7 +943,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" onclick="launchTool('export')">
       <div class="hub-card-icon">📤</div>
       <h3>Export from Catalogue</h3>
-      <p>Browse the Peats catalogue, select items, and export to Excel with live stock levels and margin data.</p>
+      <p>Browse the full Peats catalogue, filter by brand or category, view live CRM stock and pricing, then export a tailored product sheet to Excel.</p>
       <span class="hub-card-launch">Open Tool →</span>
     </div>
 
@@ -951,7 +951,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" id="hubCardSoa2" onclick="launchTool('soa2')">
       <div class="hub-card-icon">📊</div>
       <h3>SOA Tools</h3>
-      <p>On-screen SOA listing, special customer pricing, promo margin calc, market pricing, and all retailer exports.</p>
+      <p>Full SOA listing with live CRM stock, agreed special customer pricing, promotional margin calculator, market price lookup, and retailer-specific export files.</p>
       <span class="hub-card-launch">Open Tool →</span>
     </div>
 
@@ -959,7 +959,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" onclick="launchTool('backorder')">
       <div class="hub-card-icon">🚚</div>
       <h3>Backorder Tools</h3>
-      <p>Drop a backorder report to flag which lines can ship now, highlight TBD/EOL items, and export the report.</p>
+      <p>Drop a backorder report to see which lines have free stock available to ship, flag TBD and EOL items, and export a clean updated report.</p>
       <span class="hub-card-launch">Open Tool →</span>
     </div>
 
@@ -967,7 +967,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" onclick="launchTool('webimport')">
       <div class="hub-card-icon">🌐</div>
       <h3>Web Data Sync</h3>
-      <p>CRM web content syncs automatically when a catalog loads. View results, check missing products, or force a full refresh.</p>
+      <p>Syncs product descriptions, images, and web content from the CRM automatically on catalog load. View sync status, spot missing or incomplete products, or trigger a full refresh.</p>
       <span class="hub-card-launch">View Status →</span>
     </div>
 
@@ -975,15 +975,15 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" onclick="launchTool('stockanalysis')">
       <div class="hub-card-icon">📊</div>
       <h3>Stock Analysis</h3>
-      <p>Live stock positions from the CRM — free stock, on order, shortfalls and status at a glance.</p>
+      <p>Live stock positions pulled direct from the CRM — free stock, on order, shortfalls, EOL/TBD flags, price bands, and weeks of cover by brand.</p>
       <span class="hub-card-launch">Open →</span>
     </div>
 
     <!-- Aged & Slow Stock — hidden until PIN unlocked -->
     <div class="hub-card" id="hubCardAgedStock" onclick="launchTool('agedstock')">
       <div class="hub-card-icon">⏰</div>
-      <h3>Aged Stock</h3>
-      <p>Find products with no sales in 12 months or slow-moving excess stock — apply discounts and export a clearance list.</p>
+      <h3>Aged &amp; Slow Moving Stock</h3>
+      <p>Identifies aged lines (no invoiced sales in 12 months) and slow movers (excess cover vs. 3-month run rate). Apply clearance discounts by line or selection, and export for CRM or Excel.</p>
       <span class="hub-card-launch">Open →</span>
     </div>
 
@@ -991,7 +991,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" id="hubCardBrandEngagement" style="display:none;" onclick="launchTool('brandengagement')">
       <div class="hub-card-icon">👥</div>
       <h3>Brand Engagement</h3>
-      <p>See which customers are buying, lapsing, or going dormant for a brand — and post re-engagement notes to the CRM.</p>
+      <p>Shows customer buying trends by brand — active, lapsing, and dormant accounts. Post re-engagement notes directly to the CRM from within the tool.</p>
       <span class="hub-card-launch">Open →</span>
     </div>
 
@@ -999,7 +999,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="hub-card" id="hubCardAdmin" style="display:none;" onclick="launchTool('crmsettings')">
       <div class="hub-card-icon">⚙️</div>
       <h3>Admin</h3>
-      <p>Configure your CRM API token and explore the OData API. PIN protected.</p>
+      <p>Configure CRM and GitHub API tokens, explore the OData API schema, and manage tool-level settings. PIN protected.</p>
       <span class="hub-card-launch">Open Admin →</span>
     </div>
 
@@ -2050,30 +2050,30 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- PILL 2: Brands + Load Stock (dropdown row 1, All/Catalog + Load row 2) -->
+    <!-- PILL 2: Brands (Load button inside panel, same pattern as Stock Analysis) -->
     <div class="brand-filter-wrap t-pill" id="asBrandWrap"
-      style="min-width:180px;position:relative;">
+      style="min-width:140px;position:relative;">
+      <span class="t-label">Brands</span>
       <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)"
         style="width:100%;justify-content:center;">
-        🏷 Brands
-        <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
+        🏷 <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
         <span style="font-size:10px;opacity:.6">▾</span>
       </button>
-      <div style="display:flex;align-items:center;gap:6px;width:100%;">
-        <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
-          style="height:26px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;flex:1;">
-          <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 6px;">All</span>
-          <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 6px;white-space:nowrap;">Catalog</span>
-        </div>
-        <button class="btn btn-green" onclick="asLoadForSelectedBrands()"
-          style="font-size:12px;padding:4px 10px;font-weight:800;white-space:nowrap;height:26px;flex-shrink:0;">
-          ▶ Load
-        </button>
-      </div>
       <!-- Brand dropdown panel -->
-      <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:400px;max-width:480px;">
+      <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:420px;max-width:500px;">
         <input class="brand-search-inp" id="asBrandSearch" placeholder="Search brands…" oninput="asFilterBrandList(this.value)" autocomplete="off">
-        <div class="brand-list-scroll" id="asBrandList" style="max-height:420px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
+        <div class="brand-list-scroll" id="asBrandList" style="max-height:380px;"></div>
+        <!-- Mode toggle + Load at bottom of panel -->
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
+          <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
+            style="height:28px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;">
+            <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 8px;">All SKUs</span>
+            <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 8px;">Catalog Only</span>
+          </div>
+          <div id="asLoadBrandBtn" style="display:none;">
+            <button onclick="asClosePanelAndLoad()" class="btn btn-brand" style="width:100%;">▶ Load Stock</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -8000,7 +8000,7 @@ function launchTool(tool) {
     saaOnOpen();
   } else if (tool === 'agedstock') {
     document.getElementById('tool-agedstock').style.display = 'flex';
-    setToolName('Aged Stock');
+    setToolName('Aged &amp; Slow Moving Stock');
     asOnOpen();
   } else if (tool === 'brandengagement') {
     document.getElementById('tool-brandengagement').style.display = 'flex';
@@ -9580,6 +9580,8 @@ let asSelected     = new Set();   // v114: selected row SKUs for "Apply Selected
 let asSlowSelected = new Set();   // v115: selected row SKUs in slow moving table
 let asSortCol      = 'stockValue';
 let asSortDir      = -1;          // -1 = descending
+let asSlowSortCol  = 'weeksOfCoverage';
+let asSlowSortDir  = -1;          // -1 = descending (highest cover first)
 let asBrands       = [];          // all available brand names from catalog
 let asSelBrands    = new Set();   // brands the user has selected
 let asExcludeNew   = true;
@@ -10200,7 +10202,7 @@ function asToggleBrandPanel(e) {
   if (wasOpen) {
     p.style.display = 'none';
     document.getElementById('asBrandSearch').value = '';
-    asLoadForSelectedBrands();
+    // no auto-load on close — user clicks the Load button explicitly
   } else {
     _positionBrandPanel(p, document.getElementById('asBrandBtn'));
     p.style.display = 'block';
@@ -10244,7 +10246,7 @@ function asClosePanelAndLoad() {
   asLoadForSelectedBrands();
 }
 
-// Close brand panel when clicking outside it (v114: no auto-load on close)
+// Close brand panel when clicking outside it
 document.addEventListener('click', function(e) {
   const wrap = document.getElementById('asBrandWrap');
   if (wrap && !wrap.contains(e.target)) {
@@ -10253,7 +10255,6 @@ document.addEventListener('click', function(e) {
       p.style.display = 'none';
       const bs = document.getElementById('asBrandSearch');
       if (bs) bs.value = '';
-      // v114: do NOT auto-load here — user must click Load button explicitly
     }
   }
 });
@@ -10860,7 +10861,7 @@ function asRebuildSlowData() {
   const rows = [];
   const EIGHT_WEEKS_AS_MONTHS = 2;  // 8 weeks ≈ 2 months
 
-  const processSlowEntry = (code, brandName, descStr, crmName, s, catRetail, catBandC, catBandF) => {
+  const processSlowEntry = (code, brandName, descStr, crmName, s, catRetail, catBandC, catBandF, crmOnly) => {
     const qty = (s.qty != null) ? s.qty : 0;
     if (qty <= 0) return;
     const sales3Mo = s.sales3Mo || 0;
@@ -10890,7 +10891,8 @@ function asRebuildSlowData() {
       retail, bandC, bandF,
       createdDate: s.createdDate || null,
       stockValue: null,
-      discount: 0, clearance: null
+      discount: 0, clearance: null,
+      crmOnly: !!crmOnly
     });
   };
 
@@ -10898,7 +10900,7 @@ function asRebuildSlowData() {
     if (!brandSelMatch(e.brand, asSelBrands)) return;
     const s = asStockMap.get(code);
     if (!s || !s.hasSales12Data) return;
-    processSlowEntry(code, e.brand || '', e.desc || '', s.crmName || null, s, e.retail, e.bandC || null, e.bandF || null);
+    processSlowEntry(code, e.brand || '', e.desc || '', s.crmName || null, s, e.retail, e.bandC || null, e.bandF || null, false);
   });
 
   // CRM-mode: off-catalog entries
@@ -10909,7 +10911,7 @@ function asRebuildSlowData() {
       if (!brandSelMatch(crmEntry.brand, asSelBrands)) return;
       const s = asStockMap.get(sku);
       if (!s || !s.hasSales12Data) return;
-      processSlowEntry(sku, crmEntry.brand || '', crmEntry.desc || sku, s.crmName || crmEntry.desc || null, s, crmEntry.retail, null, null);
+      processSlowEntry(sku, crmEntry.brand || '', crmEntry.desc || sku, s.crmName || crmEntry.desc || null, s, crmEntry.retail, null, null, true);
     });
   }
 
@@ -11081,10 +11083,13 @@ function asRenderAgedTable() {
     return (a.code || '').localeCompare(b.code || '');
   });
 
+  const allAgedChecked = rows.length > 0 && rows.every(r => asSelected.has(r.code));
+
   const ths = [
     ['state',       'State'],
     ['brand',       'Brand'],
     ['code',        'Code'],
+    ['source',      'Source'],
     ['desc',        'Description'],
     ['free',        'Free Stock'],
     ['stockValue',  'Stock Value (€)'],
@@ -11100,14 +11105,14 @@ function asRenderAgedTable() {
   const STICKY_TH = `position:sticky;top:0;z-index:10;background:var(--light);` +
     `padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;` +
     `border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;text-align:center;`;
-  const AGED_COL_W = {state:'width:72px;',brand:'width:80px;',code:'width:110px;',
+  const AGED_COL_W = {state:'width:72px;',brand:'width:80px;',code:'width:110px;',source:'width:80px;',
     free:'width:80px;',stockValue:'width:100px;',lastSold:'width:80px;',dormant:'width:100px;',
     createdDate:'width:100px;',bandC:'width:90px;',bandF:'width:90px;',discount:'width:90px;',clearance:'width:100px;'};
   const CHK_TH = `position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;border-bottom:2px solid var(--border);text-align:center;width:32px;`;
 
   document.getElementById('asTableHead').innerHTML =
     '<tr>' +
-    `<th style="${CHK_TH}"><input type="checkbox" title="Select all" onchange="asSelectAll(this.checked)" style="cursor:pointer;"></th>` +
+    `<th style="${CHK_TH}"><input type="checkbox" title="Select all" ${allAgedChecked ? 'checked' : ''} onchange="asSelectAll(this.checked)" style="cursor:pointer;"></th>` +
     ths.map(([k, label]) =>
       `<th onclick="asSort('${k}')" style="${STICKY_TH}` +
       (AGED_COL_W[k] || '') +
@@ -11165,16 +11170,17 @@ function asRenderAgedTable() {
       ? '<span style="color:#b45309;font-weight:700;">€' + r.clearance.toFixed(2) + '</span>'
       : '—';
 
-    const crmBadge = r.crmOnly
-      ? ' <span style="display:inline-block;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.03em;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;vertical-align:middle;" title="Not in catalog — found via CRM">CRM</span>'
-      : '';
+    const sourceBadge = r.crmOnly
+      ? '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.03em;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;" title="Not in catalog — found via CRM">CRM</span>'
+      : '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.03em;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;" title="In product catalog">Catalog</span>';
 
     const isChecked = asSelected.has(r.code);
     return `<tr style="border-bottom:1px solid #d1d5db;${ri % 2 === 1 ? 'background:#fafbfd;' : ''}${r.crmOnly ? 'border-left:2px solid #7c3aed;' : ''}${isChecked ? 'background:#fffbea !important;' : ''}">
       <td style="${TD}padding:4px 8px;"><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="asToggleSelect('${r.code.replace(/'/g,"\'")}')" style="cursor:pointer;"></td>
       <td style="${TD}padding:4px 8px;">${stateBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:10px;opacity:.65;vertical-align:middle;">⚡</span>' : ''}</td>
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}${crmBadge}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="${TD}">${sourceBadge}</td>
       <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
@@ -11195,7 +11201,7 @@ function asRenderAgedTable() {
       <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="${10 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0)}" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="${11 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0)}" style="padding:30px;text-align:center;color:var(--muted);">
      No aged stock matches this filter.
    </td></tr>`;
 }
@@ -11220,35 +11226,63 @@ function asRenderSlowTable() {
   if (asSlowView === 'slow_12wks') rows = rows.filter(r => r.weeksOfCoverage > 12);
   else if (asSlowView === 'slow_26wks') rows = rows.filter(r => r.weeksOfCoverage > 26);
 
+  // Sort rows by asSlowSortCol / asSlowSortDir
+  const slowColVal = r => {
+    switch(asSlowSortCol) {
+      case 'brand':           return (r.brand || '').toLowerCase();
+      case 'code':            return (r.code  || '').toLowerCase();
+      case 'desc':            return (r.crmName || r.desc || '').toLowerCase();
+      case 'state': { const dn = (r.crmName || r.desc || '').toUpperCase(); return dn.startsWith('EOL') ? 2 : dn.startsWith('TBD') ? 1 : 0; }
+      case 'source':          return r.crmOnly ? 1 : 0;
+      case 'free':            return r.free           ?? -Infinity;
+      case 'sales3Mo':        return r.sales3Mo       ?? -Infinity;
+      case 'avgMonthly':      return r.avgMonthly     ?? -Infinity;
+      case 'weeksOfCoverage': return r.weeksOfCoverage ?? -Infinity;
+      case 'createdDate':     return r.createdDate ? r.createdDate.getTime() : -Infinity;
+      case 'bandC':           return r.bandC     ?? -Infinity;
+      case 'bandF':           return r.bandF     ?? -Infinity;
+      case 'discount':        return r.discount  || 0;
+      case 'clearance':       return r.clearance ?? -Infinity;
+      default: return -Infinity;
+    }
+  };
+  rows.sort((a, b) => {
+    const va = slowColVal(a), vb = slowColVal(b);
+    if (va < vb) return -asSlowSortDir;
+    if (va > vb) return  asSlowSortDir;
+    return (a.code || '').localeCompare(b.code || '');
+  });
+
   const fmtWks = wks => {
     const rounded = Math.round(wks);
     const col = wks > 26 ? '#dc2626' : wks > 12 ? '#b45309' : '#0891b2';
     return `<span style="color:${col};font-weight:700;">${rounded} wks</span>`;
   };
 
-  // Column widths match aged table exactly
-  const W = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center;';
+  const WB = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border);white-space:nowrap;text-align:center;cursor:pointer;';
   const CHK_TH = 'position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;border-bottom:2px solid var(--border);text-align:center;width:32px;';
   const TD = 'padding:5px 8px;white-space:nowrap;text-align:center;';
 
   const allChecked = rows.length > 0 && rows.every(r => asSlowSelected.has(r.code));
-  const colSpan = 10 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0) + 2;
+  const colSpan = 13 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0);
+  const slowArrow = k => k === asSlowSortCol ? (asSlowSortDir === 1 ? ' ▲' : ' ▼') : '';
 
   slowHead.innerHTML = `<tr>
     <th style="${CHK_TH}"><input type="checkbox" title="Select all" ${allChecked ? 'checked' : ''} onchange="asSelectAllSlow(this.checked)" style="cursor:pointer;"></th>
-    <th style="${W}color:var(--text);width:72px;">State</th>
-    <th style="${W}color:var(--text);text-align:left;width:80px;">Brand</th>
-    <th style="${W}color:var(--text);width:110px;">Code</th>
-    <th style="${W}color:var(--text);text-align:left;">Description</th>
-    <th style="${W}color:#1f6b3e;background:#e8f5e9;width:80px;">Free Stock</th>
-    <th style="${W}color:var(--text);width:100px;">3mo Sales</th>
-    <th style="${W}color:var(--text);width:80px;">Avg/Mo</th>
-    <th style="${W}color:#0891b2;width:100px;">Weeks Cover</th>
-    <th style="${W}color:var(--text);width:100px;">Created</th>
-    ${asBandCVisible ? `<th style="${W}color:#0891b2;width:90px;">Band C (€)</th>` : ''}
-    ${asBandFVisible ? `<th style="${W}color:#7c3aed;width:90px;">Band F (€)</th>` : ''}
-    <th style="${W}color:#b45309;width:90px;">Discount %</th>
-    <th style="${W}color:#b45309;background:#fffbea;width:100px;">Clearance (€)</th>
+    <th onclick="asSlowSort('state')"         style="${WB}width:72px;">State${slowArrow('state')}</th>
+    <th onclick="asSlowSort('brand')"         style="${WB}text-align:left;width:80px;">Brand${slowArrow('brand')}</th>
+    <th onclick="asSlowSort('code')"          style="${WB}width:110px;">Code${slowArrow('code')}</th>
+    <th onclick="asSlowSort('source')"        style="${WB}width:80px;">Source${slowArrow('source')}</th>
+    <th onclick="asSlowSort('desc')"          style="${WB}text-align:left;">Description${slowArrow('desc')}</th>
+    <th onclick="asSlowSort('free')"          style="${WB}color:#1f6b3e;background:#e8f5e9;width:80px;">Free Stock${slowArrow('free')}</th>
+    <th onclick="asSlowSort('sales3Mo')"      style="${WB}width:100px;">3mo Sales${slowArrow('sales3Mo')}</th>
+    <th onclick="asSlowSort('avgMonthly')"    style="${WB}width:80px;">Avg/Mo${slowArrow('avgMonthly')}</th>
+    <th onclick="asSlowSort('weeksOfCoverage')" style="${WB}color:#0891b2;width:100px;">Weeks Cover${slowArrow('weeksOfCoverage')}</th>
+    <th onclick="asSlowSort('createdDate')"   style="${WB}width:100px;">Created${slowArrow('createdDate')}</th>
+    ${asBandCVisible ? `<th onclick="asSlowSort('bandC')" style="${WB}color:#0891b2;width:90px;">Band C (€)${slowArrow('bandC')}</th>` : ''}
+    ${asBandFVisible ? `<th onclick="asSlowSort('bandF')" style="${WB}color:#7c3aed;width:90px;">Band F (€)${slowArrow('bandF')}</th>` : ''}
+    <th onclick="asSlowSort('discount')"  style="${WB}color:#b45309;width:90px;">Discount %${slowArrow('discount')}</th>
+    <th onclick="asSlowSort('clearance')" style="${WB}color:#b45309;background:#fffbea;width:100px;">Clearance (€)${slowArrow('clearance')}</th>
   </tr>`;
 
   slowBody.innerHTML = rows.map((r, ri) => {
@@ -11274,11 +11308,16 @@ function asRenderSlowTable() {
       ? '<span style="color:#b45309;font-weight:700;">€' + r.clearance.toFixed(2) + '</span>'
       : '<span style="color:var(--muted);">—</span>';
 
-    return `<tr style="border-bottom:1px solid #d1d5db;${isSelected ? 'background:#fffbea;' : ri % 2 === 1 ? 'background:#fafbfd;' : ''}">
+    const slowSrcBadge = r.crmOnly
+      ? '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.03em;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;" title="Not in catalog — found via CRM">CRM</span>'
+      : '<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.03em;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;" title="In product catalog">Catalog</span>';
+
+    return `<tr style="border-bottom:1px solid #d1d5db;${isSelected ? 'background:#fffbea;' : ri % 2 === 1 ? 'background:#fafbfd;' : ''}${r.crmOnly ? 'border-left:2px solid #7c3aed;' : ''}">
       <td style="${TD}"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="asToggleSelectSlow('${r.code}')" style="cursor:pointer;"></td>
       <td style="${TD}">${stateBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:10px;opacity:.65;vertical-align:middle;">⚡</span>' : ''}</td>
       <td style="${TD}font-size:11px;color:var(--muted);text-align:left;">${escHtml(r.brand)}</td>
       <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="${TD}">${slowSrcBadge}</td>
       <td style="padding:5px 8px;text-align:left;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
@@ -11289,14 +11328,12 @@ function asRenderSlowTable() {
       ${asBandCVisible ? `<td style="${TD}color:#0891b2;">${r.bandC != null ? '€' + r.bandC.toFixed(2) : '—'}</td>` : ''}
       ${asBandFVisible ? `<td style="${TD}color:#7c3aed;">${r.bandF != null ? '€' + r.bandF.toFixed(2) : '—'}</td>` : ''}
       <td style="${TD}"><input type="number" min="0" max="99" step="0.5" value="${disc}"
-          onchange="asSetSlowRowDiscount(${ri},this.value)"
+          onchange="asSetSlowRowDiscount('${r.code.replace(/'/g,"\\'")}',this.value)"
           style="width:52px;text-align:center;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;"></td>
       <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="${colSpan}" style="padding:30px;text-align:center;color:var(--muted);">
-     No slow moving stock found — all products are within 8 weeks cover.
-   </td></tr>`;
+  `<tr><td colspan="${colSpan}" style="padding:30px;text-align:center;color:var(--muted);">No slow moving stock found — all products are within 8 weeks cover.</td></tr>`;
 }
 
 // ── Slow Moving row selection (v115) ─────────────────────────────────────────
@@ -11321,8 +11358,8 @@ function asSelectAllSlow(checked) {
   asRenderSlowTable();
 }
 
-function asSetSlowRowDiscount(idx, pct) {
-  const row = asSlowData[idx];
+function asSetSlowRowDiscount(code, pct) {
+  const row = asSlowData.find(r => r.code === code);
   if (!row) return;
   const p = Math.min(99, Math.max(0, parseFloat(pct) || 0));
   const base = row.bandC ?? row.retail;
@@ -11341,6 +11378,16 @@ function asSort(col) {
     asSortDir = ['brand', 'code', 'desc', 'state'].includes(col) ? 1 : -1;
   }
   asRenderAgedTable();
+}
+
+function asSlowSort(col) {
+  if (asSlowSortCol === col) {
+    asSlowSortDir = -asSlowSortDir;
+  } else {
+    asSlowSortCol = col;
+    asSlowSortDir = ['brand', 'code', 'desc', 'state', 'source'].includes(col) ? 1 : -1;
+  }
+  asRenderSlowTable();
 }
 
 // ── Exclude TBD / EOL ─────────────────────────────────
@@ -11705,11 +11752,12 @@ function asShowPickPrompt() {
   content.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
       height:100%;gap:14px;padding:40px;text-align:center;">
     <div style="font-size:56px;line-height:1;">📦</div>
-    <div style="font-size:20px;font-weight:800;color:var(--text);">Select brands to find aged stock</div>
+    <div style="font-size:20px;font-weight:800;color:var(--text);">Select brands to find aged &amp; slow moving stock</div>
     <div style="font-size:13px;color:var(--muted);max-width:440px;line-height:1.65;">
       ${total.toLocaleString('en-IE')} products across ${bcount} brands in catalog.<br>
       <em>Aged stock</em> = free stock with <strong>no invoiced sales in the last 12 months</strong>.<br>
-      Use <strong>🏷 Brands</strong> above to pick which brands to check, then click <strong>▶ Load Aged Stock</strong>.
+      <em>Slow moving</em> = free stock covering more than <strong>8 weeks at current 3-month run rate</strong>.<br>
+      Use <strong>🏷 Brands</strong> above to pick which brands to check, then click <strong>▶ Load Stock</strong>.
     </div>
   </div>`;
 }
@@ -11752,6 +11800,8 @@ function asReset() {
   asCrmMode        = true;   // default: All SKUs mode
   asSortCol        = 'brand';
   asSortDir        = 1;
+  asSlowSortCol    = 'weeksOfCoverage';
+  asSlowSortDir    = -1;
 
   _asRefreshExcludePills();
 
@@ -21292,7 +21342,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v225 · 20 Sep 2026 · Aged Stock: renamed from "Aged and Slow Stock"; hub card now visible; Sony persistence bug fixed (in-memory maps cleared on every Load so prior brand data never bleeds through); asReset now also clears asSlowSelected';
+const TOOL_BUILD = 'v226 · 20 Sep 2026 · Aged &amp; Slow Moving Stock: hub card + tool renamed; Load button moved inside Brands panel; all dropdowns 2-col; pill layout space-between; hub card summaries rewritten; Slow Moving sort added (all columns clickable); Aged select-all checkbox fixed; Source (CRM/Catalog) column added to both tables; asSlowSortCol/Dir reset in asReset';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
