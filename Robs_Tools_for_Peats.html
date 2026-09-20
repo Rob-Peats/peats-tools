@@ -980,9 +980,9 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     </div>
 
     <!-- Aged & Slow Stock — hidden until PIN unlocked -->
-    <div class="hub-card" id="hubCardAgedStock" style="display:none;" onclick="launchTool('agedstock')">
+    <div class="hub-card" id="hubCardAgedStock" onclick="launchTool('agedstock')">
       <div class="hub-card-icon">⏰</div>
-      <h3>Aged and Slow Stock</h3>
+      <h3>Aged Stock</h3>
       <p>Find products with no sales in 12 months or slow-moving excess stock — apply discounts and export a clearance list.</p>
       <span class="hub-card-launch">Open →</span>
     </div>
@@ -2183,7 +2183,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <!-- Aged Stock section -->
     <div id="asAgedSection" style="display:none;">
       <div style="background:#1a3c6e;color:#fff;display:flex;align-items:center;padding:4px 14px;gap:12px;min-height:36px;">
-        <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">📦 Aged and Slow Stock</span>
+        <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">📦 Aged Stock</span>
         <div id="asAgedCards" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;justify-content:flex-end;align-items:center;"></div>
       </div>
       <table id="asTable" style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">
@@ -8000,7 +8000,7 @@ function launchTool(tool) {
     saaOnOpen();
   } else if (tool === 'agedstock') {
     document.getElementById('tool-agedstock').style.display = 'flex';
-    setToolName('Aged and Slow Stock');
+    setToolName('Aged Stock');
     asOnOpen();
   } else if (tool === 'brandengagement') {
     document.getElementById('tool-brandengagement').style.display = 'flex';
@@ -10264,6 +10264,18 @@ async function asLoadForSelectedBrands() {
   if (asSelBrands.size === 0) { asShowPickPrompt(); return; }
   if (asFetching) return;
 
+  // Always start from a clean in-memory state so stale data from a previous
+  // brand load never bleeds into this one. localStorage caches (per-brand) are
+  // kept, so this doesn't cost extra network requests.
+  asData           = [];
+  asSlowData       = [];
+  asStockMap       = new Map();
+  asCrmProductData = new Map();
+  asLoadedBrands   = new Set();
+  asCachedSkus     = new Set();
+  asSelected       = new Set();
+  asSlowSelected   = new Set();
+
   const pat = getCrmPat();
   if (!pat) {
     const c = document.getElementById('asContent');
@@ -11734,6 +11746,7 @@ function asReset() {
   asShowAged       = true;
   asShowSlow       = true;
   asSelected       = new Set();
+  asSlowSelected   = new Set();
   asView           = 'all';
   asSlowView       = 'slow_all';
   asCrmMode        = true;   // default: All SKUs mode
@@ -21279,7 +21292,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v224 · 20 Sep 2026 · Pill labels pinned to top (justify-content:flex-start); toolbar min-height:64px; selects unified to 32px; OG catalog pill: removed "Update prices" text label; OG export pill: header row (Export + Inc.Price toggle) + 3 buttons side-by-side (Total Suggested, Branch Orders, Cust.BOs); OCT: controls moved outside main for full-width toolbar; OCT: Special Customer Pricing pill (pink, CRM-sourced, toggle on/off, overrides catalog cost when active)';
+const TOOL_BUILD = 'v225 · 20 Sep 2026 · Aged Stock: renamed from "Aged and Slow Stock"; hub card now visible; Sony persistence bug fixed (in-memory maps cleared on every Load so prior brand data never bleeds through); asReset now also clears asSlowSelected';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
