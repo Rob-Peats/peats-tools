@@ -144,11 +144,11 @@ header { background: linear-gradient(135deg, #0f2a4e 0%, #1a4f8a 45%, #2176c7 80
 
 /* ── Controls bar ── */
 .controls { background: var(--white); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: stretch; }
-.controls-top { display: flex; align-items: stretch; gap: 10px; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; padding: 10px 16px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.controls-top { display: flex; align-items: stretch; gap: 10px; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; padding: 10px 16px; min-height: 64px; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .controls-top::-webkit-scrollbar { height: 4px; }
 .controls-top::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 /* ── Unified toolbar pill — used by all tools ── */
-.t-pill { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: var(--light); padding: 5px 12px; gap: 5px; box-sizing: border-box; flex-shrink: 0; }
+.t-pill { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; border: 1px solid var(--border); border-radius: 8px; background: var(--light); padding: 8px 12px; gap: 5px; box-sizing: border-box; flex-shrink: 0; }
 /* ── Unified toolbar label (9px uppercase above controls) ── */
 .t-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); line-height: 1; white-space: nowrap; }
 /* ── Consistent toolbar button height across all tools ── */
@@ -165,7 +165,7 @@ header { background: linear-gradient(135deg, #0f2a4e 0%, #1a4f8a 45%, #2176c7 80
 .controls-download { display: none; }
 .ctrl-group { display: flex; align-items: center; gap: 8px; }
 .ctrl-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
-select { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 14px; background: var(--white); color: var(--text); outline: none; transition: border-color .15s, color .15s; }
+select { border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; font-size: 14px; background: var(--white); color: var(--text); outline: none; transition: border-color .15s, color .15s; height: 32px; box-sizing: border-box; }
 select:focus { border-color: var(--brand); }
 select.unselected { border-color: var(--red); color: var(--red); font-weight: 700; animation: pulse-border 1.8s ease-in-out infinite; }
 @keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.3)} 50%{box-shadow:0 0 0 4px rgba(192,57,43,.15)} }
@@ -207,6 +207,7 @@ html[data-theme="dark"] .btn-green:hover { opacity: 1; background: #15803d; }
 .tog.amber  input:checked + .tog-track { background: #a16207; }
 .tog.green  input:checked + .tog-track { background: #15803d; }
 .og-orders-tog input:checked + .tog-track { background: #16a34a; }
+.tog.pink   input:checked + .tog-track { background: #be185d; }
 
 /* ── CRM download group ── */
 :root { --teal: #0e7490; }
@@ -245,7 +246,7 @@ html[data-theme="dark"] .tile-drop.drag-over { background: rgba(255,255,255,.08)
 .tile-drop small { opacity: .8; }
 @media (max-width: 1100px) { .tile-row { grid-template-columns: 1fr; } }
 
-.dl-section { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 5px 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; }
+.dl-section { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; flex-shrink: 0; }
 .dl-section .dl-label { font-size: 9px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
 html[data-theme="dark"] .dl-section { background: var(--white) !important; border-color: var(--border) !important; }
 html[data-theme="dark"] .dl-section .dl-label { color: var(--muted); }
@@ -254,7 +255,7 @@ html[data-theme="dark"] .dl-section .dl-label { color: var(--muted); }
 html[data-theme="dark"] .crm-tog-label { color: #22d3ee; }
 
 /* ── Catalog section ── */
-.cat-section { background: #fef8f0; border: 1px solid #f5d6a8; border-radius: 8px; padding: 5px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; flex-shrink: 0; }
+.cat-section { background: #fef8f0; border: 1px solid #f5d6a8; border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 5px; flex-shrink: 0; }
 .cat-loaded { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--orange); }
 .cat-loaded small { font-weight: 400; font-size: 11px; color: #b45309; }
 .cat-loaded button { background: none; border: none; cursor: pointer; color: var(--orange); font-size: 15px; line-height: 1; opacity: .55; padding: 0 2px; margin-left: auto; }
@@ -1453,8 +1454,6 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <!-- Price toggles + brand filter on one row -->
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;justify-content:center">
         <div id="priceToggles" style="display:none" class="price-toggles">
-          <span class="price-toggles-label" id="priceToggleLabel">Update prices</span>
-          <span id="retailerToggleLabel" style="display:none"></span>
           <label class="tog-wrap">
             <span class="tog orange"><input type="checkbox" id="toggleCost" onchange="onPriceToggle()"><span class="tog-track"></span></span>
             Cost
@@ -1482,18 +1481,19 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
     <!-- ── Export pill (inline) ── -->
     <div class="dl-section" style="align-self:stretch">
-      <!-- Row 1: Total Suggested + Cust. BO's -->
-      <div style="display:flex;gap:5px;align-items:center;justify-content:center">
-        <button class="btn btn-amber btn-sm" id="downloadBtn" disabled onclick="downloadExcel()" style="min-width:132px">↓ Total Suggested</button>
-        <button class="btn btn-orange btn-sm" id="downloadBackordBtn" disabled onclick="downloadBackorders()" style="display:none" title="Export only lines that have a backorder quantity">↓ Cust. BO's</button>
-      </div>
-      <!-- Row 2: Branch Order(s) + Inc. Price -->
-      <div style="display:flex;gap:8px;align-items:center;justify-content:center">
-        <button class="btn btn-crm btn-sm" id="downloadCrmBtn" disabled onclick="downloadCRM()" style="min-width:132px">↓ Branch Order(s)</button>
+      <!-- Header: Export label + Inc. Price toggle -->
+      <div style="display:flex;align-items:center;gap:10px;justify-content:center">
+        <span class="t-label">Export</span>
         <label class="tog-wrap crm-price-tog" title="Include price columns in output files">
           <span class="tog amber"><input type="checkbox" id="crmIncludePrice"><span class="tog-track"></span></span>
           <span class="crm-tog-label">Inc. Price</span>
         </label>
+      </div>
+      <!-- Buttons row: Total Suggested + Branch Order(s) + Cust. BO's (3rd, shown when BO file loaded) -->
+      <div style="display:flex;gap:5px;align-items:center;justify-content:center">
+        <button class="btn btn-amber btn-sm" id="downloadBtn" disabled onclick="downloadExcel()">↓ Total Suggested</button>
+        <button class="btn btn-crm btn-sm" id="downloadCrmBtn" disabled onclick="downloadCRM()">↓ Branch Order(s)</button>
+        <button class="btn btn-orange btn-sm" id="downloadBackordBtn" disabled onclick="downloadBackorders()" style="display:none" title="Export only lines that have a backorder quantity">↓ Cust. BO's</button>
       </div>
     </div>
 
@@ -1568,11 +1568,9 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
      ══════════════════════════════════════════════════ -->
 <div id="tool-conversion" style="display:none">
 
-  <main>
-
-    <!-- Retailer + file controls -->
-    <div class="controls" style="margin-bottom:20px;overflow:visible">
-      <div class="controls-top">
+  <!-- Retailer + file controls — sits outside main so it stretches full width -->
+  <div class="controls" style="overflow:visible">
+    <div class="controls-top">
 
         <!-- Retailer -->
         <div class="t-pill">
@@ -1634,6 +1632,17 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
               Retail
             </label>
             <div id="brandFilterWrapConv" class="brand-filter-wrap"></div>
+          </div>
+        </div>
+
+        <!-- ── Special Customer Pricing pill ── -->
+        <div class="cat-section" id="convSpecialPricingPill" style="align-self:stretch;border-color:#be185d;background:#fdf2f8">
+          <span class="cat-label" style="color:#9d174d">Special Pricing</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label class="tog-wrap" title="When on, agreed special prices from CRM override catalog cost for this customer">
+              <span class="tog pink"><input type="checkbox" id="convSpecialPricingToggle" checked onchange="onConvSpecialPricingToggle()"><span class="tog-track"></span></span>
+            </label>
+            <span id="convSpecialPricingStatus" style="font-size:11px;font-weight:700;color:var(--muted)">—</span>
           </div>
         </div>
 
@@ -1721,7 +1730,9 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         </div>
 
       </div>
-    </div>
+  </div><!-- /controls -->
+
+  <main>
 
     <input type="file" id="convFileInput" accept=".xlsx,.xls,.xlsm" multiple onchange="handleConvFile(event)" style="display:none">
 
@@ -4522,7 +4533,7 @@ function getEffectivePrices(row, cfg) {
   // If a special price agreement exists for this customer + SKU, it takes precedence.
   // The special price is what Peats sells to the retailer — shown instead of catalog Band C/F.
   let isSpecialPrice = false;
-  if (convState && convState.specialCustomer && Object.keys(convState.specialPrices).length) {
+  if (convState && convState.specialPricingEnabled && convState.specialCustomer && Object.keys(convState.specialPrices).length) {
     const sku = String(row[cfg.partCol] || '').trim().toUpperCase();
     const sp  = convState.specialPrices[sku];
     if (sp != null) {
@@ -7913,7 +7924,8 @@ function launchTool(tool) {
     document.getElementById('tool-generator').style.display = 'block';
     setToolName('Order Generator Tool');
   } else if (tool === 'conversion') {
-    document.getElementById('tool-conversion').style.display = 'block';
+    document.getElementById('tool-conversion').style.display = 'flex';
+    document.getElementById('tool-conversion').style.flexDirection = 'column';
     setToolName('Order Conversion Tool');
   } else if (tool === 'backorder') {
     document.getElementById('tool-backorder').style.display = 'block';
@@ -11873,8 +11885,9 @@ const convState = {
   showPhysStock:  (function(){ try { return localStorage.getItem('conv_showPhysStock')  === '1'; } catch(e){ return false; } })(),
   showSalesOrders:(function(){ try { return localStorage.getItem('conv_showSalesOrders') === '1'; } catch(e){ return false; } })(),
   showOnOrder:    (function(){ try { return localStorage.getItem('conv_showOnOrder')     === '1'; } catch(e){ return false; } })(),
-  specialPrices:  {},   // sku (uppercase) → special agreed price for active customer
-  specialCustomer: null, // { code, name } or null
+  specialPrices:        {},     // sku (uppercase) → special agreed price for active customer
+  specialCustomer:      null,   // { code, name } or null
+  specialPricingEnabled: true,  // toggle — when off, special prices are ignored
 };
 
 function onConvRetailerChange() {
@@ -11882,6 +11895,7 @@ function onConvRetailerChange() {
   convState.retailerId    = sel.value;
   convState.specialPrices  = {};   // clear special prices when retailer changes
   convState.specialCustomer = null;
+  updateConvSpecialPricingPill();
   sel.classList.toggle('unselected', !sel.value);
   // Retailer-specific hints
   const smythsHint = document.getElementById('smythsHint');
@@ -12156,9 +12170,44 @@ async function autoLoadConvSpecialPrices(retailerId) {
       convState.specialCustomer = acct;
       showToast('💎 ' + count + ' special prices loaded for ' + acct.name);
     }
+    updateConvSpecialPricingPill();
   } catch(e) {
     console.warn('[ConvSpecialPrice]', e);
+    updateConvSpecialPricingPill();
   }
+}
+
+// ── Special Pricing pill UI ────────────────────────────────────────────────
+function updateConvSpecialPricingPill() {
+  const status = document.getElementById('convSpecialPricingStatus');
+  const pill   = document.getElementById('convSpecialPricingPill');
+  if (!status) return;
+  const enabled = convState.specialPricingEnabled;
+  const count   = Object.keys(convState.specialPrices || {}).length;
+  if (!enabled) {
+    status.textContent = 'Off';
+    status.style.color = 'var(--muted)';
+    if (pill) { pill.style.borderColor = 'var(--border)'; pill.style.background = 'var(--light)'; }
+  } else if (count > 0) {
+    status.textContent = '💎 ' + count + ' prices';
+    status.style.color = '#be185d';
+    if (pill) { pill.style.borderColor = '#be185d'; pill.style.background = '#fdf2f8'; }
+  } else if (convState.specialCustomer) {
+    status.textContent = 'No prices';
+    status.style.color = 'var(--muted)';
+    if (pill) { pill.style.borderColor = '#be185d'; pill.style.background = '#fdf2f8'; }
+  } else {
+    status.textContent = '—';
+    status.style.color = 'var(--muted)';
+    if (pill) { pill.style.borderColor = '#be185d'; pill.style.background = '#fdf2f8'; }
+  }
+}
+
+function onConvSpecialPricingToggle() {
+  const tog = document.getElementById('convSpecialPricingToggle');
+  convState.specialPricingEnabled = tog ? tog.checked : true;
+  updateConvSpecialPricingPill();
+  renderConvTable();
 }
 
 // Process one or more files (drag-drop or file picker)
@@ -12406,8 +12455,9 @@ function resetConvFile() {
   convState.skuOverrides  = {};
   convState.excludedSkus  = new Set();
   convState.codeCheckDoneFor = null;
-  convState.specialPrices    = {};
-  convState.specialCustomer  = null;
+  convState.specialPrices        = {};
+  convState.specialCustomer      = null;
+  convState.specialPricingEnabled = true;
   convState.retailerId    = '';
   document.getElementById('convFileInput').value  = '';
   document.getElementById('convFilePill').style.display  = 'none';
@@ -12452,6 +12502,10 @@ void 0;
   if (calBar) calBar.remove();
   const slotEl = document.getElementById('convToolbarSlot');
   if (slotEl) slotEl.innerHTML = '';
+  // Reset special pricing pill
+  const spTog = document.getElementById('convSpecialPricingToggle');
+  if (spTog) spTog.checked = true;
+  updateConvSpecialPricingPill();
 }
 
 function updateConvDownloadBtn() {
@@ -21225,7 +21279,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v223 · 20 Sep 2026 · Unified toolbar system: .t-pill / .t-label / .controls-top stretch across all tools; Retailer selects in labelled pills; consistent cat-section, dl-section, sep heights';
+const TOOL_BUILD = 'v224 · 20 Sep 2026 · Pill labels pinned to top (justify-content:flex-start); toolbar min-height:64px; selects unified to 32px; OG catalog pill: removed "Update prices" text label; OG export pill: header row (Export + Inc.Price toggle) + 3 buttons side-by-side (Total Suggested, Branch Orders, Cust.BOs); OCT: controls moved outside main for full-width toolbar; OCT: Special Customer Pricing pill (pink, CRM-sourced, toggle on/off, overrides catalog cost when active)';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
