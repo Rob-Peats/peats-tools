@@ -147,6 +147,17 @@ header { background: linear-gradient(135deg, #0f2a4e 0%, #1a4f8a 45%, #2176c7 80
 .controls-top { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; padding: 10px 16px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .controls-top::-webkit-scrollbar { height: 4px; }
 .controls-top::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* ── Consistent toolbar button height across all tools ── */
+.controls-top .btn { min-height: 32px; }
+/* ── Consistent section dividers in toolbars ── */
+.ctrl-sep { width: 1px; align-self: stretch; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+/* ── Dark-navy stat bars (OCT, and future tools) ── */
+.stat-bar { display: flex; align-items: stretch; background: #1a3c6e; border-radius: 0 0 6px 6px; margin-bottom: 12px; overflow: hidden; }
+.stat-bar-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 22px; background: rgba(255,255,255,.04); flex-shrink: 0; gap: 2px; }
+.stat-bar-tile .stat-value { font-size: 26px; font-weight: 800; line-height: 1; }
+.stat-bar-tile .stat-label { font-size: 11px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+.stat-bar-tile .stat-detail { font-size: 10px; color: #64aed6; white-space: nowrap; }
+.stat-bar-sep { width: 1px; background: rgba(255,255,255,.15); flex-shrink: 0; }
 .controls-download { display: none; }
 .ctrl-group { display: flex; align-items: center; gap: 8px; }
 .ctrl-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
@@ -225,6 +236,7 @@ html[data-theme="dark"] .btn-red:hover   { opacity: 1; background: #b91c1c; }
 .tile-drop.drag-over { opacity: 1; background: rgba(255,255,255,.75); transform: scale(1.02); }
 html[data-theme="dark"] .tile-drop.drag-over { background: rgba(255,255,255,.08); }
 #ogBoDropZone.drag-over { background: #dbeafe !important; transform: scale(1.01); }
+#convBoDropZone.drag-over { background: #dbeafe !important; transform: scale(1.01); }
 .tile-drop strong { font-weight: 700; }
 .tile-drop small { opacity: .8; }
 @media (max-width: 1100px) { .tile-row { grid-template-columns: 1fr; } }
@@ -1554,7 +1566,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   <main>
 
     <!-- Retailer + file controls -->
-    <div class="controls" style="margin-bottom:20px;border-radius:10px;border:1px solid var(--border);overflow:visible">
+    <div class="controls" style="margin-bottom:20px;overflow:visible">
       <div class="controls-top" style="gap:10px;">
 
         <!-- Retailer select + file pill (stacked vertically) -->
@@ -1628,69 +1640,22 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           <span class="conv-loading-dots"><span></span><span></span><span></span></span>
         </div>
 
-        <!-- Combined Fulfilment + Value pill (shown after stock check) -->
-        <div id="convFulfilPill" style="display:none;align-items:stretch;border:1px solid var(--success-border);border-radius:8px;flex-shrink:0;align-self:stretch;overflow:hidden;cursor:default" title="PO fulfilment and value — live from Exchequer">
-          <!-- Left: Fulfilment % -->
-          <div id="convFulfilLeft" style="display:flex;align-items:center;gap:12px;padding:8px 18px;background:var(--success-bg)">
-            <span id="convFulfilPct" style="font-size:30px;font-weight:800;line-height:1;color:#15803d;margin-top:-4px">—%</span>
-            <span style="display:flex;flex-direction:column;gap:2px">
-              <span id="convFulfilLabel" style="font-size:12px;font-weight:700;color:#15803d">Fulfilment</span>
-              <span id="convFulfilDetail" style="font-size:10px;color:var(--muted);white-space:nowrap"></span>
-              <span id="convFulfilMeta" style="font-size:10px;color:var(--muted);white-space:nowrap"></span>
-            </span>
-          </div>
-          <!-- Divider -->
-          <div id="convFulfilDivider" style="width:1px;background:var(--success-border);flex-shrink:0"></div>
-          <!-- Right: PO Value -->
-          <div id="convValueRight" style="display:flex;align-items:center;padding:8px 18px;background:var(--success-bg)">
-            <span style="display:flex;flex-direction:column;gap:5px">
-              <span style="display:flex;align-items:baseline;gap:6px">
-                <span id="convValueTotal" style="font-size:21px;font-weight:800;color:#1d4ed8;line-height:1;white-space:nowrap">€—</span>
-                <span style="font-size:11px;font-weight:700;color:#1d4ed8;white-space:nowrap">PO Total</span>
-              </span>
-              <span style="display:flex;align-items:baseline;gap:6px">
-                <span id="convValueDeliverable" style="font-size:21px;font-weight:800;color:#15803d;line-height:1;white-space:nowrap">€—</span>
-                <span style="font-size:11px;font-weight:700;color:#15803d;white-space:nowrap">Deliverable</span>
-              </span>
-            </span>
-          </div>
-        </div>
-
-        <!-- Extended Stock toggles pill (shown after stock check, off by default) -->
-        <div id="convExtStockPill" class="cat-section" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex-shrink:0;padding:8px 14px;align-self:stretch">
-          <div class="cat-loaded-row">
-            <span class="cat-loaded-msg">Also Show</span>
-          </div>
-          <div class="cat-controls-row">
-            <label class="tog-wrap">
-              <span class="tog teal"><input type="checkbox" id="convTogglePhysStock" onchange="toggleExtStock('phys',this.checked)"><span class="tog-track"></span></span>
-              Phys Stock
-            </label>
-            <label class="tog-wrap">
-              <span class="tog amber"><input type="checkbox" id="convToggleSalesOrders" onchange="toggleExtStock('so',this.checked)"><span class="tog-track"></span></span>
-              Sales Orders
-            </label>
-            <label class="tog-wrap">
-              <span class="tog green"><input type="checkbox" id="convToggleOnOrder" onchange="toggleExtStock('oo',this.checked)"><span class="tog-track"></span></span>
-              On Order
-            </label>
-          </div>
-        </div>
-
-        <!-- Backorder file drop zone -->
+        <!-- Backorder file drop zone — styled like Generator ogBoDropZone -->
         <div class="cat-section" id="convBoSection" style="flex:0 1 auto;min-width:0;align-self:stretch;justify-content:center;">
           <div id="convBoDropZone" class="cat-section"
-            style="border:1.5px dashed #94a3b8;border-radius:7px;padding:6px 10px;cursor:pointer;text-align:center;font-size:11px;color:var(--muted);background:#f8faff;min-width:110px;"
+            style="background:#eef4fb;border-color:#bcd6ef;border-style:dashed;padding:10px 16px;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:200px;align-self:stretch;text-align:center;cursor:pointer;transition:background .15s,transform .1s"
             title="Drop the Exchequer backorder file here to flag any SKUs already on backorder for this account"
             onclick="document.getElementById('convBoFileInput').click()"
-            ondragover="event.preventDefault();this.style.borderColor='var(--brand)'"
-            ondragleave="this.style.borderColor='#94a3b8'"
-            ondrop="event.preventDefault();this.style.borderColor='#94a3b8';convBoHandleDrop(event)">
-            📋 Drop Backorder File
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="event.preventDefault();this.classList.remove('drag-over');convBoHandleDrop(event)">
+            <span class="cat-label" style="color:#1d6fb8">📮 Current Backorders</span>
+            <span style="color:#1d6fb8;font-size:12px;font-weight:700;opacity:.85">Drop file here</span>
+            <span style="color:#6b9abf;font-size:10px">— deducts backorders from suggested qty —</span>
           </div>
-          <div id="convBoPill" style="display:none;align-items:center;gap:6px;font-size:11px;">
-            <span style="font-size:14px;">📋</span>
-            <span id="convBoFileName" style="font-weight:600;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+          <div id="convBoPill" style="display:none;align-items:center;gap:6px;font-size:11px;padding:4px 8px;">
+            <span style="font-size:14px;">📮</span>
+            <span id="convBoFileName" style="font-weight:600;color:var(--text);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
             <span id="convBoCount" style="color:var(--muted);"></span>
             <button onclick="convBoReset()" title="Clear backorder file" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;padding:0 2px;">✕</button>
           </div>
@@ -1703,6 +1668,52 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           <button class="btn btn-red" id="convExportOosBtn" onclick="exportOutOfStocksXlsx()" style="font-size:12px;padding:5px 14px;white-space:nowrap;opacity:0.4;pointer-events:none" title="Export lines with stock shortages to Excel">📤 Export Out of Stocks</button>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ── Dark navy stat row — shown after stock check completes ── -->
+    <div id="convFulfilPill" style="display:none;flex-direction:row;align-items:stretch;background:#1a3c6e;border-radius:0 0 6px 6px;margin-bottom:12px;overflow:hidden">
+      <!-- Fulfilment tile -->
+      <div id="convFulfilLeft" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 24px;gap:2px;background:rgba(255,255,255,.04);flex-shrink:0">
+        <span id="convFulfilPct" style="font-size:28px;font-weight:800;line-height:1;color:#86efac">—%</span>
+        <span id="convFulfilLabel" style="font-size:11px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Fulfilment</span>
+        <span id="convFulfilDetail" style="font-size:10px;color:#64aed6;white-space:nowrap;margin-top:1px"></span>
+        <span id="convFulfilMeta" style="font-size:10px;color:#64aed6;white-space:nowrap"></span>
+      </div>
+      <!-- Divider -->
+      <div id="convFulfilDivider" style="width:1px;background:rgba(255,255,255,.15);flex-shrink:0"></div>
+      <!-- PO Value tile -->
+      <div id="convValueRight" style="display:flex;align-items:center;padding:10px 24px;background:rgba(255,255,255,.04);flex-shrink:0">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <span id="convValueTotal" style="font-size:22px;font-weight:800;color:#60a5fa;line-height:1;white-space:nowrap">€—</span>
+            <span style="font-size:11px;font-weight:700;color:#93c5fd;white-space:nowrap">PO Total</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <span id="convValueDeliverable" style="font-size:22px;font-weight:800;color:#86efac;line-height:1;white-space:nowrap">€—</span>
+            <span style="font-size:11px;font-weight:700;color:#93c5fd;white-space:nowrap">Deliverable</span>
+          </div>
+        </div>
+      </div>
+      <!-- Flex spacer -->
+      <div style="flex:1"></div>
+      <!-- Also Show toggles -->
+      <div id="convExtStockPill" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;padding:8px 20px;border-left:1px solid rgba(255,255,255,.15)">
+        <span style="font-size:10px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.4px">Also Show</span>
+        <div style="display:flex;gap:12px">
+          <label class="tog-wrap" style="color:#e2e8f0">
+            <span class="tog teal"><input type="checkbox" id="convTogglePhysStock" onchange="toggleExtStock('phys',this.checked)"><span class="tog-track"></span></span>
+            Phys Stock
+          </label>
+          <label class="tog-wrap" style="color:#e2e8f0">
+            <span class="tog amber"><input type="checkbox" id="convToggleSalesOrders" onchange="toggleExtStock('so',this.checked)"><span class="tog-track"></span></span>
+            Sales Orders
+          </label>
+          <label class="tog-wrap" style="color:#e2e8f0">
+            <span class="tog green"><input type="checkbox" id="convToggleOnOrder" onchange="toggleExtStock('oo',this.checked)"><span class="tog-track"></span></span>
+            On Order
+          </label>
+        </div>
       </div>
     </div>
 
@@ -6004,13 +6015,28 @@ function convBoReset() {
   injectConvBoBadges();
 }
 
-/** Call after any conv preview render to stamp BO badges on matching SKUs. */
+/** Call after any conv preview render to stamp BO badges on matching SKUs and centre the Qty column. */
 function injectConvBoBadges() {
   const tbody = document.getElementById('convTableBody');
   if (!tbody) return;
 
   // Remove any existing badges first
   tbody.querySelectorAll('.conv-bo-badge').forEach(function(el){ el.remove(); });
+
+  // ── Centre the Qty column regardless of whether a BO file is loaded ──
+  const table = tbody.closest('table');
+  let qtyColIdx = -1;
+  if (table) {
+    const headers = Array.from(table.querySelectorAll('thead th'));
+    qtyColIdx = headers.findIndex(function(th){ return /^qty$/i.test(th.textContent.trim()); });
+    if (qtyColIdx >= 0) {
+      headers[qtyColIdx].style.textAlign = 'center';
+      Array.from(tbody.querySelectorAll('tr')).forEach(function(tr) {
+        const cells = tr.querySelectorAll('td');
+        if (cells[qtyColIdx]) cells[qtyColIdx].style.textAlign = 'center';
+      });
+    }
+  }
 
   if (!convBoMap || !convState) return;
   const retailerEntry = (typeof CONV_SPECIAL_ACCOUNTS !== 'undefined') && CONV_SPECIAL_ACCOUNTS[convState.retailerId];
@@ -6019,31 +6045,39 @@ function injectConvBoBadges() {
 
   const skuMap = convBoMap[acCode];
 
+  function makeBoBadge(qty) {
+    const badge = document.createElement('div');
+    badge.className = 'conv-bo-badge';
+    badge.title     = 'Already on backorder for this account: ' + qty + ' unit' + (qty !== 1 ? 's' : '') + ' outstanding';
+    badge.style.cssText = 'display:block;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:4px;font-size:10px;font-weight:800;padding:1px 5px;margin-top:3px;white-space:nowrap;text-align:center;';
+    badge.textContent   = 'BO ' + qty;
+    return badge;
+  }
+
+  function injectBadgeToRow(tr, badge) {
+    // Prefer the QTY column cell detected from thead
+    if (qtyColIdx >= 0) {
+      const cells = tr.querySelectorAll('td');
+      if (cells[qtyColIdx]) { cells[qtyColIdx].appendChild(badge); return; }
+    }
+    // Fallback: first td
+    const first = tr.querySelector('td');
+    if (first) first.appendChild(badge);
+  }
+
   // Most renderers use <input data-orig="SKU"> for editable SKU cells
   tbody.querySelectorAll('input[data-orig]').forEach(function(inp) {
     const rawSku = (inp.dataset.orig || '').trim().toUpperCase();
     if (!rawSku || skuMap[rawSku] === undefined) return;
-    const qty  = skuMap[rawSku];
-    const badge = document.createElement('span');
-    badge.className = 'conv-bo-badge';
-    badge.title     = 'Already on backorder for this account: ' + qty + ' unit' + (qty !== 1 ? 's' : '') + ' outstanding';
-    badge.style.cssText = 'display:inline-block;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:4px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:5px;vertical-align:middle;white-space:nowrap;';
-    badge.textContent   = 'BO ' + qty;
-    inp.parentNode.appendChild(badge);
+    injectBadgeToRow(inp.closest('tr'), makeBoBadge(skuMap[rawSku]));
   });
 
   // Some renderers write SKUs as plain text in td[data-sku] — support that too
   tbody.querySelectorAll('td[data-sku]').forEach(function(td) {
     const rawSku = (td.dataset.sku || '').trim().toUpperCase();
     if (!rawSku || skuMap[rawSku] === undefined) return;
-    if (td.querySelector('.conv-bo-badge')) return;
-    const qty   = skuMap[rawSku];
-    const badge = document.createElement('span');
-    badge.className = 'conv-bo-badge';
-    badge.title     = 'Already on backorder for this account: ' + qty + ' unit' + (qty !== 1 ? 's' : '') + ' outstanding';
-    badge.style.cssText = 'display:inline-block;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:4px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:5px;vertical-align:middle;white-space:nowrap;';
-    badge.textContent   = 'BO ' + qty;
-    td.appendChild(badge);
+    if (td.closest('tr').querySelector('.conv-bo-badge')) return; // already handled
+    injectBadgeToRow(td.closest('tr'), makeBoBadge(skuMap[rawSku]));
   });
 }
 
@@ -21185,7 +21219,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v220 · 20 Sep 2026 · Email SOA: fix ReferenceError escHtml not defined';
+const TOOL_BUILD = 'v221 · 20 Sep 2026 · OCT: full-width toolbar, dark navy stat row, Generator-style BO dropzone, BO badges in Qty column, centred Qty; global toolbar consistency CSS';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -22668,20 +22702,17 @@ function updateFulfilPill(stockMap, lines) {
   const total = full + partial + out + unknown;
   const pct   = total > 0 ? Math.round((full / total) * 100) : 0;
 
-  let bg, border, color;
-  if (pct >= 90) { bg = '#dcfce7'; border = '#86efac'; color = '#15803d'; }
-  else if (pct >= 50) { bg = '#fef3c7'; border = '#fcd34d'; color = '#d97706'; }
-  else               { bg = '#fee2e2'; border = '#fca5a5'; color = '#dc2626'; }
+  // Colour coding: green ≥90%, amber ≥50%, red below — applied to the number and label only
+  // (stat row uses dark navy background which never changes)
+  let color;
+  if (pct >= 90)      color = '#86efac';   // bright green on dark
+  else if (pct >= 50) color = '#fcd34d';   // amber
+  else                color = '#f87171';   // red
 
-  // Apply colour uniformly across both sections
-  if (leftEl)    leftEl.style.background  = bg;
-  if (rightEl)   rightEl.style.background = bg;
-  if (dividerEl) dividerEl.style.background = border;
-  if (labelEl)   labelEl.style.color = color;
-  pill.style.borderColor = border;
-  pill.style.display     = 'flex';
-  pctEl.style.color      = color;
-  pctEl.textContent      = pct + '%';
+  if (labelEl) labelEl.style.color = color;
+  pill.style.display = 'flex';
+  pctEl.style.color  = color;
+  pctEl.textContent  = pct + '%';
 
   // Show the extended stock toggles pill and sync checkbox states from convState
   const extPill = document.getElementById('convExtStockPill');
