@@ -144,11 +144,15 @@ header { background: linear-gradient(135deg, #0f2a4e 0%, #1a4f8a 45%, #2176c7 80
 
 /* ── Controls bar ── */
 .controls { background: var(--white); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: stretch; }
-.controls-top { display: flex; align-items: stretch; gap: 10px; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; padding: 10px 16px; min-height: 64px; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.controls-top { display: flex; align-items: stretch; gap: 8px; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; padding: 7px 14px; min-height: 56px; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .controls-top::-webkit-scrollbar { height: 4px; }
 .controls-top::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 /* ── Unified toolbar pill — used by all tools ── */
-.t-pill { display: flex; flex-direction: column; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 8px; background: var(--light); padding: 8px 12px; gap: 5px; box-sizing: border-box; flex-shrink: 0; }
+.t-pill { display: flex; flex-direction: column; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 8px; background: var(--light); padding: 6px 10px; gap: 4px; box-sizing: border-box; flex-shrink: 0; }
+/* ── Band toggle buttons (replaces toggle switches for price bands) ── */
+.band-btn { display:inline-flex;align-items:center;justify-content:center;padding:4px 12px;border:1px solid var(--border);background:var(--white);color:var(--muted);font-size:11px;font-weight:800;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap; }
+.band-btn.active-teal { background:#0891b2;color:#fff;border-color:#0891b2; }
+.band-btn.active-purple { background:#7c3aed;color:#fff;border-color:#7c3aed; }
 /* ── Unified toolbar label (9px uppercase above controls) ── */
 .t-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); line-height: 1; white-space: nowrap; }
 /* ── Consistent toolbar button height across all tools ── */
@@ -246,7 +250,7 @@ html[data-theme="dark"] .tile-drop.drag-over { background: rgba(255,255,255,.08)
 .tile-drop small { opacity: .8; }
 @media (max-width: 1100px) { .tile-row { grid-template-columns: 1fr; } }
 
-.dl-section { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 6px; flex-shrink: 0; }
+.dl-section { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 4px; flex-shrink: 0; }
 .dl-section .dl-label { font-size: 9px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
 html[data-theme="dark"] .dl-section { background: var(--white) !important; border-color: var(--border) !important; }
 html[data-theme="dark"] .dl-section .dl-label { color: var(--muted); }
@@ -255,7 +259,7 @@ html[data-theme="dark"] .dl-section .dl-label { color: var(--muted); }
 html[data-theme="dark"] .crm-tog-label { color: #22d3ee; }
 
 /* ── Catalog section ── */
-.cat-section { background: #fef8f0; border: 1px solid #f5d6a8; border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 5px; flex-shrink: 0; }
+.cat-section { background: #fef8f0; border: 1px solid #f5d6a8; border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 4px; flex-shrink: 0; }
 .cat-loaded { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--orange); }
 .cat-loaded small { font-weight: 400; font-size: 11px; color: #b45309; }
 .cat-loaded button { background: none; border: none; cursor: pointer; color: var(--orange); font-size: 15px; line-height: 1; opacity: .55; padding: 0 2px; margin-left: auto; }
@@ -2053,23 +2057,18 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <!-- PILL 2: Brands (Load button inside panel, same pattern as Stock Analysis) -->
     <div class="brand-filter-wrap t-pill" id="asBrandWrap"
       style="min-width:140px;position:relative;">
-      <span class="t-label">Brands</span>
+      <span class="t-label" style="align-self:center;">Brands</span>
       <button class="brand-filter-btn" id="asBrandBtn" onclick="asToggleBrandPanel(event)"
         style="width:100%;justify-content:center;">
-        🏷 <span id="asBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
-        <span style="font-size:10px;opacity:.6">▾</span>
+        <span id="asBrandLabel" style="font-size:12px;font-weight:700;color:var(--muted);">Select brand</span>
+        <span style="font-size:10px;opacity:.6;margin-left:4px;">▾</span>
       </button>
       <!-- Brand dropdown panel -->
       <div class="brand-filter-panel" id="asBrandPanel" style="display:none;min-width:420px;max-width:500px;">
         <input class="brand-search-inp" id="asBrandSearch" placeholder="Search brands…" oninput="asFilterBrandList(this.value)" autocomplete="off">
         <div class="brand-list-scroll" id="asBrandList" style="max-height:380px;"></div>
-        <!-- Mode toggle + Load at bottom of panel -->
+        <!-- Load at bottom of panel -->
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
-          <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
-            style="height:28px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;">
-            <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 8px;">All SKUs</span>
-            <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 8px;">Catalog Only</span>
-          </div>
           <div id="asLoadBrandBtn" style="display:none;">
             <button onclick="asClosePanelAndLoad()" class="btn btn-brand" style="width:100%;">▶ Load Stock</button>
           </div>
@@ -2077,24 +2076,22 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- PILL 4: Price Bands (label on top, Band C + F side-by-side) -->
-    <div class="t-pill" style="min-width:200px;">
+    <!-- PILL 3: Selection (All SKUs / Catalog Only) -->
+    <div class="t-pill" style="min-width:140px;">
+      <span class="t-label" style="align-self:center;">Selection</span>
+      <div id="asCrmModeToggle" onclick="asToggleCrmMode()" title="All: includes CRM SKUs not in catalog · Catalog Only: uses product catalog only"
+        style="height:28px;display:flex;align-items:stretch;border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;user-select:none;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-family:inherit;transition:all .15s;">
+        <span id="asCrmToggleAll" style="flex:1;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:#fff;transition:all .15s;padding:0 8px;">All SKUs</span>
+        <span id="asCrmToggleCat" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--light);color:var(--muted);transition:all .15s;padding:0 8px;">Catalog Only</span>
+      </div>
+    </div>
+
+    <!-- PILL 4: Price Bands (label on top, Band C + F as toggle buttons) -->
+    <div class="t-pill" style="min-width:170px;">
       <span class="t-label">Price Bands</span>
-      <div style="display:flex;align-items:center;gap:14px;">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <span style="font-size:11px;font-weight:700;color:#0891b2;white-space:nowrap;">Band C</span>
-          <label class="tog teal" style="flex-shrink:0;">
-            <input type="checkbox" id="asBandCToggle" checked onchange="asToggleBandCol('C')">
-            <span class="tog-track"></span>
-          </label>
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <span style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Band F</span>
-          <label class="tog purple" style="flex-shrink:0;">
-            <input type="checkbox" id="asBandFToggle" checked onchange="asToggleBandCol('F')">
-            <span class="tog-track"></span>
-          </label>
-        </label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button id="asBandCToggle" class="band-btn active-teal" onclick="asToggleBandCol('C')" title="Toggle Band C column">Band C</button>
+        <button id="asBandFToggle" class="band-btn active-purple" onclick="asToggleBandCol('F')" title="Toggle Band F column">Band F</button>
       </div>
     </div>
 
@@ -2131,27 +2128,29 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- PILL 7: Export -->
-    <div class="dl-section" style="min-width:140px;align-self:stretch;">
-      <button id="asExportBtn" onclick="asExportExcel()" disabled
-        class="btn"
-        style="background:var(--green);color:#fff;font-size:12px;padding:5px 14px;width:100%;cursor:not-allowed;opacity:.38;">
-        ⬇ Export to Excel
-      </button>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;">
-        <input type="checkbox" id="asThumbnailToggle" style="cursor:pointer;">
-        Thumbnails
-      </label>
+    <!-- PILL 7: Exports -->
+    <div class="t-pill" style="min-width:180px;">
+      <span class="t-label" style="align-self:center;">Exports</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button id="asExportBtn" onclick="asExportExcel()" disabled
+          style="background:var(--green);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:800;padding:4px 12px;cursor:not-allowed;opacity:.38;font-family:inherit;white-space:nowrap;transition:all .15s;">
+          ⬇ Export to Excel
+        </button>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;">
+          <input type="checkbox" id="asThumbnailToggle" style="cursor:pointer;">
+          Inc. Thumbnails
+        </label>
+      </div>
     </div>
 
-    <!-- PILL 8: Clear Cache -->
+    <!-- PILL 8: Cache -->
     <div class="t-pill" style="min-width:80px;">
-      <span class="t-label">Cache</span>
+      <span class="t-label" style="align-self:center;">Cache</span>
       <button onclick="asClearCache()"
         title="Clear the 7-day local cache and re-fetch fresh data from CRM"
-        style="border:none;background:transparent;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;padding:2px 0;transition:color .15s;"
-        onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
-        ⚡ Clear
+        style="padding:4px 12px;border:none;border-radius:6px;background:#d97706;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .15s;"
+        onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">
+        ⚡ Clear Cache
       </button>
     </div>
 
@@ -2182,7 +2181,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
     <!-- Aged Stock section -->
     <div id="asAgedSection" style="display:none;">
-      <div style="background:#1a3c6e;color:#fff;display:flex;align-items:center;padding:4px 14px;gap:12px;min-height:36px;">
+      <div style="background:#1a3c6e;color:#fff;display:flex;align-items:center;padding:6px 14px;gap:10px;min-height:42px;">
         <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">📦 Aged Stock</span>
         <div id="asAgedCards" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;justify-content:flex-end;align-items:center;"></div>
       </div>
@@ -2195,7 +2194,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <!-- Slow Moving section -->
     <div id="asSlowSection" style="display:none;">
       <div style="height:12px;background:var(--light);border-top:2px solid var(--border);"></div>
-      <div style="background:#0891b2;color:#fff;display:flex;align-items:center;padding:4px 14px;gap:12px;min-height:36px;">
+      <div style="background:#0891b2;color:#fff;display:flex;align-items:center;padding:6px 14px;gap:10px;min-height:42px;">
         <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">⏱ Slow Moving Stock</span>
         <div id="asSlowCards" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;justify-content:flex-end;align-items:center;"></div>
       </div>
@@ -8711,7 +8710,7 @@ function saaRenderTable() {
 
   document.getElementById('saaTableHead').innerHTML =
     '<tr>' + ths.map(([k,label]) =>
-      `<th onclick="saaSort('${k}')" style="${STICKY_TH}${k==='desc'?'text-align:left;':''}${k==='free'?'background:#e8f5e9;':''}">${label}${arrowFor(k)}</th>`
+      `<th onclick="saaSort('${k}')" style="${STICKY_TH}${k==='desc'?'text-align:left;':''}${k==='free'?'background:#e8f5e9;':''}${k===saaSortCol?'text-decoration:underline;':''}">${label}${arrowFor(k)}</th>`
     ).join('') + '</tr>';
 
   // Rows
@@ -9937,7 +9936,8 @@ function beaRenderResults(brand, periodMo, activeMo, lapsedMo, allTime) {
 
   function _th(label, col, extra) {
     const arr = beaSortCol === col ? (beaSortDir === 1 ? ' ▲' : ' ▼') : '';
-    return '<th onclick="beaSort(&quot;' + col + '&quot;)" style="' + TH_BASE + (extra||'') + '">' +
+    const ul  = beaSortCol === col ? 'text-decoration:underline;' : '';
+    return '<th onclick="beaSort(&quot;' + col + '&quot;)" style="' + TH_BASE + (extra||'') + ul + '">' +
       label + '<span style="opacity:.4;font-size:10px;">' + arr + ' ⇅</span></th>';
   }
 
@@ -10226,10 +10226,18 @@ function asToggleBrand(chk) {
 }
 
 function asUpdateBrandBtn() {
-  const cnt = document.getElementById('asBrandCount');
-  if (!cnt) return;
-  if (asSelBrands.size === 0) { cnt.style.display = 'none'; }
-  else { cnt.textContent = asSelBrands.size; cnt.style.display = ''; }
+  const lbl = document.getElementById('asBrandLabel');
+  if (!lbl) return;
+  if (asSelBrands.size === 0) {
+    lbl.textContent = 'Select brand';
+    lbl.style.color = 'var(--muted)';
+  } else if (asSelBrands.size === 1) {
+    lbl.textContent = [...asSelBrands][0];
+    lbl.style.color = 'var(--brand)';
+  } else {
+    lbl.textContent = asSelBrands.size + ' brands';
+    lbl.style.color = 'var(--brand)';
+  }
 }
 
 function asUpdateLoadBtn() {
@@ -10991,12 +10999,12 @@ function asRenderSummaryCards() {
     const border  = active ? '1px solid rgba(255,255,255,.75)' : '1px solid rgba(255,255,255,.2)';
     const opacity = active ? '1' : '.82';
     return `<span ${clickable ? `onclick="${fn}('${c.view}')"` : ''}
-      style="display:inline-flex;align-items:center;gap:5px;background:${bg};border:${border};
-             border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700;
+      style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:${bg};border:${border};
+             border-radius:99px;padding:3px 13px;font-size:11px;font-weight:700;min-height:26px;
              ${clickable ? 'cursor:pointer;' : 'cursor:default;'}white-space:nowrap;
              color:rgba(255,255,255,${opacity});transition:all .15s;user-select:none;">
-      <span style="font-weight:900;font-size:11px;">${c.val}</span>
-      <span style="font-size:9px;font-weight:600;">${c.label}</span>
+      <span style="font-weight:900;font-size:13px;">${c.val}</span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:.03em;">${c.label}</span>
     </span>`;
   }
 
@@ -11119,6 +11127,7 @@ function asRenderAgedTable() {
       (k === 'desc'       ? 'text-align:left;'      : '') +
       (k === 'free'       ? 'background:#e8f5e9;'   : '') +
       (k === 'clearance'  ? 'background:#fffbea;'   : '') +
+      (k === asSortCol    ? 'text-decoration:underline;' : '') +
       `">${label}${arrowFor(k)}</th>`
     ).join('') + '</tr>';
 
@@ -11266,23 +11275,24 @@ function asRenderSlowTable() {
   const allChecked = rows.length > 0 && rows.every(r => asSlowSelected.has(r.code));
   const colSpan = 13 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0);
   const slowArrow = k => k === asSlowSortCol ? (asSlowSortDir === 1 ? ' ▲' : ' ▼') : '';
+  const slowUL    = k => k === asSlowSortCol ? 'text-decoration:underline;' : '';
 
   slowHead.innerHTML = `<tr>
     <th style="${CHK_TH}"><input type="checkbox" title="Select all" ${allChecked ? 'checked' : ''} onchange="asSelectAllSlow(this.checked)" style="cursor:pointer;"></th>
-    <th onclick="asSlowSort('state')"         style="${WB}width:72px;">State${slowArrow('state')}</th>
-    <th onclick="asSlowSort('brand')"         style="${WB}text-align:left;width:80px;">Brand${slowArrow('brand')}</th>
-    <th onclick="asSlowSort('code')"          style="${WB}width:110px;">Code${slowArrow('code')}</th>
-    <th onclick="asSlowSort('source')"        style="${WB}width:80px;">Source${slowArrow('source')}</th>
-    <th onclick="asSlowSort('desc')"          style="${WB}text-align:left;">Description${slowArrow('desc')}</th>
-    <th onclick="asSlowSort('free')"          style="${WB}color:#1f6b3e;background:#e8f5e9;width:80px;">Free Stock${slowArrow('free')}</th>
-    <th onclick="asSlowSort('sales3Mo')"      style="${WB}width:100px;">3mo Sales${slowArrow('sales3Mo')}</th>
-    <th onclick="asSlowSort('avgMonthly')"    style="${WB}width:80px;">Avg/Mo${slowArrow('avgMonthly')}</th>
-    <th onclick="asSlowSort('weeksOfCoverage')" style="${WB}color:#0891b2;width:100px;">Weeks Cover${slowArrow('weeksOfCoverage')}</th>
-    <th onclick="asSlowSort('createdDate')"   style="${WB}width:100px;">Created${slowArrow('createdDate')}</th>
-    ${asBandCVisible ? `<th onclick="asSlowSort('bandC')" style="${WB}color:#0891b2;width:90px;">Band C (€)${slowArrow('bandC')}</th>` : ''}
-    ${asBandFVisible ? `<th onclick="asSlowSort('bandF')" style="${WB}color:#7c3aed;width:90px;">Band F (€)${slowArrow('bandF')}</th>` : ''}
-    <th onclick="asSlowSort('discount')"  style="${WB}color:#b45309;width:90px;">Discount %${slowArrow('discount')}</th>
-    <th onclick="asSlowSort('clearance')" style="${WB}color:#b45309;background:#fffbea;width:100px;">Clearance (€)${slowArrow('clearance')}</th>
+    <th onclick="asSlowSort('state')"         style="${WB}width:72px;${slowUL('state')}">State${slowArrow('state')}</th>
+    <th onclick="asSlowSort('brand')"         style="${WB}text-align:left;width:80px;${slowUL('brand')}">Brand${slowArrow('brand')}</th>
+    <th onclick="asSlowSort('code')"          style="${WB}width:110px;${slowUL('code')}">Code${slowArrow('code')}</th>
+    <th onclick="asSlowSort('source')"        style="${WB}width:80px;${slowUL('source')}">Source${slowArrow('source')}</th>
+    <th onclick="asSlowSort('desc')"          style="${WB}text-align:left;${slowUL('desc')}">Description${slowArrow('desc')}</th>
+    <th onclick="asSlowSort('free')"          style="${WB}color:#1f6b3e;background:#e8f5e9;width:80px;${slowUL('free')}">Free Stock${slowArrow('free')}</th>
+    <th onclick="asSlowSort('sales3Mo')"      style="${WB}width:100px;${slowUL('sales3Mo')}">3mo Sales${slowArrow('sales3Mo')}</th>
+    <th onclick="asSlowSort('avgMonthly')"    style="${WB}width:80px;${slowUL('avgMonthly')}">Avg/Mo${slowArrow('avgMonthly')}</th>
+    <th onclick="asSlowSort('weeksOfCoverage')" style="${WB}color:#0891b2;width:100px;${slowUL('weeksOfCoverage')}">Weeks Cover${slowArrow('weeksOfCoverage')}</th>
+    <th onclick="asSlowSort('createdDate')"   style="${WB}width:100px;${slowUL('createdDate')}">Created${slowArrow('createdDate')}</th>
+    ${asBandCVisible ? `<th onclick="asSlowSort('bandC')" style="${WB}color:#0891b2;width:90px;${slowUL('bandC')}">Band C (€)${slowArrow('bandC')}</th>` : ''}
+    ${asBandFVisible ? `<th onclick="asSlowSort('bandF')" style="${WB}color:#7c3aed;width:90px;${slowUL('bandF')}">Band F (€)${slowArrow('bandF')}</th>` : ''}
+    <th onclick="asSlowSort('discount')"  style="${WB}color:#b45309;width:90px;${slowUL('discount')}">Discount %${slowArrow('discount')}</th>
+    <th onclick="asSlowSort('clearance')" style="${WB}color:#b45309;background:#fffbea;width:100px;${slowUL('clearance')}">Clearance (€)${slowArrow('clearance')}</th>
   </tr>`;
 
   slowBody.innerHTML = rows.map((r, ri) => {
@@ -11410,12 +11420,12 @@ function asToggleBandCol(col) {
   if (col === 'C') {
     asBandCVisible = !asBandCVisible;
     const t = document.getElementById('asBandCToggle');
-    if (t) t.checked = asBandCVisible;
+    if (t) { t.classList.toggle('active-teal', asBandCVisible); }
   }
   if (col === 'F') {
     asBandFVisible = !asBandFVisible;
     const t = document.getElementById('asBandFToggle');
-    if (t) t.checked = asBandFVisible;
+    if (t) { t.classList.toggle('active-purple', asBandFVisible); }
   }
   if (asData.length > 0) asRenderAgedTable();
   if (asSlowData.length > 0) asRenderSlowTable();
@@ -11802,6 +11812,12 @@ function asReset() {
   asSortDir        = 1;
   asSlowSortCol    = 'weeksOfCoverage';
   asSlowSortDir    = -1;
+  asBandCVisible   = true;
+  asBandFVisible   = true;
+  const bC = document.getElementById('asBandCToggle');
+  if (bC) { bC.classList.add('active-teal'); }
+  const bF = document.getElementById('asBandFToggle');
+  if (bF) { bF.classList.add('active-purple'); }
 
   _asRefreshExcludePills();
 
@@ -21342,7 +21358,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v226 · 20 Sep 2026 · Aged &amp; Slow Moving Stock: hub card + tool renamed; Load button moved inside Brands panel; all dropdowns 2-col; pill layout space-between; hub card summaries rewritten; Slow Moving sort added (all columns clickable); Aged select-all checkbox fixed; Source (CRM/Catalog) column added to both tables; asSlowSortCol/Dir reset in asReset';
+const TOOL_BUILD = 'v227 · 20 Sep 2026 · Toolbar redesign: Brands pill label (name/count), Selection pill (All SKUs/Catalog Only moved from brand panel), Price Bands now toggle buttons (teal/purple band-btn), Exports pill inline with Inc. Thumbnails checkbox, Cache pill amber button, toolbar height 56px; sort column underline on Aged, Slow, Stock Analysis &amp; BEA tables';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
