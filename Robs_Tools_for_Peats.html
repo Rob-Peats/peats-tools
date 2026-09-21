@@ -20830,7 +20830,7 @@ function renderRedmondsPreview(data) {
   if (showRetail)    hdrs.push('SRP');
   if (showMarginCol) hdrs.push('Margin');
   hdrs.push('Line Total');
-  thead.innerHTML = '<tr>' + hdrs.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr>';
+  thead.innerHTML = '<tr>' + hdrs.map(function(h){ return '<th class="th-col">' + h + '</th>'; }).join('') + '</tr>';
 
   tbody.innerHTML = '';
   products.forEach(function(p) {
@@ -21376,7 +21376,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v229 · 21 Sep 2026 · Fix: Order Conversion Tool table now full width on wide monitors (removed max-width constraint from main); CRM forecast re-triggers correctly after Clear All (saaReset resets monthly data &amp; load state); replacements push re-fetches catalog from GitHub to confirm sheet landed';
+const TOOL_BUILD = 'v230 · 21 Sep 2026 · Fix: Redmonds Export Order(s) button now works (was falling through to Golden Disc branch-check); Redmonds table header now has solid background so rows no longer scroll behind it';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
@@ -28184,7 +28184,7 @@ function showCrmPushQueue() {
   const singleAccountRetailers = ['rob-test', 'smyths', 'joyces', 'jjs-appliances', 'marlboro', 'soundstore', 'beattys',
     'tj-omahony', 'king-moffatt', 'airport-cork', 'airport-shannon', 'airport-dublin',
     'dominic-smith', 'soundstore', 'irwins', 'telfords', 'mckennas', 'cal-flavin', 'md-oshea', 'expert-nenagh', 'expert-stores', 'electrocity', 'briscoes', 'stakelums', 'ronaynes',
-    'peter-murphy', 'ennis-elec'];
+    'peter-murphy', 'ennis-elec', 'redmonds'];
   if (singleAccountRetailers.includes(rid)) {
     let peatsCode = '';
     let branchName = '';
@@ -28555,6 +28555,14 @@ function showCrmPushQueue() {
       }
       peatsCode = data.accountCode;
       branchName = 'Ennis Elec ' + data.branchName;
+      outLines = (data.products || []).filter(p => !isConvExcluded(p.sku)).map(p => {
+        const sku = effectiveSku(p.sku, rid);
+        return { sku, desc: p.description || '', qty: p.qty, price: effCrmPrice(p.sku, sku, p.price) };
+      });
+      totalValue = (data.products || []).reduce((a, p) => a + (p.totalCost || 0), 0);
+    } else if (rid === 'redmonds') {
+      peatsCode  = data.accountCode || REDMONDS_ACCOUNT;
+      branchName = 'Redmonds';
       outLines = (data.products || []).filter(p => !isConvExcluded(p.sku)).map(p => {
         const sku = effectiveSku(p.sku, rid);
         return { sku, desc: p.description || '', qty: p.qty, price: effCrmPrice(p.sku, sku, p.price) };
