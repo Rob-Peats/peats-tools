@@ -13091,7 +13091,7 @@ function renderMultiFilePreview(parsedFiles) {
   // Column count: base 5 (SKU, Desc, Price, Qty, Total) + checkbox col + margin col
   const isCatalogRetailer = (retailer === 'joyces' || retailer === 'callaghans' || retailer === 'jjs-appliances' || retailer === 'soundstore' || retailer === 'smyths' || retailer === 'dominic-smith' || retailer === 'mckennas' || retailer === 'cal-flavin' || retailer === 'md-oshea' || retailer === 'expert-stores' || retailer === 'expert-nenagh' || retailer === 'electrocity' || retailer === 'briscoes' || retailer === 'stakelums' || retailer === 'ronaynes' || retailer === 'marlboro');
   const numCols = isCatalogRetailer
-    ? 5 + (showCost ? 1 : 0) + (showMarginCol ? 1 : 0)
+    ? 5 + (showCost ? 1 : 0) + (showRetail ? 1 : 0) + (showMarginCol ? 1 : 0)
     : 5;
 
   let grandLines = 0, grandUnits = 0, grandValue = 0;
@@ -13127,15 +13127,13 @@ function renderMultiFilePreview(parsedFiles) {
               + ' onchange="toggleConvLine(\'' + escHtml(l.sku) + '\',this);rerenderConvPreview()"></td>';
           } else { chkCell = '<td></td>'; }
         }
-        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
-        var priceCell;
+            var priceCell;
         if (hasCostDiff) {
-          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-        } else if (hasRetailInfo) {
-          priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>';
+          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + '</td>';
         } else {
           priceCell = '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
         }
+        var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
         var marginCell = '';
         if (showMarginCol) {
           if (margin !== null) {
@@ -13150,6 +13148,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
           + priceCell
+          + retailCell
           + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
           + '<td style="text-align:right">€' + (l.total||0).toFixed(2) + '</td>'
           + marginCell
@@ -13169,6 +13168,7 @@ function renderMultiFilePreview(parsedFiles) {
             + '<td style="font-size:11px;padding-left:28px">' + l.sku + '</td>'
             + '<td style="font-size:12px">' + l.desc + '</td>'
             + '<td style="text-align:right">€' + parseFloat(l.cost||0).toFixed(2) + '</td>'
+            + (showRetail ? '<td></td>' : '')
             + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
             + '<td></td></tr>');
         }
@@ -13184,6 +13184,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:12px;padding-left:20px;font-weight:600;color:var(--brand)">' + escHtml(p.sku) + '</td>'
           + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
           + '<td style="text-align:right">€' + (p.price||0).toFixed(2) + '</td>'
+          + (showRetail ? '<td></td>' : '')
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + (p.totalCost||0).toFixed(2) + '</td>'
           + '</tr>');
@@ -13199,6 +13200,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:12px;padding-left:20px;font-weight:600;color:var(--brand)">' + escHtml(p.sku) + '</td>'
           + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
           + '<td style="text-align:right">€' + (p.price||0).toFixed(2) + '</td>'
+          + (showRetail ? '<td></td>' : '')
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + (p.totalCost||0).toFixed(2) + '</td>'
           + '</tr>');
@@ -13225,15 +13227,13 @@ function renderMultiFilePreview(parsedFiles) {
               + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
           } else { chkCell = '<td></td>'; }
         }
-        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
-        var priceCell;
+            var priceCell;
         if (hasCostDiff) {
-          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-        } else if (hasRetailInfo) {
-          priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>';
+          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + '</td>';
         } else {
           priceCell = '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
         }
+        var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
         var marginCell = '';
         if (showMarginCol) {
           if (margin !== null) {
@@ -13247,6 +13247,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
+          + retailCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
           + marginCell + '</tr>');
@@ -13271,11 +13272,10 @@ function renderMultiFilePreview(parsedFiles) {
           chkCell = hasCostDiff ? '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '')
             + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>' : '<td></td>';
         }
-        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
-        var priceCell = hasCostDiff
-          ? '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>'
-          : hasRetailInfo ? '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>'
+            var priceCell = hasCostDiff
+          ? '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + '</td>'
           : '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
+        var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
         var marginCell = '';
         if (showMarginCol) {
           if (margin !== null) { var mc = marginColor(margin); marginCell = '<td style="text-align:right;font-weight:700;color:' + mc + '">' + margin.toFixed(1) + '%</td>'; }
@@ -13287,6 +13287,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
+          + retailCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
           + marginCell + '</tr>');
@@ -13302,6 +13303,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:12px;padding-left:20px;font-weight:600;color:var(--brand)">' + escHtml(p.sku) + '</td>'
           + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
           + '<td style="text-align:right">€' + (p.price||0).toFixed(2) + '</td>'
+          + (showRetail ? '<td></td>' : '')
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + (p.totalCost||0).toFixed(2) + '</td>'
           + '</tr>');
@@ -13329,15 +13331,13 @@ function renderMultiFilePreview(parsedFiles) {
               + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
           } else { chkCell = '<td></td>'; }
         }
-        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
-        var priceCell;
+            var priceCell;
         if (hasCostDiff) {
-          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-        } else if (hasRetailInfo) {
-          priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>';
+          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + '</td>';
         } else {
           priceCell = '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
         }
+        var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
         var marginCell = '';
         if (showMarginCol) {
           if (margin !== null) {
@@ -13351,6 +13351,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
+          + retailCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
           + marginCell
@@ -13380,15 +13381,13 @@ function renderMultiFilePreview(parsedFiles) {
               + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
           } else { chkCell = '<td></td>'; }
         }
-        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
-        var priceCell;
+            var priceCell;
         if (hasCostDiff) {
-          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-        } else if (hasRetailInfo) {
-          priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>';
+          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + '</td>';
         } else {
           priceCell = '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
         }
+        var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
         var marginCell = '';
         if (showMarginCol) {
           if (margin !== null) {
@@ -13401,6 +13400,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
+          + retailCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
           + marginCell
@@ -13429,15 +13429,13 @@ function renderMultiFilePreview(parsedFiles) {
               + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
           } else { chkCell = '<td></td>'; }
         }
-        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
-        var priceCell;
+            var priceCell;
         if (hasCostDiff) {
-          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-        } else if (hasRetailInfo) {
-          priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>';
+          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + '</td>';
         } else {
           priceCell = '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
         }
+        var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
         var marginCell = '';
         if (showMarginCol) {
           if (margin !== null) {
@@ -13451,6 +13449,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
+          + retailCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
           + marginCell
@@ -13478,15 +13477,13 @@ function renderMultiFilePreview(parsedFiles) {
               + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
           } else { chkCell = '<td></td>'; }
         }
-        var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
-        var priceCell;
+            var priceCell;
         if (hasCostDiff) {
-          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-        } else if (hasRetailInfo) {
-          priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + poCost.toFixed(2) + '</span>' + retailTag + '</td>';
+          priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + poCost.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + '</td>';
         } else {
           priceCell = '<td style="text-align:right">€' + poCost.toFixed(2) + '</td>';
         }
+        var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
         var marginCell = '';
         if (showMarginCol) {
           if (margin !== null) {
@@ -13500,6 +13497,7 @@ function renderMultiFilePreview(parsedFiles) {
           + '<td style="font-size:13px;padding-left:20px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
           + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
           + priceCell
+          + retailCell
           + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
           + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
           + marginCell + '</tr>');
@@ -13567,10 +13565,11 @@ function renderMultiFilePreview(parsedFiles) {
   }
 
   // Grand total
-  const gtLabelCols = numCols - 2 - (showMarginCol ? 1 : 0);
+  const gtLabelCols = numCols - 2 - (showMarginCol ? 1 : 0) - (showRetail ? 1 : 0);
   html.push('<tr><td colspan="' + numCols + '" style="height:0;border-top:3px solid var(--brand);padding:0"></td></tr>');
   html.push('<tr class="conv-hdr-row" style="background:var(--brand);color:#fff;font-weight:700;font-size:13px">'
     + '<td colspan="' + gtLabelCols + '" style="padding:8px 14px">GRAND TOTAL &nbsp;·&nbsp; ' + parsedFiles.length + ' files</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + grandUnits + '</td>'
     + '<td style="text-align:right">' + (grandValue>0 ? '€'+grandValue.toFixed(2) : '') + '</td>'
     + (showMarginCol ? '<td></td>' : '')
@@ -13583,7 +13582,7 @@ function renderMultiFilePreview(parsedFiles) {
   thead.innerHTML = '<tr>'
     + (isEasons
         ? '<th class="th-col" colspan="2">Product Code</th><th class="th-col"></th><th class="th-col" style="text-align:right">Qty</th><th class="th-col"></th>'
-        : chkHdr + '<th class="th-col">SKU</th><th class="th-col">Description</th><th class="th-col" style="text-align:right">Price</th><th class="th-col" style="text-align:right">Qty</th><th class="th-col" style="text-align:right">Total</th>' + marginHdr)
+        : chkHdr + '<th class="th-col">SKU</th><th class="th-col">Description</th><th class="th-col" style="text-align:right">Price</th>' + (showRetail ? '<th class="th-col" style="text-align:right">Retail</th>' : '') + '<th class="th-col" style="text-align:right">Qty</th><th class="th-col" style="text-align:right">Total</th>' + marginHdr)
     + '</tr>';
 
   tbody.innerHTML = html.join('');
@@ -14126,6 +14125,7 @@ function renderGoldenDiscPreview(data) {
     + '<th class="th-col">Description</th>'
     + (hasCatalog ? '<th class="th-col" style="text-align:right">Cost</th>' : '')
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '</tr>';
 
@@ -14348,6 +14348,7 @@ function renderSmythsPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr
@@ -14377,22 +14378,16 @@ function renderSmythsPreview(data) {
     }
 
     // Cost diff = strikethrough; retail = supplementary RRP info only (no comparison)
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + l.price.toFixed(2) + '</span>'
         + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>'
-        + retailTag
-        + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6">'
-        + '<span style="display:block">€' + l.price.toFixed(2) + '</span>'
-        + retailTag
         + '</td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -14409,6 +14404,7 @@ function renderSmythsPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -14417,6 +14413,7 @@ function renderSmythsPreview(data) {
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '')
@@ -14784,9 +14781,9 @@ function renderJoycesPreview(data) {
   thead.innerHTML = '<tr>'
     + chkCol
     + '<th class="th-col">Peats SKU</th>'
-    + '<th class="th-col" style="color:var(--muted)">Joyces Code</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr
@@ -14816,22 +14813,16 @@ function renderJoycesPreview(data) {
     }
 
     // Cost diff = strikethrough; retail = supplementary RRP info only (no comparison)
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + p.unitCost.toFixed(2) + '</span>'
         + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>'
-        + retailTag
-        + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6">'
-        + '<span style="display:block">€' + p.unitCost.toFixed(2) + '</span>'
-        + retailTag
         + '</td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.unitCost.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -14846,10 +14837,10 @@ function renderJoycesPreview(data) {
     var joycesOverride = convState.skuOverrides[p.sku];
     rows.push('<tr style="' + rowStyle + '">'
       + chkCell
-      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
-      + '<td style="font-size:11px;color:var(--muted)">' + escHtml(p.joycesCode) + '</td>'
+      + '<td style="font-size:13px;min-width:120px">' + (p.joycesCode && p.joycesCode.toUpperCase() !== effectiveSku(p.sku, convState.retailerId).toUpperCase() ? '<span style="display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px" title="Joyces code: ' + escHtml(p.joycesCode) + '">' + escHtml(p.joycesCode) + '</span>' : '') + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -14857,7 +14848,8 @@ function renderJoycesPreview(data) {
   }
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
-    + '<td colspan="' + ((showCost ? 1 : 0) + 4) + '">TOTAL ORDER VALUE</td>'
+    + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '')
@@ -15227,6 +15219,7 @@ function renderCallaghansPreview(data) {
     + '<th class="th-col">Peats SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr
@@ -15252,18 +15245,16 @@ function renderCallaghansPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + p.unitCost.toFixed(2) + '</span>'
         + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>'
-        + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.unitCost.toFixed(2) + '</span>' + retailTag + '</td>';
+        + '</td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.unitCost.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -15280,6 +15271,7 @@ function renderCallaghansPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -15288,6 +15280,7 @@ function renderCallaghansPreview(data) {
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '')
@@ -15633,6 +15626,7 @@ function renderJJsPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -15660,15 +15654,13 @@ function renderJJsPreview(data) {
           + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>'
         : '<td></td>';
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -15683,6 +15675,7 @@ function renderJJsPreview(data) {
         + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -15690,6 +15683,7 @@ function renderJJsPreview(data) {
   }
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '')
@@ -15894,6 +15888,7 @@ function renderMarlboroPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -15923,12 +15918,11 @@ function renderMarlboroPreview(data) {
           + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>'
         : '<td></td>';
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
-      priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + retailTag + '</td>';
+      priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
     var marginCell = showMarginCol
       ? '<td style="text-align:right;font-size:12px;color:' + (margin !== null ? (margin < 0 ? 'var(--red)' : 'var(--green)') : 'var(--muted)') + '">'
@@ -15940,6 +15934,7 @@ function renderMarlboroPreview(data) {
         + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -15947,6 +15942,7 @@ function renderMarlboroPreview(data) {
   }
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '')
@@ -17382,6 +17378,7 @@ function renderSoundstorePreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr
@@ -17411,22 +17408,16 @@ function renderSoundstorePreview(data) {
     }
 
     // Cost diff = strikethrough; retail = supplementary RRP info only (no comparison)
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + p.price.toFixed(2) + '</span>'
         + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>'
-        + retailTag
-        + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6">'
-        + '<span style="display:block">€' + p.price.toFixed(2) + '</span>'
-        + retailTag
         + '</td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -17444,6 +17435,7 @@ function renderSoundstorePreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -17452,6 +17444,7 @@ function renderSoundstorePreview(data) {
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '')
@@ -17750,15 +17743,13 @@ function renderDomSmithPreview(data) {
         chkCell = '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -17772,6 +17763,7 @@ function renderDomSmithPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);min-width:120px;border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -18044,15 +18036,13 @@ function renderMcKennasPreview(data) {
           + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + effP.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + effP.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + effP.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + effP.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       marginCell = margin !== null
@@ -18072,6 +18062,7 @@ function renderMcKennasPreview(data) {
       + ' onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -18327,15 +18318,13 @@ function renderCalFlavinPreview(data) {
           + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + effP.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + effP.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + effP.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + effP.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       marginCell = margin !== null
@@ -18355,6 +18344,7 @@ function renderCalFlavinPreview(data) {
       + ' onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -18610,15 +18600,13 @@ function renderMDOSheaPreview(data) {
           + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + effP.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + effP.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + effP.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + effP.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       marginCell = margin !== null
@@ -18638,6 +18626,7 @@ function renderMDOSheaPreview(data) {
       + ' onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -18945,6 +18934,7 @@ function renderExpertStoresPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -18972,15 +18962,13 @@ function renderExpertStoresPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -18999,6 +18987,7 @@ function renderExpertStoresPreview(data) {
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -19285,6 +19274,7 @@ function renderExpertNenaghPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -19312,15 +19302,13 @@ function renderExpertNenaghPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -19339,6 +19327,7 @@ function renderExpertNenaghPreview(data) {
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -19675,6 +19664,7 @@ function renderBriscoesPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -19702,15 +19692,13 @@ function renderBriscoesPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -19729,6 +19717,7 @@ function renderBriscoesPreview(data) {
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -20064,6 +20053,7 @@ function renderStakelumsPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -20091,15 +20081,13 @@ function renderStakelumsPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -20119,6 +20107,7 @@ function renderStakelumsPreview(data) {
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -20481,6 +20470,7 @@ function renderRonaynesPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -20508,15 +20498,13 @@ function renderRonaynesPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -20536,6 +20524,7 @@ function renderRonaynesPreview(data) {
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -20808,10 +20797,11 @@ function renderRedmondsPreview(data) {
   var products    = data.products    || [];
   var orderNo     = data.orderNo     || '';
   var accountCode = data.accountCode || REDMONDS_ACCOUNT;
-  var resultsDiv  = document.getElementById('convResults');
-  var titleEl     = document.getElementById('convTableTitle');
-  var thead       = document.getElementById('convTableHead');
-  var tbody       = document.getElementById('convTableBody');
+
+  var resultsDiv = document.getElementById('convResults');
+  var titleEl    = document.getElementById('convTableTitle');
+  var thead      = document.getElementById('convTableHead');
+  var tbody      = document.getElementById('convTableBody');
 
   document.getElementById('convSummaryCards').innerHTML = '';
   var gdBar = document.getElementById('gdAccountsBar'); if (gdBar) gdBar.innerHTML = '';
@@ -20821,43 +20811,95 @@ function renderRedmondsPreview(data) {
   var showCost      = hasCatalog && convState.showCost;
   var showRetail    = hasCatalog && convState.showRetail;
   var showMarginCol = showRetail;
-  var titleOrderVal = products.reduce(function(a,p){ return a+(p.totalCost||0); }, 0);
 
-  titleEl.innerHTML = 'Redmonds [' + escHtml(accountCode) + '] — PO <strong>' + escHtml(orderNo || '(unknown)') + '</strong>' + ' — €' + titleOrderVal.toFixed(2);
+  var visibleProducts = products.filter(function(p){ return !isConvExcluded(p.sku); });
+  var totalQty        = visibleProducts.reduce(function(a,p){ return a + p.qty; }, 0);
+  var titleOrderVal   = products.reduce(function(a,p){ return a + (p.totalCost || 0); }, 0);
+  var totalVal        = 0;
 
-  var hdrs = ['SKU','Description','Qty'];
-  if (showCost)      hdrs.push('Cost');
-  if (showRetail)    hdrs.push('SRP');
-  if (showMarginCol) hdrs.push('Margin');
-  hdrs.push('Line Total');
-  thead.innerHTML = '<tr>' + hdrs.map(function(h){ return '<th class="th-col">' + h + '</th>'; }).join('') + '</tr>';
+  titleEl.innerHTML = 'Redmonds [' + escHtml(accountCode) + '] — PO <strong>' + escHtml(orderNo || '(unknown)') + '</strong> — €' + titleOrderVal.toFixed(2);
+  document.getElementById('convRowCount').textContent = visibleProducts.length + ' lines';
+  resultsDiv.style.display = 'block';
 
-  tbody.innerHTML = '';
-  products.forEach(function(p) {
-    if (isConvExcluded(p.sku)) return;
+  var chkCol       = showCost ? '<th class="th-col chk-pricing" style="min-width:60px">Update<br>Pricing</th>' : '';
+  var marginColHdr = showMarginCol ? '<th class="th-col" style="text-align:right;color:var(--brand)">Margin</th>' : '';
+  thead.innerHTML = '<tr>'
+    + chkCol
+    + '<th class="th-col">SKU</th>'
+    + '<th class="th-col">Description</th>'
+    + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class="th-col" style="text-align:right">Retail</th>' : '')
+    + '<th class="th-col" style="text-align:right">Qty</th>'
+    + '<th class="th-col" style="text-align:right">Line Total</th>'
+    + marginColHdr
+    + '</tr>';
+
+  var rows = [];
+  for (var i = 0; i < products.length; i++) {
+    var p = products[i];
+    if (isConvExcluded(p.sku)) continue;
     var entry         = (showCost || showRetail) ? catalogLookup(convState.skuOverrides[p.sku] || p.sku) : null;
     var hasCostDiff   = showCost   && entry && entry.cost   != null && Math.abs(p.price - entry.cost) > 0.005;
     var hasRetailInfo = showRetail && entry && entry.retail != null;
-    var flagOn        = hasCostDiff && convState.priceOn.has(p.sku);
-    var effPrice      = flagOn ? entry.cost : p.price;
-    var effTotal      = flagOn ? Math.round(entry.cost * p.qty * 100) / 100 : p.totalCost;
-    var margin        = (hasRetailInfo && entry.retail > 0) ? Math.round(((entry.retail / 1.23) - effPrice) / (entry.retail / 1.23) * 1000) / 10 : null;
+    var isOn          = hasCostDiff && convState.priceOn.has(p.sku);
+    var effP          = isOn ? entry.cost : p.price;
+    var effTotal      = isOn ? Math.round(entry.cost * p.qty * 100) / 100 : (p.totalCost || 0);
+    totalVal         += effTotal;
+    var margin        = (hasRetailInfo && entry.retail > 0) ? ((entry.retail / 1.23) - effP) / (entry.retail / 1.23) * 100 : null;
+    var rowStyle      = i % 2 === 1 ? 'background:var(--light)' : '';
 
-    var tds  = '<td>' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '</td>';
-    tds += '<td>' + escHtml(p.description) + '</td>';
-    tds += '<td style="text-align:center">' + p.qty + '</td>';
-    if (showCost)   tds += '<td style="text-align:right;' + (flagOn ? 'background:#ff0;font-weight:bold' : (hasCostDiff ? 'color:#e53e3e' : '')) + '">' + effPrice.toFixed(2) + '</td>';
-    if (showRetail) tds += '<td style="text-align:right">' + (hasRetailInfo ? entry.retail.toFixed(2) : '') + '</td>';
-    if (showMarginCol) {
-      var mc = margin === null ? '' : margin >= 35 ? 'color:#22a03a;font-weight:bold' : margin >= 20 ? 'color:#d97706;font-weight:bold' : 'color:#dc2626;font-weight:bold';
-      tds += '<td style="text-align:right;' + mc + '">' + (margin !== null ? margin.toFixed(1) + '%' : '') + '</td>';
+    var chkCell = '';
+    if (showCost) {
+      chkCell = hasCostDiff
+        ? '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleConvLine(\'' + escHtml(p.sku) + '\',this);rerenderConvPreview()"></td>'
+        : '<td></td>';
     }
-    tds += '<td style="text-align:right">' + (effTotal || 0).toFixed(2) + '</td>';
-    tbody.insertAdjacentHTML('beforeend', '<tr>' + tds + '</tr>');
-  });
 
-  resultsDiv.style.display = 'block';
+    var priceCell;
+    if (hasCostDiff) {
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
+        + '<span class="old-val">€' + p.price.toFixed(2) + '</span>'
+        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>'
+        + '</td>';
+    } else {
+      priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
+    }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
+
+    var marginCell = '';
+    if (showMarginCol) {
+      marginCell = margin !== null
+        ? '<td style="text-align:right;font-weight:700;color:' + marginColor(margin) + '">' + margin.toFixed(1) + '%</td>'
+        : '<td style="text-align:right;color:var(--muted)">—</td>';
+    }
+
+    rows.push('<tr style="' + rowStyle + '">'
+      + chkCell
+      + '<td style="font-size:13px;min-width:120px">' + skuPrefix(p.sku) + '<input type="text" value="' + escHtml(effectiveSku(p.sku, convState.retailerId)) + '" data-orig="' + escHtml(p.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
+      + '<td style="font-size:14px">' + escHtml(p.description) + '</td>'
+      + priceCell
+      + retailCell
+      + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
+      + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
+      + marginCell
+      + '</tr>');
+  }
+
+  rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
+    + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
+    + '<td style="text-align:right">' + totalQty + '</td>'
+    + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
+    + (showMarginCol ? '<td></td>' : '')
+    + '</tr>');
+
+  tbody.innerHTML = rows.join('');
+
+  var barEl = document.getElementById('convAcctBar');
+  if (!barEl) { barEl = document.createElement('div'); barEl.id = 'convAcctBar'; resultsDiv.appendChild(barEl); }
+  barEl.innerHTML = '<div style="margin-top:8px;font-size:12px;color:var(--muted)">Account: <strong>' + escHtml(accountCode) + '</strong></div>';
 }
+
 
 async function buildRedmondsEntry(data, safeTag) {
   safeTag = safeTag || (function(s){ return String(s||'').replace(/[^a-zA-Z0-9\-]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); });
@@ -21176,6 +21218,7 @@ function renderElectroCityPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -21203,15 +21246,13 @@ function renderElectroCityPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showMarginCol) {
       if (margin !== null) {
@@ -21230,6 +21271,7 @@ function renderElectroCityPreview(data) {
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell
@@ -22065,6 +22107,7 @@ function renderIrwinsPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + (showRetail ? '<th class="th-col" style="text-align:right;color:var(--brand)">Margin</th>' : '')
@@ -22362,6 +22405,7 @@ function renderRobTestPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + (showRetail ? '<th class="th-col" style="text-align:right;color:var(--brand)">Margin</th>' : '')
@@ -23627,6 +23671,7 @@ function renderAirportShannonPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr + '</tr>';
@@ -23652,17 +23697,15 @@ function renderAirportShannonPreview(data) {
       } else { chkCell = '<td></td>'; }
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + l.price.toFixed(2) + '</span>'
-        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -23677,6 +23720,7 @@ function renderAirportShannonPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -23684,6 +23728,7 @@ function renderAirportShannonPreview(data) {
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '') + '</tr>');
@@ -23885,6 +23930,7 @@ function renderAirportCorkPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr + '</tr>';
@@ -23910,17 +23956,15 @@ function renderAirportCorkPreview(data) {
       } else { chkCell = '<td></td>'; }
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + l.price.toFixed(2) + '</span>'
-        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -23935,6 +23979,7 @@ function renderAirportCorkPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -23942,6 +23987,7 @@ function renderAirportCorkPreview(data) {
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '') + '</tr>');
@@ -24234,6 +24280,7 @@ function renderTelfordsPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr + '</tr>';
@@ -24259,17 +24306,15 @@ function renderTelfordsPreview(data) {
       } else { chkCell = '<td></td>'; }
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + l.price.toFixed(2) + '</span>'
-        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -24284,6 +24329,7 @@ function renderTelfordsPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -24291,6 +24337,7 @@ function renderTelfordsPreview(data) {
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '') + '</tr>');
@@ -24715,15 +24762,13 @@ function renderTJOMahonyPreview(data) {
         chkCell = '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleConvLine(\'' + escHtml(l.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showRetail) {
       if (margin !== null) {
@@ -24736,6 +24781,7 @@ function renderTJOMahonyPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -24966,15 +25012,13 @@ function renderKingMoffattPreview(data) {
         chkCell = '<td style="text-align:center"><input type="checkbox" ' + (isOn?'checked':'') + ' onchange="toggleConvLine(\'' + escHtml(l.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showRetail) {
       if (margin !== null) {
@@ -24987,6 +25031,7 @@ function renderKingMoffattPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -25173,6 +25218,7 @@ function renderEnnisElecPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginHdr + '</tr>';
@@ -25201,15 +25247,13 @@ function renderEnnisElecPreview(data) {
         : '<td></td>';
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + p.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + p.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -25229,6 +25273,7 @@ function renderEnnisElecPreview(data) {
         + 'onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:13px">' + escHtml(p.description) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + p.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -25529,15 +25574,13 @@ function renderBeattysPreview(data) {
         chkCell = '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleConvLine(\'' + escHtml(l.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showRetail) {
       if (margin !== null) {
@@ -25550,6 +25593,7 @@ function renderBeattysPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -25837,15 +25881,13 @@ function renderPeterMurphyPreview(data) {
         chkCell = '<td style="text-align:center"><input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleConvLine(\'' + escHtml(l.sku) + '\',this);rerenderConvPreview()"></td>';
       } else { chkCell = '<td></td>'; }
     }
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+      priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6"><span class="old-val">€' + l.price.toFixed(2) + '</span><span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = '';
     if (showRetail) {
       if (margin !== null) {
@@ -25858,6 +25900,7 @@ function renderPeterMurphyPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effSkuL) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -25956,6 +25999,7 @@ function renderAirportDublinPreview(data) {
     + '<th class="th-col">SKU</th>'
     + '<th class="th-col">Description</th>'
     + '<th class="th-col" style="text-align:right">Price</th>'
+    + (showRetail ? '<th class=\"th-col\" style=\"text-align:right\">Retail</th>' : '')
     + '<th class="th-col" style="text-align:right">Qty</th>'
     + '<th class="th-col" style="text-align:right">Line Total</th>'
     + marginColHdr + '</tr>';
@@ -25981,17 +26025,15 @@ function renderAirportDublinPreview(data) {
       } else { chkCell = '<td></td>'; }
     }
 
-    var retailTag = hasRetailInfo ? '<span style="display:block;font-size:10px;font-weight:700;color:var(--purple)">RRP €' + entry.retail.toFixed(2) + '</span>' : '';
     var priceCell;
     if (hasCostDiff) {
       priceCell = '<td class="updated-cost" style="text-align:right;line-height:1.6">'
         + '<span class="old-val">€' + l.price.toFixed(2) + '</span>'
-        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>' + retailTag + '</td>';
-    } else if (hasRetailInfo) {
-      priceCell = '<td style="text-align:right;line-height:1.6"><span style="display:block">€' + l.price.toFixed(2) + '</span>' + retailTag + '</td>';
+        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span></td>';
     } else {
       priceCell = '<td style="text-align:right">€' + l.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:right">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
 
     var marginCell = '';
     if (showMarginCol) {
@@ -26006,6 +26048,7 @@ function renderAirportDublinPreview(data) {
       + '<td style="font-size:13px;min-width:120px">' + skuPrefix(l.sku) + '<input type="text" value="' + escHtml(effectiveSku(l.sku, convState.retailerId)) + '" data-orig="' + escHtml(l.sku) + '" style="font-size:13px;font-weight:600;color:var(--brand);border:none;border-bottom:1px dashed transparent;background:transparent;padding:0 1px;width:120px;min-width:90px;cursor:pointer;outline:none" title="Click to edit SKU" onfocus="this.style.borderBottomColor=\'var(--brand)\';this.style.background=\'rgba(255,255,255,.8)\'" onblur="this.style.borderBottomColor=\'transparent\';this.style.background=\'transparent\';updateSkuOverride(this.dataset.orig,this.value)"></td>'
       + '<td style="font-size:14px">' + escHtml(l.desc) + '</td>'
       + priceCell
+      + retailCell
       + '<td style="text-align:right;font-weight:600">' + l.qty + '</td>'
       + '<td style="text-align:right">€' + effTotal.toFixed(2) + '</td>'
       + marginCell + '</tr>');
@@ -26013,6 +26056,7 @@ function renderAirportDublinPreview(data) {
 
   rows.push('<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--light)">'
     + '<td colspan="' + ((showCost ? 1 : 0) + 3) + '">TOTAL ORDER VALUE</td>'
+    + (showRetail ? '<td></td>' : '')
     + '<td style="text-align:right">' + totalQty + '</td>'
     + '<td style="text-align:right">€' + totalVal.toFixed(2) + '</td>'
     + (showMarginCol ? '<td></td>' : '') + '</tr>');
