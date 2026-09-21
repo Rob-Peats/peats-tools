@@ -1736,7 +1736,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
   </div><!-- /controls -->
 
-  <main>
+  <main style="max-width:none;margin:0">
 
     <input type="file" id="convFileInput" accept=".xlsx,.xls,.xlsm" multiple onchange="handleConvFile(event)" style="display:none">
 
@@ -7841,6 +7841,10 @@ function saaReset() {
   _saaRefreshExcludePills();
   saaSortCol      = 'status';
   saaSortDir      = 1;
+  // Reset CRM forecast state so fetch re-triggers on next brand load
+  saaMonthlyDataMap   = {};
+  saaSeasonalIndices  = null;
+  saaCrmLoadState     = 'idle';
   // Reset UI
   const panel = document.getElementById('saaBrandPanel');
   if (panel) panel.style.display = 'none';
@@ -9514,7 +9518,21 @@ async function saaSaveReplacementsToCatalog() {
     document.getElementById('saaPredModal') && document.getElementById('saaPredModal').remove();
 
     if (pushOk) {
-      showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' pushed to catalog on GitHub — colleagues get them on next load.');
+      showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' pushed to catalog on GitHub.');
+      // Re-fetch catalog from GitHub to confirm the Replacements sheet landed correctly
+      setTimeout(function() {
+        githubLoadCatalog().then(function() {
+          // Check if replacements came back
+          var n = Object.keys(state.replacementsNewToOld || {}).length;
+          if (n) {
+            showToast('✔ Replacements sheet confirmed in catalog (' + n + ' pair' + (n===1?'':'s') + ') — colleagues get them on next load.');
+          } else {
+            showToast('⚠ Replacements pushed but not found in re-fetched catalog — check GitHub push status.');
+          }
+        }).catch(function() {
+          // githubLoadCatalog already shows its own error badge; don't double-toast
+        });
+      }, 1500);
     } else if (!GH_READY) {
       showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' saved — re-upload this catalog to share with others.');
     }
@@ -21358,7 +21376,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v227 · 20 Sep 2026 · Toolbar redesign: Brands pill label (name/count), Selection pill (All SKUs/Catalog Only moved from brand panel), Price Bands now toggle buttons (teal/purple band-btn), Exports pill inline with Inc. Thumbnails checkbox, Cache pill amber button, toolbar height 56px; sort column underline on Aged, Slow, Stock Analysis &amp; BEA tables';
+const TOOL_BUILD = 'v229 · 21 Sep 2026 · Fix: Order Conversion Tool table now full width on wide monitors (removed max-width constraint from main); CRM forecast re-triggers correctly after Clear All (saaReset resets monthly data &amp; load state); replacements push re-fetches catalog from GitHub to confirm sheet landed';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
