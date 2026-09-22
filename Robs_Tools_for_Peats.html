@@ -5340,6 +5340,7 @@ function renderTable() {
 
   // Update excluded count badge
   updateExclBadge();
+  injectOgReplacementCol();
 }
 
 // ════════════════════════════════════════════════════
@@ -6046,6 +6047,7 @@ function convBoReset() {
   document.getElementById('convBoDropZone').style.display = '';
   document.getElementById('convBoPill').style.display     = 'none';
   injectConvBoBadges();
+  injectConvReplacementCol();
 }
 
 /** Call after any conv preview render to stamp BO badges on matching SKUs and centre the Qty column. */
@@ -6504,7 +6506,8 @@ function boVisibleLines() {
 
 function boRender() {
   const ls = boVisibleLines();
-  const hasCat  = !!state.catalogName;
+  const hasCat    = !!state.catalogName;
+  const hasBoRepl = hasCat && state.replacementsOldToNew && Object.keys(state.replacementsOldToNew).length > 0;
   const diffs   = boState.lines.filter(l => l.cmp && l.cmp.changed).length;
   const exclT10 = !!(document.getElementById('boExclTag10') && document.getElementById('boExclTag10').checked);
   const exclT11 = !!(document.getElementById('boExclTag11') && document.getElementById('boExclTag11').checked);
@@ -6601,8 +6604,9 @@ function boRender() {
     <th ${TH} style="width:88px;text-align:center">Net Total</th>
     ${hasCat ? `<th ${TH} style="width:80px;text-align:center">Unit Cost</th>` : ''}
     ${hasCat ? `<th ${TH} style="width:80px;text-align:center">Cat. Cost</th>` : ''}
+    ${hasBoRepl ? `<th ${TH} style="width:110px;text-align:center">Replacement</th>` : ''}
   </tr>`;
-  const NCOLS = hasCat ? 14 : 12;
+  const NCOLS = hasCat ? (hasBoRepl ? 15 : 14) : (hasBoRepl ? 13 : 12);
 
   // Group by customer
   const groups = [];
@@ -6726,6 +6730,7 @@ function boRender() {
              onblur="this.style.borderColor='transparent';this.style.borderBottomColor='var(--border)';this.style.background='transparent'"></td>
         <td style="text-align:center;font-size:12px;font-weight:600">€${l.val.toFixed(2)}</td>
         ${unitCostCell}${catCostCell}
+        ${hasBoRepl ? boReplacementCell(l.id, l.code) : ''}
       </tr>`;
     }).join('');
     return `<tr class="bo-gap"><td colspan="${NCOLS}" style="height:14px;background:transparent;border:none;padding:0"></td></tr>`
@@ -6734,6 +6739,36 @@ function boRender() {
 
   document.getElementById('boTableBody').innerHTML = html ||
     `<tr><td colspan="${NCOLS}" style="padding:26px;text-align:center;color:var(--muted)">No lines in this view.</td></tr>`;
+}
+
+
+// ── Replacement SKU column — Backorder ────────────────────────────────────
+function boSetReplacement(lineId, rawSku, replSku, cb) {
+  if (cb.checked) {
+    boState.comments[lineId] = "Change to '" + replSku + "'";
+  } else {
+    // Only clear the comment if it was the auto-set replacement comment
+    if (boState.comments[lineId] === "Change to '" + replSku + "'") {
+      delete boState.comments[lineId];
+    }
+  }
+  boRender();
+}
+
+function boReplacementCell(lineId, rawSku) {
+  const norm = normCode(rawSku);
+  const repl = (state.replacementsOldToNew && norm) ? state.replacementsOldToNew[norm] : null;
+  if (!repl) return '<td style="text-align:center"><span style="color:var(--muted);font-size:11px">—</span></td>';
+  const expectedComment = "Change to '" + repl + "'";
+  const isActive = boState.comments[lineId] === expectedComment;
+  return '<td style="text-align:center;vertical-align:middle;padding:4px 8px;white-space:nowrap">'
+    + '<div style="font-size:11.5px;font-weight:700;color:var(--brand);margin-bottom:3px">' + escHtml(repl) + '</div>'
+    + '<input type="checkbox" ' + (isActive ? 'checked' : '')
+    + ' data-lid="' + escHtml(String(lineId)) + '" data-raw="' + escHtml(rawSku) + '" data-repl="' + escHtml(repl) + '"'
+    + ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--brand)"'
+    + ' title="' + (isActive ? "Comment set to: " + escHtml(expectedComment) + ' — untick to clear' : 'Tick to add change note to comment') + '"'
+    + ' onchange="boSetReplacement(this.getAttribute(\'data-lid\'),this.getAttribute(\'data-raw\'),this.getAttribute(\'data-repl\'),this)">'
+    + '</td>';
 }
 
 function boReset() {
@@ -7205,6 +7240,76 @@ function updateSelectAllState() {
   if (!sa) return;
   sa.checked       = allChecked;
   sa.indeterminate = !allChecked && !noneChecked;
+}
+
+
+// ── Replacement SKU column — Order Generator ─────────────────────────────
+function toggleOgReplacement(rawSku, replSku, cb) {
+  if (cb.checked) {
+    convState.skuOverrides[rawSku] = replSku;
+  } else {
+    delete convState.skuOverrides[rawSku];
+  }
+  renderTable();
+}
+
+function injectOgReplacementCol() {
+  if (!state.catalogName) return;
+  const tbl = document.querySelector('#tableBody');
+  if (!tbl) return;
+  const rows = tbl.querySelectorAll('tr[data-part]');
+  if (!rows.length) return;
+
+  // Check if we already have the header
+  const thead = document.querySelector('#tableHead');
+  if (!thead) return;
+  const lastHRow = thead.querySelectorAll('tr')[thead.querySelectorAll('tr').length - 1];
+  if (!lastHRow) return;
+  if (lastHRow.querySelector('th[data-repl-og-col]')) return;
+
+  // Collect raw SKUs from data-part rows by looking at the SKU cell
+  // The OG SKU cell uses effectiveSku() already — the raw partKey is data-part
+  let anyRepl = false;
+  rows.forEach(row => {
+    const raw = row.getAttribute('data-part') || '';
+    if (raw && state.replacementsOldToNew && state.replacementsOldToNew[normCode(raw)]) {
+      anyRepl = true;
+    }
+  });
+  if (!anyRepl) return;
+
+  // Add header
+  const th = document.createElement('th');
+  th.setAttribute('data-repl-og-col', '1');
+  th.textContent = 'Replacement';
+  th.className = 'th-col';
+  th.style.cssText = 'text-align:center;white-space:nowrap;min-width:110px';
+  lastHRow.appendChild(th);
+
+  // Add body cells
+  rows.forEach(row => {
+    const raw  = row.getAttribute('data-part') || '';
+    const norm = normCode(raw);
+    const repl = (state.replacementsOldToNew && norm) ? state.replacementsOldToNew[norm] : null;
+    const td   = document.createElement('td');
+    td.style.cssText = 'text-align:center;vertical-align:middle;padding:4px 8px;white-space:nowrap';
+
+    if (repl) {
+      const isActive = !!(convState.skuOverrides[raw] && convState.skuOverrides[raw] === repl);
+      td.innerHTML =
+        '<div style="font-size:11.5px;font-weight:700;color:var(--brand);margin-bottom:3px">' + escHtml(repl) + '</div>' +
+        '<input type="checkbox" ' + (isActive ? 'checked' : '') +
+        ' data-raw="' + escHtml(raw) + '" data-repl="' + escHtml(repl) + '"' +
+        ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--brand)"' +
+        ' title="' + (isActive ? 'Replacement active — untick to revert to ' + escHtml(raw) : 'Tick to switch to replacement SKU ' + escHtml(repl)) + '">';
+      td.querySelector('input').addEventListener('change', function() {
+        toggleOgReplacement(this.getAttribute('data-raw'), this.getAttribute('data-repl'), this);
+      });
+    } else {
+      td.innerHTML = '<span style="color:var(--muted);font-size:11px">—</span>';
+    }
+    row.appendChild(td);
+  });
 }
 
 function updateExclBadge() {
@@ -9169,15 +9274,26 @@ function saaRenderForecastTable() {
       const _f   = saaForecastNextMonths(_r, nextMonths, _fa);
       fcstCache.set(_r.code, _f);
       const _tot = _f ? _f.reduce((s, x) => s + (x && x.predicted != null ? x.predicted : 0), 0) : 0;
-      if (_tot > 0) totals.push({ code: _r.code, total: _tot });
+      if (_tot > 0) totals.push({ code: _r.code, total: _tot, brand: _r.brand || '' });
     }
-    totals.sort((a, b) => b.total - a.total);
-    const grandTotal = totals.reduce((s, x) => s + x.total, 0);
-    let cumulative = 0;
+    // Run 80/20 independently per brand so dominant brands don't crowd out
+    // top-sellers from smaller brands.
+    const byBrand = {};
     for (const x of totals) {
-      cumulative += x.total;
-      eighty20set.add(x.code);
-      if (grandTotal > 0 && cumulative / grandTotal >= 0.8) break;
+      const bk = x.brand || '__none__';
+      if (!byBrand[bk]) byBrand[bk] = [];
+      byBrand[bk].push(x);
+    }
+    for (const bk of Object.keys(byBrand)) {
+      const grp = byBrand[bk];
+      grp.sort((a, b) => b.total - a.total);
+      const brandTotal = grp.reduce((s, x) => s + x.total, 0);
+      let cumulative = 0;
+      for (const x of grp) {
+        cumulative += x.total;
+        eighty20set.add(x.code);
+        if (brandTotal > 0 && cumulative / brandTotal >= 0.8) break;
+      }
     }
   }
 
@@ -12238,6 +12354,103 @@ function rerenderConvPreview() {
     if (_vlines.length) updateValuePill(convState.stockLevels, _vlines);
   }
   injectConvBoBadges();
+}
+
+
+// ── Replacement SKU column — Order Conversion ─────────────────────────────
+function toggleConvReplacement(rawSku, replSku, cb) {
+  if (cb.checked) {
+    convState.skuOverrides[rawSku] = replSku;
+  } else {
+    delete convState.skuOverrides[rawSku];
+  }
+  rerenderConvPreview();
+}
+
+function injectConvReplacementCol() {
+  // Only run when a catalog is loaded (replacements come from catalog)
+  if (!state.catalogName) return;
+
+  // Find every table inside the conversion preview area
+  const preview = document.getElementById('convPreview');
+  if (!preview) return;
+
+  const tables = preview.querySelectorAll('table');
+  tables.forEach(tbl => {
+    // ── Header row ─────────────────────────────────────────────────────────
+    const thead = tbl.querySelector('thead');
+    if (!thead) return;
+    const hRows = thead.querySelectorAll('tr');
+    if (!hRows.length) return;
+    // Use the last header row (some tables have a colgroup header row first)
+    const hRow = hRows[hRows.length - 1];
+
+    // Don't inject twice
+    if (hRow.querySelector('th[data-repl-col]')) return;
+
+    // Check if any data row in this table has a replacement available
+    const tbody = tbl.querySelector('tbody');
+    if (!tbody) return;
+
+    // Collect all raw SKUs in this table via data-orig attributes
+    const origInputs = tbody.querySelectorAll('input[data-orig]');
+    if (!origInputs.length) return;
+
+    let anyRepl = false;
+    origInputs.forEach(inp => {
+      const raw = inp.getAttribute('data-orig');
+      if (raw && state.replacementsOldToNew && state.replacementsOldToNew[normCode(raw)]) {
+        anyRepl = true;
+      }
+    });
+    if (!anyRepl) return;
+
+    // Add header cell
+    const th = document.createElement('th');
+    th.setAttribute('data-repl-col', '1');
+    th.textContent = 'Replacement';
+    th.style.cssText = 'padding:7px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;text-align:center;border-bottom:2px solid var(--border);background:var(--light)';
+    hRow.appendChild(th);
+
+    // ── Body rows ───────────────────────────────────────────────────────────
+    const bodyRows = tbody.querySelectorAll('tr');
+    bodyRows.forEach(row => {
+      // Skip separator / group header rows that have no data-orig input
+      const inp = row.querySelector('input[data-orig]');
+      if (!inp) {
+        // Extend colspan of spanning cells so the table stays aligned
+        const spanning = row.querySelector('td[colspan]');
+        if (spanning) {
+          spanning.setAttribute('colspan', String(Number(spanning.getAttribute('colspan') || 1) + 1));
+        }
+        return;
+      }
+
+      const raw  = inp.getAttribute('data-orig') || '';
+      const norm = normCode(raw);
+      const repl = (state.replacementsOldToNew && norm) ? state.replacementsOldToNew[norm] : null;
+      const td   = document.createElement('td');
+      td.style.cssText = 'text-align:center;vertical-align:middle;padding:4px 8px;white-space:nowrap';
+
+      if (repl) {
+        const isActive = !!(convState.skuOverrides[raw] && convState.skuOverrides[raw] === repl);
+        const cbId = 'repl_conv_' + norm;
+        td.innerHTML =
+          '<div style="font-size:11.5px;font-weight:700;color:var(--brand);margin-bottom:3px">' + escHtml(repl) + '</div>' +
+          '<input type="checkbox" id="' + cbId + '" ' + (isActive ? 'checked' : '') +
+          ' data-raw="' + escHtml(raw) + '" data-repl="' + escHtml(repl) + '"' +
+          ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--brand)"' +
+          ' title="' + (isActive ? 'Replacement active — untick to revert to ' + escHtml(raw) : 'Tick to switch to replacement SKU ' + escHtml(repl)) + '">';
+        td.querySelector('input').addEventListener('change', function() {
+          toggleConvReplacement(this.getAttribute('data-raw'), this.getAttribute('data-repl'), this);
+        });
+      } else {
+        td.innerHTML = '<span style="color:var(--muted);font-size:11px">—</span>';
+      }
+
+      row.appendChild(td);
+    });
+  });
 }
 
 function toggleConvLine(sku, cb) {
