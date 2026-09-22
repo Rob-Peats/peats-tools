@@ -8187,6 +8187,7 @@ const SAA_ALT_SKU_KEY  = 'peats_saa_alt_skus';
 function saaLoadAltOverrides()  { try { return JSON.parse(localStorage.getItem(SAA_ALT_SKU_KEY) || '{}'); } catch(e) { return {}; } }
 function saaSaveAltOverrides(o) { try { localStorage.setItem(SAA_ALT_SKU_KEY, JSON.stringify(o)); } catch(e) {} }
 let saaFcstSortCol = null;  // null | 'code' | 'state' | 'trend'  (forecast table only)
+let saaCachedForecastSkus = new Set(); // norm SKU codes whose monthly data came from cache (⚡)
 let saaFcstSortDir = 1;     // 1 = ascending, -1 = descending
 let saaFcstExcluded = new Set(); // codes unchecked in forecast table (excluded from export)
 function saaSortBy(col) {
@@ -9099,6 +9100,8 @@ async function saaTriggerMonthlyLoad(rowsToLoad) {
   // ── Restore from localStorage cache first (instant — no network) ──────────
   const cachedCount = saaRestoreCache();
   if (cachedCount > 0) {
+    // Track which SKUs came from cache so the table can show ⚡ per row
+    saaCachedForecastSkus = new Set(Object.keys(saaMonthlyDataMap));
     saaSeasonalIndices = saaComputeSeasonalIndices();
     saaCrmLoadState = 'ok';
     saaRenderForecastTable();
@@ -9114,9 +9117,15 @@ async function saaTriggerMonthlyLoad(rowsToLoad) {
     if (alt) skus.add(alt);
   }
 
+  // Snapshot keys before CRM fetch so we know which are freshly loaded
+  const preLoadKeys = new Set(Object.keys(saaMonthlyDataMap));
   const { loaded, failed } = await saaLoadMonthlyDataForSkus([...skus]);
 
   if (loaded > 0) {
+    // Freshly CRM-loaded keys are no longer "cache only" — remove their ⚡
+    for (const k of Object.keys(saaMonthlyDataMap)) {
+      if (!preLoadKeys.has(k)) saaCachedForecastSkus.delete(k);
+    }
     saaCrmLoadState = 'ok';
     saaSeasonalIndices = saaComputeSeasonalIndices();
     saaSaveCache();   // persist updated map to localStorage
@@ -9447,7 +9456,7 @@ function saaRenderForecastTable() {
     return `<tr style="border-bottom:1px solid #d1d5db;${_isExcl?'opacity:.45;':''}">
       <td style="padding:4px 8px;text-align:center;white-space:nowrap;"><input type="checkbox" class="saa-fcst-chk" data-code="${escHtml(r.code)}" ${_isExcl?'':'checked'} onchange="if(this.checked){saaFcstExcluded.delete(this.dataset.code);}else{saaFcstExcluded.add(this.dataset.code);}this.closest('tr').style.opacity=this.checked?'':'0.45';document.getElementById('saaFcstCheckAll').checked=[...document.querySelectorAll('.saa-fcst-chk')].every(c=>c.checked);"></td>
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${replacedBy ? `<span style="text-decoration:line-through;opacity:.5;">${escHtml(r.code)}</span>` : escHtml(r.code)}${altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaces ${escHtml(altRaw)}</div>` : ''}${replacedBy ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaced by ${escHtml(replacedBy)}</div>` : ''}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${replacedBy ? `<span style="text-decoration:line-through;opacity:.5;">${escHtml(r.code)}</span>` : escHtml(r.code)}${saaCachedForecastSkus.has(normCode(r.code)) ? ' <span title="Loaded from local cache" style="font-size:10px;opacity:.65;vertical-align:middle;">⚡</span>' : ''}${altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaces ${escHtml(altRaw)}</div>` : ''}${replacedBy ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaced by ${escHtml(replacedBy)}</div>` : ''}</td>
       <td style="padding:5px 10px;text-align:left;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
       <td style="${TD}padding:4px 8px;">${statePill}</td>
       ${trendTd}
@@ -9462,6 +9471,8 @@ function saaRenderForecastTable() {
 }
 
 function saaShowPredecessorModal() {
+  // Refresh from catalog state in case it loaded after the tool was opened
+  saaLoadReplacements();
   const rows = saaData.slice().sort((a,b) => (a.brand+'|'+a.code).localeCompare(b.brand+'|'+b.code));
   const normFn = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const rowsHtml = rows.map(r => {
@@ -9691,21 +9702,10 @@ async function saaSaveReplacementsToCatalog() {
     }
 
     if (pushOk) {
-      showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' pushed to catalog on GitHub.');
-      // Re-fetch catalog from GitHub to confirm the Replacements sheet landed correctly
-      setTimeout(function() {
-        githubLoadCatalog().then(function() {
-          // Check if replacements came back
-          var n = Object.keys(state.replacementsNewToOld || {}).length;
-          if (n) {
-            showToast('✔ Replacements sheet confirmed in catalog (' + n + ' pair' + (n===1?'':'s') + ') — colleagues get them on next load.');
-          } else {
-            showToast('⚠ Replacements pushed but not found in re-fetched catalog — check GitHub push status.');
-          }
-        }).catch(function() {
-          // githubLoadCatalog already shows its own error badge; don't double-toast
-        });
-      }, 1500);
+      // Success — no re-fetch needed. The in-memory state.replacementsNewToOld is already
+      // up to date (we just built it from allRepls), and a GitHub CDN re-fetch at this
+      // point risks returning a stale version that would overwrite valid local state.
+      showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' pushed to catalog — colleagues get them on next load.');
     } else if (!GH_READY) {
       showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' saved — re-upload this catalog to share with others.');
     }
@@ -11215,8 +11215,10 @@ function asRenderAll() {
   document.getElementById('asContent').style.display      = 'none';
   const agedEl = document.getElementById('asAgedSection');
   const slowEl = document.getElementById('asSlowSection');
-  if (agedEl) agedEl.style.display = asShowAged ? '' : 'none';
-  if (slowEl) slowEl.style.display = asShowSlow ? '' : 'none';
+  // Only show a section if it actually has data — prevents stale rows from a
+  // previous brand appearing when the new brand has no aged/slow stock.
+  if (agedEl) agedEl.style.display = (asShowAged && asData.length > 0)     ? '' : 'none';
+  if (slowEl) slowEl.style.display = (asShowSlow && asSlowData.length > 0) ? '' : 'none';
   const btn = document.getElementById('asExportBtn');
   if (btn) { btn.disabled = false; btn.style.cursor = ''; btn.style.opacity = '1'; }
 }
@@ -11248,7 +11250,16 @@ function asGetFilteredRows() {
 function asRenderTable() { asRenderAgedTable(); }
 
 function asRenderAgedTable() {
-  if (!asData.length) return;
+  if (!asData.length) {
+    // Clear stale rows and hide the section so a previous brand's data never persists.
+    const _tb = document.getElementById('asTableBody');
+    const _th = document.getElementById('asTableHead');
+    if (_tb) _tb.innerHTML = '';
+    if (_th) _th.innerHTML = '';
+    const _sec = document.getElementById('asAgedSection');
+    if (_sec) _sec.style.display = 'none';
+    return;
+  }
   asRenderSummaryCards();
 
   const rows = asGetFilteredRows();
@@ -11262,6 +11273,7 @@ function asRenderAgedTable() {
         const dn = (r.crmName || r.desc || '').toUpperCase();
         return dn.startsWith('EOL') ? 2 : dn.startsWith('TBD') ? 1 : 0;
       }
+      case 'salesOrders': return r.salesOrders ?? -Infinity;
       case 'free':       return r.free       ?? -Infinity;
       case 'stockValue': return r.stockValue  ?? -Infinity;
       case 'lastSold':   return r.lastSoldDate ? r.lastSoldDate.getTime() : -Infinity;
@@ -11290,6 +11302,7 @@ function asRenderAgedTable() {
     ['code',        'Code'],
     ['source',      'Source'],
     ['desc',        'Description'],
+    ['salesOrders', 'Sales Orders'],
     ['free',        'Free Stock'],
     ['stockValue',  'Stock Value (€)'],
     ['lastSold',    'Last Sold'],
@@ -11305,7 +11318,7 @@ function asRenderAgedTable() {
     `padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;` +
     `border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;text-align:center;`;
   const AGED_COL_W = {state:'width:72px;',brand:'width:80px;',code:'width:110px;',source:'width:80px;',
-    free:'width:80px;',stockValue:'width:100px;',lastSold:'width:80px;',dormant:'width:100px;',
+    salesOrders:'width:90px;',free:'width:80px;',stockValue:'width:100px;',lastSold:'width:80px;',dormant:'width:100px;',
     createdDate:'width:100px;',bandC:'width:90px;',bandF:'width:90px;',discount:'width:90px;',clearance:'width:100px;'};
   const CHK_TH = `position:sticky;top:0;z-index:10;background:var(--light);padding:7px 8px;border-bottom:2px solid var(--border);text-align:center;width:32px;`;
 
@@ -11383,6 +11396,7 @@ function asRenderAgedTable() {
       <td style="${TD}">${sourceBadge}</td>
       <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
+      <td style="${TD}font-weight:600;color:#0369a1;">${r.salesOrders != null ? r.salesOrders.toLocaleString('en-IE') : '—'}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
       <td style="${TD}color:var(--orange);font-weight:600;">${stockValFmt}</td>
       <td style="${TD}font-size:11px;">${fmtLastSold(r.lastSoldDate)}</td>
@@ -11401,7 +11415,7 @@ function asRenderAgedTable() {
       <td style="${TD}background:#fffbea;">${clearFmt}</td>
     </tr>`;
   }).join('') ||
-  `<tr><td colspan="${11 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0)}" style="padding:30px;text-align:center;color:var(--muted);">
+  `<tr><td colspan="${12 + (asBandCVisible ? 1 : 0) + (asBandFVisible ? 1 : 0)}" style="padding:30px;text-align:center;color:var(--muted);">
      No aged stock matches this filter.
    </td></tr>`;
 }
@@ -11412,6 +11426,14 @@ function asRenderSlowTable() {
   const slowHead = document.getElementById('asSlowTableHead');
   const slowBody = document.getElementById('asSlowTableBody');
   if (!slowHead || !slowBody) return;
+  if (!asSlowData.length) {
+    // Clear stale rows and hide the section so a previous brand's data never persists.
+    slowHead.innerHTML = '';
+    slowBody.innerHTML = '';
+    const _sec = document.getElementById('asSlowSection');
+    if (_sec) _sec.style.display = 'none';
+    return;
+  }
   const q = (document.getElementById('asSearch')?.value || '').toLowerCase().trim();
   let rows = asSlowData;
   if (q) {
@@ -11434,6 +11456,7 @@ function asRenderSlowTable() {
       case 'desc':            return (r.crmName || r.desc || '').toLowerCase();
       case 'state': { const dn = (r.crmName || r.desc || '').toUpperCase(); return dn.startsWith('EOL') ? 2 : dn.startsWith('TBD') ? 1 : 0; }
       case 'source':          return r.crmOnly ? 1 : 0;
+      case 'salesOrders':     return r.salesOrders    ?? -Infinity;
       case 'free':            return r.free           ?? -Infinity;
       case 'sales3Mo':        return r.sales3Mo       ?? -Infinity;
       case 'avgMonthly':      return r.avgMonthly     ?? -Infinity;
@@ -11475,6 +11498,7 @@ function asRenderSlowTable() {
     <th onclick="asSlowSort('code')"          style="${WB}width:110px;${slowUL('code')}">Code${slowArrow('code')}</th>
     <th onclick="asSlowSort('source')"        style="${WB}width:80px;${slowUL('source')}">Source${slowArrow('source')}</th>
     <th onclick="asSlowSort('desc')"          style="${WB}text-align:left;${slowUL('desc')}">Description${slowArrow('desc')}</th>
+    <th onclick="asSlowSort('salesOrders')"   style="${WB}color:#0369a1;width:90px;${slowUL('salesOrders')}">Sales Orders${slowArrow('salesOrders')}</th>
     <th onclick="asSlowSort('free')"          style="${WB}color:#1f6b3e;background:#e8f5e9;width:80px;${slowUL('free')}">Free Stock${slowArrow('free')}</th>
     <th onclick="asSlowSort('sales3Mo')"      style="${WB}width:100px;${slowUL('sales3Mo')}">3mo Sales${slowArrow('sales3Mo')}</th>
     <th onclick="asSlowSort('avgMonthly')"    style="${WB}width:80px;${slowUL('avgMonthly')}">Avg/Mo${slowArrow('avgMonthly')}</th>
@@ -11521,6 +11545,7 @@ function asRenderSlowTable() {
       <td style="${TD}">${slowSrcBadge}</td>
       <td style="padding:5px 8px;text-align:left;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
+      <td style="${TD}font-weight:600;color:#0369a1;">${r.salesOrders != null ? r.salesOrders.toLocaleString('en-IE') : '—'}</td>
       <td style="${TD}background:#e8f5e9;font-weight:700;color:#1f6b3e;">${r.free.toLocaleString('en-IE')}</td>
       <td style="${TD}">${Math.round(r.sales3Mo).toLocaleString('en-IE')}</td>
       <td style="${TD}">${r.avgMonthly.toFixed(1)}</td>
