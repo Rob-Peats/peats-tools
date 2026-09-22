@@ -2788,17 +2788,31 @@ async function githubPushCatalog(blob) {
   }
   const b64 = btoa(binary);
 
-  // 3. Commit the new file
-  const putResp = await fetch(apiUrl, {
+  // 3. Commit the new file — retry once if SHA conflict (another push landed between our fetch and PUT)
+  const _doPut = async (sha) => fetch(apiUrl, {
     method: 'PUT',
     headers,
     body: JSON.stringify({
       message: `Catalog update — ${state.userName || 'unknown user'} — ${new Date().toISOString().slice(0,16).replace('T',' ')} UTC`,
       content: b64,
-      sha:     meta.sha,
+      sha,
       branch:  GITHUB_CONFIG.branch,
     }),
   });
+  let putResp = await _doPut(meta.sha);
+  // 409 = SHA conflict (another commit landed between our GET and PUT) — re-fetch and retry once
+  if (!putResp.ok && (putResp.status === 409 || putResp.status === 422)) {
+    const errCheck = await putResp.json().catch(() => ({}));
+    const errMsg   = (errCheck.message || '').toLowerCase();
+    if (errMsg.includes('does not match') || errMsg.includes('sha') || putResp.status === 409) {
+      // Re-fetch the latest SHA and retry
+      const retryMeta = await fetch(apiUrl + `?ref=${GITHUB_CONFIG.branch}`, { headers });
+      if (retryMeta.ok) {
+        const retryMetaJson = await retryMeta.json();
+        putResp = await _doPut(retryMetaJson.sha);
+      }
+    }
+  }
   if (!putResp.ok) {
     const errBody = await putResp.json().catch(() => ({}));
     const msg = errBody.message || '';
@@ -2807,6 +2821,9 @@ async function githubPushCatalog(blob) {
     }
     throw new Error(msg || `GitHub push failed (${putResp.status})`);
   }
+  // After a successful push, update our local buffer to match what we just committed
+  // so any subsequent push in this session starts from the correct base
+  state.catalogRawBuf = arrBuf;
   return true;
 }
 
@@ -7841,6 +7858,7 @@ function saaReset() {
   _saaRefreshExcludePills();
   saaSortCol      = 'status';
   saaSortDir      = 1;
+  saaFcstExcluded = new Set();
   // Reset CRM forecast state so fetch re-triggers on next brand load
   saaMonthlyDataMap   = {};
   saaSeasonalIndices  = null;
@@ -8065,6 +8083,7 @@ function saaLoadAltOverrides()  { try { return JSON.parse(localStorage.getItem(S
 function saaSaveAltOverrides(o) { try { localStorage.setItem(SAA_ALT_SKU_KEY, JSON.stringify(o)); } catch(e) {} }
 let saaFcstSortCol = null;  // null | 'code' | 'state' | 'trend'  (forecast table only)
 let saaFcstSortDir = 1;     // 1 = ascending, -1 = descending
+let saaFcstExcluded = new Set(); // codes unchecked in forecast table (excluded from export)
 function saaSortBy(col) {
   if (saaFcstSortCol === col) saaFcstSortDir *= -1;
   else { saaFcstSortCol = col; saaFcstSortDir = 1; }
@@ -8143,6 +8162,8 @@ async function saaExportExcel() {
         const d = (r.crmName||r.desc).toLowerCase();
         if (!r.code.toLowerCase().includes(q) && !d.includes(q) && !r.brand.toLowerCase().includes(q)) return false;
       }
+      // In forecast mode, respect the per-row checkbox exclusions
+      if (saaView === 'forecast' && saaFcstExcluded.has(r.code)) return false;
       return true;
     });
 
@@ -9078,7 +9099,7 @@ function saaRenderForecastTable() {
 
   const hasCrmData = saaSeasonalIndices != null;
   const normFn     = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const NCOLS      = 13; // Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Sug. Order | 80/20 | Status
+  const NCOLS      = 14; // [✓] | Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Sug. Order | 80/20 | Status
 
   // Filter by search + state tab
   let rows = saaData.slice();
@@ -9203,6 +9224,7 @@ function saaRenderForecastTable() {
   const indicesHtml = '';
 
   document.getElementById('saaTableHead').innerHTML = banner + indicesHtml + `<tr>
+    <th style="${TH}width:36px;padding:4px;" title="Uncheck to exclude from export"><input type="checkbox" id="saaFcstCheckAll" checked title="Select all / deselect all" onchange="document.querySelectorAll('.saa-fcst-chk').forEach(cb=>{cb.checked=this.checked;const c=cb.dataset.code;if(this.checked)saaFcstExcluded.delete(c);else saaFcstExcluded.add(c);});"></th>
     <th style="${TH}width:80px;">Brand</th>
     <th style="${TH}width:135px;cursor:pointer;user-select:none;" onclick="saaSortBy('code')" title="Sort by SKU code">Code${saaFcstSortCol==='code'?(saaFcstSortDir===1?' ↑':' ↓'):'<span style=\"opacity:.35;font-size:9px;\"> ⇅</span>'}</th>
     <th style="${TH}text-align:left;width:150px;">Description</th>
@@ -9305,7 +9327,9 @@ function saaRenderForecastTable() {
       }
     }
 
-    return `<tr style="border-bottom:1px solid #d1d5db;">
+    const _isExcl = saaFcstExcluded.has(r.code);
+    return `<tr style="border-bottom:1px solid #d1d5db;${_isExcl?'opacity:.45;':''}">
+      <td style="padding:4px 8px;text-align:center;white-space:nowrap;"><input type="checkbox" class="saa-fcst-chk" data-code="${escHtml(r.code)}" ${_isExcl?'':'checked'} onchange="if(this.checked){saaFcstExcluded.delete(this.dataset.code);}else{saaFcstExcluded.add(this.dataset.code);}this.closest('tr').style.opacity=this.checked?'':'0.45';document.getElementById('saaFcstCheckAll').checked=[...document.querySelectorAll('.saa-fcst-chk')].every(c=>c.checked);"></td>
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
       <td style="${TD}font-family:monospace;font-weight:700;">${replacedBy ? `<span style="text-decoration:line-through;opacity:.5;">${escHtml(r.code)}</span>` : escHtml(r.code)}${altRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaces ${escHtml(altRaw)}</div>` : ''}${replacedBy ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaced by ${escHtml(replacedBy)}</div>` : ''}</td>
       <td style="padding:5px 10px;text-align:left;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
@@ -9329,14 +9353,22 @@ function saaShowPredecessorModal() {
     const override = saaAltSkuOverrides[norm] || '';
     const fromMap  = saaReplacements[norm] || '';
     const current  = override || fromMap;
-    const fromTab  = !override && !!fromMap;
-    return `<tr style="border-bottom:1px solid #e5e7eb;">
+    const fromCatalog = !override && !!fromMap; // exists in catalog, not a new local override
+    const isNew    = !!override;                // user has set/changed this locally (unpushed)
+    const rowBg    = fromCatalog ? '#f0fdf4' : isNew ? '#faf5ff' : 'transparent';
+    const tag      = fromCatalog
+      ? '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#d1fae5;color:#065f46;margin-left:5px;white-space:nowrap;">✔ In catalog</span>'
+      : isNew
+      ? '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#ede9fe;color:#6d28d9;margin-left:5px;white-space:nowrap;">⬆ Unpushed</span>'
+      : '';
+    return `<tr style="border-bottom:1px solid #e5e7eb;background:${rowBg};">
       <td style="padding:6px 10px;font-family:monospace;font-size:12px;font-weight:700;white-space:nowrap;">${escHtml(r.code)}</td>
       <td style="padding:6px 10px;font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.brand+' · '+r.desc)}</td>
       <td style="padding:6px 10px;white-space:nowrap;">
         <input type="text" data-sku="${escHtml(r.code)}" value="${escHtml(current)}" placeholder="none"
-          style="width:130px;padding:3px 7px;font-size:11px;font-family:monospace;border:1px solid ${current?'#a78bfa':'var(--border)'};border-radius:4px;background:${current?'#faf5ff':'var(--white)'};">
-        ${fromTab ? '<span style="font-size:10px;color:#1d4ed8;margin-left:4px;">↩ Replacements</span>' : ''}
+          oninput="saaUpdatePushCount()"
+          style="width:130px;padding:3px 7px;font-size:11px;font-family:monospace;border:1px solid ${current?'#a78bfa':'var(--border)'};border-radius:4px;background:${fromCatalog?'#f0fdf4':current?'#faf5ff':'var(--white)'};">
+        ${tag}
       </td>
     </tr>`;
   }).join('');
@@ -9364,13 +9396,27 @@ function saaShowPredecessorModal() {
     </div>
     <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;align-items:center;">
       <span style="font-size:11px;color:var(--muted);margin-right:auto;">Save keeps in browser only — Push shares with all users via catalog.</span>
-      <button onclick="saaSaveReplacementsToCatalog()" style="padding:7px 18px;border-radius:8px;background:#065f46;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;" title="Merge all replacements into the catalog Replacements tab and push to GitHub">Push to Catalog</button>
+      <button id="saaPushCountBtn" onclick="saaSaveReplacementsToCatalog()" style="padding:7px 18px;border-radius:8px;background:#065f46;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;" title="Merge all replacements into the catalog Replacements tab and push to GitHub">Push to Catalog</button>
       <button onclick="saaSavePredecessors()" style="padding:7px 20px;border-radius:8px;background:var(--brand);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;">Save Changes</button>
       <button onclick="document.getElementById('saaPredModal').remove()" style="padding:7px 16px;border-radius:8px;background:var(--light);color:var(--text);font-weight:600;font-size:13px;border:1px solid var(--border);cursor:pointer;">Cancel</button>
     </div>
   </div>`;
   document.body.appendChild(el);
   el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+}
+
+function saaUpdatePushCount() {
+  // Update Push button label with count of entries that differ from catalog
+  const normFn2 = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  let count = 0;
+  document.querySelectorAll('#saaPredModal input[data-sku]').forEach(function(inp) {
+    const norm = normFn2(inp.getAttribute('data-sku'));
+    const val  = inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const catalogVal = (saaReplacements[norm] || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if (val !== catalogVal) count++;
+  });
+  const btn = document.getElementById('saaPushCountBtn');
+  if (btn) btn.textContent = count > 0 ? `Push ${count} Change${count===1?'':'s'}` : 'Push to Catalog';
 }
 
 function saaSavePredecessors() {
@@ -9516,6 +9562,17 @@ async function saaSaveReplacementsToCatalog() {
     try { localStorage.setItem('peats_saa_alt_skus', JSON.stringify(saaAltSkuOverrides)); } catch(e) {}
 
     document.getElementById('saaPredModal') && document.getElementById('saaPredModal').remove();
+
+    // Trigger CRM data load for any predecessor SKUs not yet loaded, then re-render forecast
+    var _newPredSkus = Object.values(allRepls).filter(function(s){ return !saaMonthlyDataMap[normFn(s)]; });
+    if (_newPredSkus.length && localStorage.getItem('peats_crm_pat')) {
+      saaLoadMonthlyDataForSkus(_newPredSkus).then(function(result) {
+        if (result && result.loaded > 0) { saaSeasonalIndices = saaComputeSeasonalIndices(); }
+        if (saaView === 'forecast') saaRenderForecastTable();
+      });
+    } else if (saaView === 'forecast') {
+      saaRenderForecastTable();
+    }
 
     if (pushOk) {
       showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' pushed to catalog on GitHub.');
