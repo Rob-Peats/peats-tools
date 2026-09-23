@@ -2453,24 +2453,25 @@ const RETAILERS = {
   'stakelums': {
     name: 'Stakelums',
     dataRow: 1,       // data starts at Excel row 2 (row 0 = header)
-    // Source file columns: A=SKU  B=Description  C=Available  G=Price(incl)  K=COST  L=SOLD
+    // Source file columns: A=SKU  B=Description  C=Available  F=Price(incl)  I=Cost  J=SOLD
+    // (D=Default Case, E=Price excl, G=Supplier Ref, H=Default Buy Case — all ignored)
     infoHeaders: ['SKU', 'Description', 'Stock', 'Retail', 'Cost', 'Sold'],
     branches: ['STA'],
     branchMeta: {
       STA: { name: 'Stakelums', code: 'STA05H' },
     },
-    infoCols:      [0, 1, 2, 6, 10, 11],  // SKU | Desc | Stock | Retail | Cost | Sold
+    infoCols:      [0, 1, 2, 5, 8, 9],   // SKU | Desc | Stock | Retail | Cost | Sold
     tableInfoIdxs: [0],     // show SKU in table column; description handled separately
     descIdx:       1,       // infoCols[1] = raw col 1 = Description
     partCol:       0,       // raw col A = SKU — used for catalog matching
-    costCol:       10,      // raw col K = COST
-    retailCol:     6,       // raw col G = Price(incl) = Retail
+    costCol:       8,       // raw col I = Buy Price (cost)
+    retailCol:     5,       // raw col F = Price(incl) = Retail
     shopCols:      [2],     // raw col C = Available (stock)
-    soldCols:      [11],    // raw col L = SOLD
+    soldCols:      [9],     // raw col J = Qty sold for period
     backordCols:   [],
-    origTotalCols: 12,      // 12 original columns (A–L)
-    suggestCols:   [12],    // suggested order appended at col M
-    totalCols:     13,
+    origTotalCols: 10,      // 10 original columns (A–J)
+    suggestCols:   [10],    // suggested order appended at col K
+    totalCols:     11,
     colHeaders:    ['SKU', 'Description', 'Stock', 'Retail', 'Cost', 'Sold'],
     outputStyle:   'append',
     allowPriceUpdate: true,
