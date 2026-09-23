@@ -865,6 +865,13 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   font-size: 11px; color: var(--muted); margin-top: 8px;
   display: flex; align-items: center; gap: 6px;
 }
+/* ── CRM status badges (OG + OC) ── */
+.crm-badge { display:inline-block;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px;letter-spacing:.04em;line-height:1.4;white-space:nowrap; }
+.crm-badge.eol  { background:#fee2e2;color:#b91c1c; }
+.crm-badge.tbd  { background:#fef9c3;color:#92400e; }
+.crm-badge.curr { background:#dcfce7;color:#166534; }
+.crm-badge.none { background:#f3f4f6;color:#9ca3af; }
+.crm-badge.cat  { background:#dbeafe;color:#1e40af; }
 </style>
 </head>
 <body>
@@ -1432,13 +1439,6 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         <input type="range" id="coverageSlider" min="1" max="12" value="4" step="1" oninput="onCoverageChange()">
         <span class="range-val" id="coverageLabel">4 weeks</span>
       </div>
-      <div id="salesWeeksGroup" style="display:none;align-items:center;gap:6px" title="How many weeks of sales the Sold column represents — adjusts the suggested order quantity">
-        <span class="t-label">Sold covers</span>
-        <input type="number" id="salesWeeksInput" min="1" max="52" value="4"
-               style="width:46px;padding:5px 6px;font-size:13px;font-weight:700;border:1px solid var(--border);border-radius:6px;text-align:center"
-               oninput="onSalesWeeksChange()">
-        <span style="font-size:12px;color:var(--muted)">weeks</span>
-      </div>
       <div id="monthDayGroup" style="display:none;align-items:center;gap:6px" title="Day of the month when the report was generated — used to extrapolate partial-month sales to a full month rate">
         <span class="t-label">Report Day</span>
         <input type="number" id="reportDayInput" min="1" max="31" value="1"
@@ -1448,8 +1448,15 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <div class="sep" id="monthDaySep" style="display:none"></div>
+    <div id="salesWeeksGroup" class="t-pill" style="display:none;align-items:center;gap:6px" title="How many weeks of sales the Sold column represents — adjusts the suggested order quantity">
+      <span class="t-label">Sold Period</span>
+      <input type="number" id="salesWeeksInput" min="1" max="52" value="4"
+             style="width:46px;padding:5px 6px;font-size:13px;font-weight:700;border:1px solid var(--border);border-radius:6px;text-align:center"
+             oninput="onSalesWeeksChange()">
+      <span style="font-size:12px;color:var(--muted)">weeks</span>
+    </div>
 
+    <div class="sep" id="monthDaySep" style="display:none"></div>
     <div class="sep"></div>
 
     <!-- ── Catalog pill (inline) ── -->
@@ -2338,6 +2345,12 @@ function _clearSearch(inputId, btnId, renderFn) {
   const inp = document.getElementById(inputId);
   if (inp) { inp.value = ''; if (renderFn) renderFn(); _syncSearchX(inputId, btnId); inp.focus(); }
 }
+
+// CRM name maps for status badges (populated async after file load)
+let ogCrmNameMap    = {}; // normCode → crmName string (OG tool)
+let ogCrmFetchState = 'idle'; // 'idle' | 'loading' | 'done'
+let convCrmNameMap    = {}; // normCode → crmName string (OC tool)
+let convCrmFetchState = 'idle';
 
 // ════════════════════════════════════════════════════
 //  RETAILER CONFIGS
@@ -3579,6 +3592,9 @@ async function parseRedmondsReport(arrayBuffer, fileName) {
 }
 
 function parseReport(rows, name, wb) {
+  // Reset CRM name cache whenever a new retailer file is loaded
+  ogCrmFetchState = 'idle';
+  ogCrmNameMap = {};
   const cfg = RETAILERS[state.retailerId];
 
   // ── Custom parse: Telfords ──
@@ -3915,6 +3931,36 @@ function catalogLookup(partNo) {
 // "WPA 7517-KIT.V2" → "WPA7517KITV2"
 function normCode(s) {
   return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+// ── CRM status helpers (OG + OC tools) ────────────────────────────────────────
+/** Given a crmName string and whether the SKU is in catalog, return a status class */
+function getCrmStatusClass(crmName, inCatalog) {
+  if (!inCatalog) return 'none';
+  if (!crmName)   return 'cat';
+  const u = crmName.toUpperCase();
+  if (u.startsWith('EOL')) return 'eol';
+  if (u.startsWith('TBD')) return 'tbd';
+  return 'curr';
+}
+/** Inline badge span for use inside cells */
+function crmBadgeSpan(crmName, inCatalog) {
+  const cls  = getCrmStatusClass(crmName, inCatalog);
+  const labels = { eol:'EOL', tbd:'TBD', curr:'✓', none:'—', cat:'📋' };
+  return `<span class="crm-badge ${cls}">${labels[cls] || '—'}</span>`;
+}
+/** Standalone <td> for the Status column */
+function crmStatusTd(crmName, inCatalog) {
+  return `<td style="text-align:center;padding:2px 4px;vertical-align:middle">${crmBadgeSpan(crmName, inCatalog)}</td>`;
+}
+/** Best available display description: CRM name → catalog desc → fallback */
+function bestDesc(normSku, fallback, crmMap, catalogObj, catalogNormObj) {
+  if (crmMap && normSku && crmMap[normSku]) return crmMap[normSku];
+  if (catalogObj && catalogNormObj && normSku) {
+    const code = catalogNormObj[normSku];
+    if (code && catalogObj[code] && catalogObj[code].desc) return catalogObj[code].desc;
+  }
+  return fallback || '';
 }
 
 const CODE_ALIAS_KEY  = 'peats_code_aliases';
@@ -5120,7 +5166,7 @@ function renderTable() {
   const hasPrices   = hasCatalog && (showCost || showRetail);
   // hasPriceChk: show per-row "Update Pricing" checkbox (only for retailers with native prices)
   const hasPriceChk = cfg.allowPriceUpdate && hasPrices;
-  const infoCols_count = tableInfoIdxs.length + 1; // +1 for desc
+  const infoCols_count = tableInfoIdxs.length + 2; // +1 for desc, +1 for Status
 
   // ── Header ──
   const head = document.getElementById('tableHead');
@@ -5189,6 +5235,7 @@ function renderTable() {
       <tr>
         <th class="th-col chk">Include<br>on Output</th>
         ${hasPriceChk ? `<th class="th-col chk-pricing">Update<br>Pricing</th>` : ''}
+        <th class="th-col" style="text-align:center;min-width:52px;font-size:9px;padding:4px 3px">Status</th>
         ${tableInfoIdxs.map((i, pos) => {
           const narrowW = [100, 85, 85, 85, 85][pos] || 85;
           const infoSt = ` style="width:${narrowW}px;max-width:${narrowW}px;padding:4px 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"`;
@@ -5232,6 +5279,7 @@ function renderTable() {
       <tr>
         <th class="th-col chk">Include<br>on Output</th>
         ${hasPriceChk ? `<th class="th-col chk-pricing">Update<br>Pricing</th>` : ''}
+        <th class="th-col" style="text-align:center;min-width:52px;font-size:9px;padding:4px 3px">Status</th>
         ${tableInfoIdxs.map((i, pos) => {
           const narrowW = [100, 85, 85, 85, 85][pos] || 85;
           const infoSt  = br.length > 1
@@ -5311,16 +5359,29 @@ function renderTable() {
       // SKU cell: show strikethrough original + corrected code when a correction exists
       if (cfg.infoCols[i] === cfg.partCol && val) {
         const effVal = effectiveSku(val, state.retailerId);
+        const _vnm   = normCode(effVal || val);
+        const _vinCat = !!(_vnm && state.catalogNorm[_vnm]);
+        const _vcrmName = (_vnm && ogCrmNameMap[_vnm]) || null;
+        const _catTagHtml = _inCat !== undefined
+          ? `<span style="display:block;margin-top:2px">${crmBadgeSpan(_vcrmName, _vinCat)}</span>`
+          : '';
         if (effVal && effVal.toUpperCase() !== val.toUpperCase()) {
           return `<td title="${val.replace(/"/g,'&quot;')} → ${effVal.replace(/"/g,'&quot;')}">`
             + `<span style="display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(val)}</span>`
             + `<span style="display:block;font-size:12px;font-weight:600;color:var(--brand);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(effVal)}</span>`
+            + _catTagHtml
             + `</td>`;
         }
+        return `<td title="${val.replace(/"/g,'&quot;')}"><div class="trunc-cell ${cls}"${widthSt}>${val}</div>${_catTagHtml}</td>`;
       }
       return `<td title="${val.replace(/"/g,'&quot;')}"><div class="trunc-cell ${cls}"${widthSt}>${val}</div></td>`;
     }).join('');
-    const desc     = String(row[cfg.infoCols[descIdx]] || '');
+    const _rawSku   = String(row[cfg.partCol] || '').trim();
+    const _effSku   = effectiveSku(_rawSku, state.retailerId) || _rawSku;
+    const _nm       = normCode(_effSku);
+    const _inCat    = !!(_nm && state.catalogNorm[_nm]);
+    const _crmName  = (_nm && ogCrmNameMap[_nm]) || null;
+    const desc      = bestDesc(_nm, String(row[cfg.infoCols[descIdx]] || ''), ogCrmNameMap, state.catalog, state.catalogNorm);
 
     const pricingOn      = pricingActive && !state.noPriceUpdate.has(partKey);
     const showPricingChk = hasPriceChk && pricingActive && hasRawPriceDiff(row, cfg);
@@ -5371,6 +5432,7 @@ function renderTable() {
     return `<tr class="${hasOrder ? 'has-order' : ''} ${isExcl ? 'excluded' : ''}" data-part="${partKey}">
       <td class="chk-cell"><input type="checkbox" class="row-chk" ${isExcl ? '' : 'checked'} data-part="${partKey}" onchange="toggleRow(this)"></td>
       ${hasPriceChk ? `<td class="chk-cell-pricing">${showPricingChk ? `<input type="checkbox" class="price-chk" ${pricingOn ? 'checked' : ''} data-part="${partKey}" onchange="togglePricingRow(this)">` : ''}</td>` : ''}
+      ${crmStatusTd(_crmName, _inCat)}
       ${infoBase}
       <td title="${desc}" style="${isGrouped || br.length > 1 ? 'max-width:130px;min-width:95px' : 'max-width:220px'};overflow:hidden;text-overflow:ellipsis">${desc.substring(0, br.length > 1 ? 30 : 45)}${desc.length>(br.length > 1 ? 30 : 45)?'…':''}</td>
       ${costCell}${retailCell}
@@ -5381,6 +5443,10 @@ function renderTable() {
   // Update excluded count badge
   updateExclBadge();
   injectOgReplacementCol();
+  // Trigger async CRM name fetch if not yet done (re-renders when complete)
+  if (ogCrmFetchState === 'idle' && state.rawRows.length && getCrmPat()) {
+    fetchOgCrmNames();
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -6153,6 +6219,81 @@ function injectConvBoBadges() {
     if (!rawSku || skuMap[rawSku] === undefined) return;
     if (td.closest('tr').querySelector('.conv-bo-badge')) return; // already handled
     injectBadgeToRow(td.closest('tr'), makeBoBadge(skuMap[rawSku]));
+  });
+}
+
+/** Post-process the OC table: inject a Status column and replace description cells with CRM/catalog names. */
+function injectConvCrmStatus() {
+  const tbody = document.getElementById('convTableBody');
+  const thead = document.getElementById('convTableHead');
+  if (!tbody || !thead) return;
+
+  // Remove any previously injected status elements
+  thead.querySelectorAll('.conv-crm-th').forEach(el => el.remove());
+  tbody.querySelectorAll('.conv-crm-td').forEach(el => el.remove());
+
+  // Insert Status th in every header row (after first th = chk or first column)
+  thead.querySelectorAll('tr').forEach(tr => {
+    const firstTh = tr.querySelector('th');
+    if (!firstTh) return;
+    const th = document.createElement('th');
+    th.className = 'th-col conv-crm-th';
+    th.style.cssText = 'text-align:center;min-width:52px;font-size:9px;padding:4px 3px';
+    th.textContent = 'Status';
+    firstTh.insertAdjacentElement('afterend', th);
+  });
+
+  const hasCrmData = Object.keys(convCrmNameMap).length > 0;
+
+  tbody.querySelectorAll('tr').forEach(tr => {
+    // Find the Peats SKU for this row
+    let rawSku = '';
+    const inp = tr.querySelector('input[data-orig]');
+    if (inp) rawSku = (inp.dataset.orig || '').trim();
+    if (!rawSku) {
+      const skuTd = tr.querySelector('td[data-sku]');
+      if (skuTd) rawSku = (skuTd.dataset.sku || '').trim();
+    }
+    if (!rawSku) {
+      // Total/summary row — just insert an empty cell
+      const firstTd = tr.querySelector('td');
+      if (firstTd) {
+        const td = document.createElement('td');
+        td.className = 'conv-crm-td';
+        firstTd.insertAdjacentElement('afterend', td);
+      }
+      return;
+    }
+
+    const nm = normCode(rawSku);
+    const inCatalog = !!(state.catalogNorm && state.catalogNorm[nm]);
+    const crmName = convCrmNameMap[nm] || null;
+
+    // Status cell
+    const td = document.createElement('td');
+    td.className = 'conv-crm-td';
+    td.style.cssText = 'text-align:center;padding:2px 4px;vertical-align:middle';
+    td.innerHTML = crmBadgeSpan(hasCrmData ? crmName : null, inCatalog);
+    const firstTd = tr.querySelector('td');
+    if (firstTd) firstTd.insertAdjacentElement('afterend', td);
+
+    // Replace description cell: find the <td> after the Status td that looks like a description
+    // Description cell is typically the 3rd td (after chk/status) but we locate it by content heuristic:
+    // it's the first td with font-size:14px or plain text (not a number, not a checkbox, not the SKU cell)
+    if (hasCrmData && crmName) {
+      const cells = Array.from(tr.querySelectorAll('td'));
+      // desc cell: first td that has text content > 10 chars and no input element, skipping the first 2-3 cols
+      for (let ci = 2; ci < Math.min(cells.length, 5); ci++) {
+        const cell = cells[ci];
+        if (cell.querySelector('input')) continue; // skip checkbox/input cells
+        const txt = cell.textContent.trim();
+        if (txt.length > 5 && !/^[€\d\.\-,%×]+$/.test(txt)) {
+          cell.textContent = crmName;
+          cell.title = crmName;
+          break;
+        }
+      }
+    }
   });
 }
 
@@ -8755,6 +8896,70 @@ async function fetchSaaCrmNames(skus) {
     }
   }
   return result;
+}
+
+// ── OG: async CRM name fetch (after retailer file loads) ──────────────────────
+async function fetchOgCrmNames() {
+  const cfg = state.retailerId ? RETAILERS[state.retailerId] : null;
+  if (!cfg || !state.rawRows.length) return;
+  if (ogCrmFetchState === 'loading') return;
+  if (!getCrmPat()) return;
+  ogCrmFetchState = 'loading';
+  ogCrmNameMap = {};
+  // Collect unique Peats codes for all rows
+  const normToPeats = {};
+  state.rawRows.forEach(row => {
+    const rawSku = String(row[cfg.partCol] || '').trim();
+    if (!rawSku) return;
+    const effSku = effectiveSku(rawSku, state.retailerId) || rawSku;
+    const nm = normCode(effSku);
+    if (nm && !normToPeats[nm]) normToPeats[nm] = effSku;
+  });
+  const peatsCodes = Object.values(normToPeats);
+  try {
+    const nameMap = await fetchSaaCrmNames(peatsCodes);
+    nameMap.forEach((name, code) => {
+      const nm = normCode(code);
+      if (nm) ogCrmNameMap[nm] = name;
+    });
+  } catch(e) {}
+  ogCrmFetchState = 'done';
+  if (state.rawRows.length) { renderSummary(); renderTable(); }
+}
+
+// ── OC: async CRM name fetch (after order file loads) ─────────────────────────
+async function fetchConvCrmNames() {
+  if (convCrmFetchState === 'loading') return;
+  if (!getCrmPat()) return;
+  const tbody = document.getElementById('convTableBody');
+  if (!tbody) return;
+  // Collect SKUs from rendered table (input[data-orig] or td[data-sku])
+  const normToPeats = {};
+  tbody.querySelectorAll('input[data-orig]').forEach(inp => {
+    const raw = (inp.dataset.orig || '').trim();
+    if (!raw) return;
+    const nm = normCode(raw);
+    if (nm && !normToPeats[nm]) normToPeats[nm] = raw;
+  });
+  tbody.querySelectorAll('td[data-sku]').forEach(td => {
+    const raw = (td.dataset.sku || '').trim();
+    if (!raw) return;
+    const nm = normCode(raw);
+    if (nm && !normToPeats[nm]) normToPeats[nm] = raw;
+  });
+  const peatsCodes = Object.values(normToPeats);
+  if (!peatsCodes.length) return;
+  convCrmFetchState = 'loading';
+  convCrmNameMap = {};
+  try {
+    const nameMap = await fetchSaaCrmNames(peatsCodes);
+    nameMap.forEach((name, code) => {
+      const nm = normCode(code);
+      if (nm) convCrmNameMap[nm] = name;
+    });
+  } catch(e) {}
+  convCrmFetchState = 'done';
+  injectConvCrmStatus();
 }
 
 async function saaLoadForSelectedBrands() {
@@ -12940,6 +13145,8 @@ async function processConvFiles(files) {
   }
 
   // Set state once — all files complete, no partial state
+  convCrmFetchState = 'idle';
+  convCrmNameMap = {};
   convState.parsedFiles = parsed;
   convState.parsedData  = parsed[0].parsedData;   // backward-compat
   convState.fileName    = parsed.length === 1 ? parsed[0].fileName : `${parsed.length} files`;
@@ -13017,6 +13224,8 @@ function processConvFile(file) {
       : parseAirportDublinOrderFromPDF;
     file.arrayBuffer().then(async function(buf) {
       try {
+        convCrmFetchState = 'idle';
+        convCrmNameMap = {};
         convState.parsedData = await _pdfParser(buf, file.name);
         if (!convState.parsedData) return;
         document.getElementById('convFileName').textContent = file.name;
@@ -13157,6 +13366,10 @@ function updateConvDownloadBtn() {
 function renderConvTable() {
   _renderConvTableCore();
   injectConvBoBadges();
+  injectConvCrmStatus();
+  if (convCrmFetchState === 'idle' && getCrmPat()) {
+    setTimeout(() => fetchConvCrmNames(), 50); // slight delay so DOM is settled
+  }
 }
 function _renderConvTableCore() {
   // Multi-file view — show summary across all files
