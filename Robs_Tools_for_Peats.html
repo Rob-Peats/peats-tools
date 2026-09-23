@@ -1985,6 +1985,14 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         ⚙ Manage Codes
       </button>
     </div>
+    <!-- Export pill (hidden until data loads) -->
+    <div id="saaExportPill" class="t-pill" style="display:none;">
+      <span class="t-label">Export</span>
+      <button id="saaExportBtn" onclick="saaExportExcel()"
+        style="padding:7px 16px;border-radius:6px;border:1px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+        📊 Export State
+      </button>
+    </div>
     <div id="saaCachePill" class="t-pill" style="display:none;">
       <span class="t-label">Cache</span>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -2005,10 +2013,6 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <button class="search-x-btn" id="saaSearchX"
               onclick="_clearSearch('saaSearch','saaSearchX',saaRenderTable)" title="Clear">✕</button>
     </div>
-    <button id="saaExportBtn" onclick="saaExportExcel()" class="btn btn-green"
-      style="display:none;margin-left:10px;align-self:center;padding:6px 14px;font-size:12px;" disabled>
-      📊 Export Excel
-    </button>
   </div>
 
   <!-- Big summary cards (hidden until data loaded) — cards above tabs like backorder tool -->
@@ -8015,7 +8019,7 @@ function saaReset() {
   saaRenderBrandList('');
   document.getElementById('saaSummaryCards').style.display = 'none';
   document.getElementById('saaSearchWrap').style.display   = 'none';
-  const _saaExpR = document.getElementById('saaExportBtn'); if (_saaExpR) { _saaExpR.style.display = 'none'; _saaExpR.disabled = true; }
+  const _saaExpR = document.getElementById('saaExportPill'); if (_saaExpR) _saaExpR.style.display = 'none';
   document.getElementById('saaTable').style.display        = 'none';
   const _mtR = document.getElementById('saaModeToggle'); if (_mtR) _mtR.style.display = 'none';
   const _pbR = document.getElementById('saaPredPill'); if (_pbR) _pbR.style.display = 'none';
@@ -8265,7 +8269,7 @@ function saaOnOpen() {
 function saaShowPickPrompt() {
   document.getElementById('saaSummaryCards').style.display  = 'none';
   document.getElementById('saaSearchWrap').style.display    = 'none';
-  const _saaExpP = document.getElementById('saaExportBtn'); if (_saaExpP) { _saaExpP.style.display = 'none'; _saaExpP.disabled = true; }
+  const _saaExpP = document.getElementById('saaExportPill'); if (_saaExpP) _saaExpP.style.display = 'none';
   document.getElementById('saaTable').style.display         = 'none';
   const _mtP = document.getElementById('saaModeToggle'); if (_mtP) _mtP.style.display = 'none';
   const _pbP = document.getElementById('saaPredPill'); if (_pbP) _pbP.style.display = 'none';
@@ -8288,101 +8292,287 @@ function saaShowPickPrompt() {
 async function saaExportExcel() {
   if (!saaData || !saaData.length) { showToast('No data to export.'); return; }
   const btn = document.getElementById('saaExportBtn');
+  const origLabel = btn ? btn.textContent : '';
   if (btn) { btn.textContent = '⏳ Exporting…'; btn.disabled = true; }
   try {
+    const isForecast = saaView === 'forecast';
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Stock Analysis');
-    const critWks = saaCritWks(), lowWks = saaLowWks();
+    const ws = wb.addWorksheet(isForecast ? 'Forecast' : 'Stock Analysis');
 
-    // Apply same TBD/EOL exclusions and search filter as the table
-    const q = (document.getElementById('saaSearch') ? document.getElementById('saaSearch').value : '').toLowerCase().trim();
-    const rows = saaData.filter(function(r) {
+    // ── Common header style ──────────────────────────────────────────────────
+    const HDR_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
+    const HDR_FONT = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Arial', size: 10 };
+    const ROW_FONT = { name: 'Arial', size: 10 };
+
+    // ── Filter rows matching current view ────────────────────────────────────
+    const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
+    const normFn = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    let rows = saaData.filter(function(r) {
       if (saaExcludeTBD && (r.crmName||r.desc).toUpperCase().startsWith('TBD')) return false;
       if (saaExcludeEOL && (r.crmName||r.desc).toUpperCase().startsWith('EOL')) return false;
       if (q) {
         const d = (r.crmName||r.desc).toLowerCase();
         if (!r.code.toLowerCase().includes(q) && !d.includes(q) && !r.brand.toLowerCase().includes(q)) return false;
       }
-      // In forecast mode, respect the per-row checkbox exclusions
-      if (saaView === 'forecast' && saaFcstExcluded.has(r.code)) return false;
+      if (isForecast && saaFcstExcluded.has(r.code)) return false;
       return true;
     });
 
-    ws.columns = [
-      { header: 'Code',        key: 'code',    width: 18 },
-      { header: 'Description', key: 'desc',    width: 40 },
-      { header: 'Brand',       key: 'brand',   width: 14 },
-      { header: 'Cost (€)',    key: 'cost',    width: 10 },
-      { header: 'Physical',    key: 'phys',    width: 10 },
-      { header: 'Sales',       key: 'sales',   width: 10 },
-      { header: 'Free',        key: 'free',    width: 10 },
-      { header: 'On Order',    key: 'onOrder', width: 10 },
-      { header: 'Projected',   key: 'proj',    width: 10 },
-      { header: 'Avg/Mo',      key: 'avg',     width: 10 },
-      { header: 'Wks Cover',   key: 'wks',     width: 10 },
-      { header: '3Mo Sales',   key: 'sales3',  width: 10 },
-      { header: 'Status',      key: 'status',  width: 14 },
-    ];
-
-    // Style header row
-    const hdr = ws.getRow(1);
-    hdr.height = 18;
-    hdr.eachCell(function(cell) {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Arial', size: 10 };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
-      cell.alignment = { vertical: 'middle' };
-    });
-
-    const statusLabels = { 0: 'Critical', 1: 'Low Cover', 2: 'Healthy', 3: 'Over-stocked' };
-    const statusFills  = {
-      0: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } },
-      1: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } },
-      2: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } },
-    };
-
-    rows.forEach(function(r) {
-      const wksVal = r.weeksCover;
-      const row = ws.addRow({
-        code:   r.code,
-        desc:   r.crmName || r.desc,
-        brand:  r.brand,
-        cost:   r.cost != null ? r.cost : '',
-        phys:   r.phys,
-        sales:  r.sales,
-        free:   r.free,
-        onOrder:r.onOrder,
-        proj:   r.proj,
-        avg:    r.avgPerMonth != null ? Math.round(r.avgPerMonth * 10) / 10 : '',
-        wks:    wksVal != null ? Math.round(wksVal * 10) / 10 : '',
-        sales3: r.soldLast3Mo || 0,
-        status: statusLabels[r.status] || '',
+    if (isForecast) {
+      // ── FORECAST EXPORT ────────────────────────────────────────────────────
+      // Filter by active state tab
+      rows = rows.filter(r => {
+        const name = (r.crmName||r.desc).toUpperCase();
+        if (saaForecastStateFilter === 'current') return !name.startsWith('EOL') && !name.startsWith('TBD');
+        if (saaForecastStateFilter === 'tbd')     return name.startsWith('TBD');
+        if (saaForecastStateFilter === 'eol')     return name.startsWith('EOL');
+        return true;
       });
-      row.font = { name: 'Arial', size: 10 };
-      if (statusFills[r.status]) {
-        row.getCell('status').fill = statusFills[r.status];
-      }
-      // Highlight free stock cell if critical/low
-      if (wksVal != null && wksVal < critWks) {
-        row.getCell('free').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
-      } else if (wksVal != null && wksVal < lowWks) {
-        row.getCell('free').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
-      }
-    });
+      rows.sort((a,b) => (a.brand+'|'+a.code).localeCompare(b.brand+'|'+b.code));
 
-    ws.autoFilter = { from: 'A1', to: { row: 1, column: ws.columns.length } };
+      const now    = new Date();
+      const MNAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const nextMonths = [1,2,3].map(i => {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        return { label: MNAMES[d.getMonth()] + " '" + String(d.getFullYear()).slice(2), month: d.getMonth(), year: d.getFullYear() };
+      });
 
-    const buf  = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = 'Stock_Analysis_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-    a.click(); URL.revokeObjectURL(url);
-    showToast('✓ Stock analysis exported — ' + rows.length + ' rows.');
+      // Build replacedBy map (same logic as render)
+      const replacedByMap = {};
+      for (const _r of saaData) {
+        const _nrm = normFn(_r.code);
+        const _rawOld = saaAltSkuOverrides[_nrm] || saaReplacements[_nrm] || '';
+        if (_rawOld) replacedByMap[normFn(_rawOld)] = _r.code;
+      }
+
+      // Build 80/20 set (same logic as render — reuse fcstCache built in renderForecastTable if available)
+      const freeByNorm = {};
+      for (const _r of saaData) freeByNorm[normFn(_r.code)] = _r.free || 0;
+
+      const eighty20exp = new Set();
+      if (saaSeasonalIndices) {
+        const totals = [];
+        for (const _r of saaData) {
+          const _nm  = normFn(_r.code);
+          if (replacedByMap[_nm]) continue;
+          const _alt = saaAltSkuOverrides[_nm] || saaReplacements[_nm] || '';
+          const _isE = (_r.crmName||_r.desc||'').toUpperCase().startsWith('EOL');
+          const _sf  = freeByNorm[_nm] || 0;
+          const _fa  = (!_isE || _alt) && _sf < 0 ? Math.abs(_sf) : 0;
+          const _f   = saaForecastNextMonths(_r, nextMonths, _fa);
+          const _tot = _f ? _f.reduce((s,x) => s + (x && x.predicted != null ? x.predicted : 0), 0) : 0;
+          if (_tot > 0) totals.push({ code: _r.code, total: _tot, brand: _r.brand || '' });
+        }
+        const byBrand = {};
+        for (const x of totals) { const bk = x.brand || '__none__'; if (!byBrand[bk]) byBrand[bk] = []; byBrand[bk].push(x); }
+        for (const bk of Object.keys(byBrand)) {
+          const grp = byBrand[bk]; grp.sort((a,b) => b.total - a.total);
+          const bt = grp.reduce((s,x) => s + x.total, 0); let cum = 0;
+          for (const x of grp) { cum += x.total; eighty20exp.add(x.code); if (bt > 0 && cum / bt >= 0.8) break; }
+        }
+      }
+
+      // Column definitions — widths are character units; at least header.length + 2
+      ws.columns = [
+        { header: 'Brand',                                  key: 'brand',   width: 18 },
+        { header: 'Code',                                   key: 'code',    width: 22 },
+        { header: 'Predecessor SKU',                        key: 'pred',    width: 20 },
+        { header: 'Description',                            key: 'desc',    width: 45 },
+        { header: 'State',                                  key: 'state',   width: 12 },
+        { header: 'Trend % YoY',                            key: 'trend',   width: 16 },
+        { header: nextMonths[0].label + ' Predicted',       key: 'm1p',     width: Math.max(22, nextMonths[0].label.length + 12) },
+        { header: nextMonths[0].label + ' LY Actual',       key: 'm1ly',    width: Math.max(20, nextMonths[0].label.length + 10) },
+        { header: nextMonths[1].label + ' Predicted',       key: 'm2p',     width: Math.max(22, nextMonths[1].label.length + 12) },
+        { header: nextMonths[1].label + ' LY Actual',       key: 'm2ly',    width: Math.max(20, nextMonths[1].label.length + 10) },
+        { header: nextMonths[2].label + ' Predicted',       key: 'm3p',     width: Math.max(22, nextMonths[2].label.length + 12) },
+        { header: nextMonths[2].label + ' LY Actual',       key: 'm3ly',    width: Math.max(20, nextMonths[2].label.length + 10) },
+        { header: 'Free Stock',                             key: 'free',    width: 14 },
+        { header: 'On Order',                               key: 'onOrder', width: 12 },
+        { header: 'Sug. Order (Q4 Gap)',                    key: 'sugOrd',  width: 22 },
+        { header: '80/20',                                  key: 'key8020', width: 10 },
+        { header: 'Status (' + nextMonths[0].label + ')',   key: 'status',  width: Math.max(22, nextMonths[0].label.length + 10) },
+      ];
+
+      // Style header
+      const hdr = ws.getRow(1);
+      hdr.height = 20;
+      hdr.eachCell(cell => {
+        cell.font = HDR_FONT;
+        cell.fill = HDR_FILL;
+        cell.alignment = { vertical: 'middle', wrapText: false };
+      });
+
+      rows.forEach(r => {
+        const norm    = normFn(r.code);
+        const altRaw  = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
+        const srcNorm = altRaw ? normFn(altRaw) : norm;
+        const series  = saaMonthlyDataMap[srcNorm];
+        const isEol   = (r.crmName||r.desc||'').toUpperCase().startsWith('EOL');
+        const isTbd   = (r.crmName||r.desc||'').toUpperCase().startsWith('TBD');
+        const _srcFree = freeByNorm[srcNorm] || 0;
+        const freeAdj  = (!isEol || altRaw) && _srcFree < 0 ? Math.abs(_srcFree) : 0;
+        const fcst    = saaForecastNextMonths(r, nextMonths, freeAdj);
+        const trend   = (series && series.length) ? saaComputeTrend(series, freeAdj) : null;
+
+        const getMForecast = (i) => {
+          if (!fcst || !fcst[i]) return { pred: null, ly: null };
+          const lyEntry = series ? series.find(e => e.year === nextMonths[i].year - 1 && e.month === nextMonths[i].month + 1) : null;
+          return { pred: fcst[i].predicted != null ? Math.round(fcst[i].predicted) : null, ly: lyEntry ? Math.round(lyEntry.qty) : null };
+        };
+        const m1 = getMForecast(0), m2 = getMForecast(1), m3 = getMForecast(2);
+
+        const q4Total   = fcst ? fcst.reduce((s,f) => s + (f && f.predicted != null ? f.predicted : 0), 0) : 0;
+        const available = Math.max(0, (r.free || 0) + (r.onOrder || 0));
+        const sugQty    = fcst ? Math.max(0, q4Total - available) : null;
+        const shortfall = (fcst && fcst[0] != null) ? fcst[0].shortfall : null;
+
+        const stateStr = isEol ? 'EOL' : isTbd ? 'TBD' : 'Current';
+        const trendStr = trend ? ((trend.direction === 'up' ? '+' : '') + trend.pct + '%') : '';
+        const is80     = eighty20exp.has(r.code);
+        const statusStr = shortfall == null ? '' : shortfall > 0 ? 'Surplus +' + Math.round(shortfall) : shortfall < 0 ? 'Shortage ' + Math.round(shortfall) : 'Exact';
+
+        const row = ws.addRow({
+          brand:   r.brand || '',
+          code:    r.code,
+          pred:    altRaw || '',
+          desc:    r.crmName || r.desc || '',
+          state:   stateStr,
+          trend:   trendStr,
+          m1p:     m1.pred != null ? m1.pred : '',
+          m1ly:    m1.ly   != null ? m1.ly   : '',
+          m2p:     m2.pred != null ? m2.pred : '',
+          m2ly:    m2.ly   != null ? m2.ly   : '',
+          m3p:     m3.pred != null ? m3.pred : '',
+          m3ly:    m3.ly   != null ? m3.ly   : '',
+          free:    r.free  != null ? Math.round(r.free)    : '',
+          onOrder: r.onOrder > 0  ? Math.round(r.onOrder)  : '',
+          sugOrd:  sugQty  != null ? (sugQty > 0 ? Math.round(sugQty) : 0) : '',
+          key8020: is80 ? 'Key' : '',
+          status:  statusStr,
+        });
+        row.font = ROW_FONT;
+
+        // Colour coding
+        const stateCell = row.getCell('state');
+        if (isEol)  stateCell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFEE2E2' } };
+        else if (isTbd) stateCell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFEF3C7' } };
+        else        stateCell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFD1FAE5' } };
+
+        if (trendStr) {
+          const tCell = row.getCell('trend');
+          tCell.font = { ...ROW_FONT, color: { argb: trend.direction === 'up' ? 'FF16A34A' : 'FFDC2626' }, bold: true };
+        }
+        // Free stock highlight if negative
+        if (r.free != null && r.free < 0) {
+          row.getCell('free').font = { ...ROW_FONT, color: { argb: 'FFDC2626' }, bold: true };
+        }
+        // Suggested order highlight
+        if (sugQty != null && sugQty > 0) {
+          row.getCell('sugOrd').fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFEF9C3' } };
+          row.getCell('sugOrd').font = { ...ROW_FONT, color:{ argb:'FFB45309' }, bold:true };
+        }
+        // 80/20 Key badge colour
+        if (is80) {
+          row.getCell('key8020').fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFD1FAE5' } };
+          row.getCell('key8020').font = { ...ROW_FONT, color:{ argb:'FF065F46' }, bold:true };
+        }
+        // Status colour
+        if (shortfall != null) {
+          const sfCell = row.getCell('status');
+          if (shortfall > 0)       sfCell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFD1FAE5' } };
+          else if (shortfall < 0)  sfCell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFEE2E2' } };
+        }
+      });
+
+      ws.autoFilter = { from: 'A1', to: { row: 1, column: ws.columns.length } };
+      ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+      const buf  = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'Stock_Forecast_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+      a.click(); URL.revokeObjectURL(url);
+      showToast('✓ Forecast exported — ' + rows.length + ' rows.');
+
+    } else {
+      // ── STATE EXPORT ───────────────────────────────────────────────────────
+      rows.sort((a,b) => (a.brand+'|'+a.code).localeCompare(b.brand+'|'+b.code));
+      const critWks = saaCritWks(), lowWks = saaLowWks();
+
+      ws.columns = [
+        { header: 'Code',        key: 'code',    width: 22 },
+        { header: 'Description', key: 'desc',    width: 45 },
+        { header: 'Brand',       key: 'brand',   width: 18 },
+        { header: 'Cost (€)',    key: 'cost',    width: 12 },
+        { header: 'Physical',    key: 'phys',    width: 12 },
+        { header: 'Sales',       key: 'sales',   width: 10 },
+        { header: 'Free Stock',  key: 'free',    width: 14 },
+        { header: 'On Order',    key: 'onOrder', width: 12 },
+        { header: 'Projected',   key: 'proj',    width: 12 },
+        { header: 'Avg/Mo',      key: 'avg',     width: 12 },
+        { header: 'Wks Cover',   key: 'wks',     width: 12 },
+        { header: '3Mo Sales',   key: 'sales3',  width: 12 },
+        { header: 'Status',      key: 'status',  width: 16 },
+      ];
+
+      const hdr = ws.getRow(1);
+      hdr.height = 20;
+      hdr.eachCell(cell => {
+        cell.font = HDR_FONT;
+        cell.fill = HDR_FILL;
+        cell.alignment = { vertical: 'middle' };
+      });
+
+      const statusLabels = { 0: 'Critical', 1: 'Low Cover', 2: 'Healthy', 3: 'Over-stocked' };
+      const statusFills  = {
+        0: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } },
+        1: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } },
+        2: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } },
+      };
+
+      rows.forEach(r => {
+        const wksVal = r.weeksCover;
+        const row = ws.addRow({
+          code:    r.code,
+          desc:    r.crmName || r.desc,
+          brand:   r.brand,
+          cost:    r.cost != null ? r.cost : '',
+          phys:    r.phys,
+          sales:   r.sales,
+          free:    r.free,
+          onOrder: r.onOrder,
+          proj:    r.proj,
+          avg:     r.avgPerMonth != null ? Math.round(r.avgPerMonth * 10) / 10 : '',
+          wks:     wksVal != null ? Math.round(wksVal * 10) / 10 : '',
+          sales3:  r.soldLast3Mo || 0,
+          status:  statusLabels[r.status] || '',
+        });
+        row.font = ROW_FONT;
+        if (statusFills[r.status]) row.getCell('status').fill = statusFills[r.status];
+        if (wksVal != null && wksVal < critWks) {
+          row.getCell('free').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+        } else if (wksVal != null && wksVal < lowWks) {
+          row.getCell('free').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
+        }
+      });
+
+      ws.autoFilter = { from: 'A1', to: { row: 1, column: ws.columns.length } };
+      ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+      const buf  = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'Stock_Analysis_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+      a.click(); URL.revokeObjectURL(url);
+      showToast('✓ Stock analysis exported — ' + rows.length + ' rows.');
+    }
   } catch(e) {
     showToast('✗ Export failed: ' + e.message);
     console.error('[saaExportExcel]', e);
   } finally {
-    if (btn) { btn.textContent = '📊 Export Excel'; btn.disabled = false; }
+    if (btn) { btn.textContent = origLabel; btn.disabled = false; }
   }
 }
 
@@ -8700,7 +8890,8 @@ function saaRenderAll() {
   saaRenderTable();
   document.getElementById('saaSummaryCards').style.display = 'flex';
   document.getElementById('saaSearchWrap').style.display   = 'flex';
-  const _saaExp = document.getElementById('saaExportBtn'); if (_saaExp) { _saaExp.style.display = ''; _saaExp.disabled = false; }
+  const _saaExpPill = document.getElementById('saaExportPill'); if (_saaExpPill) _saaExpPill.style.display = 'flex';
+  const _saaExpBtn = document.getElementById('saaExportBtn'); if (_saaExpBtn) _saaExpBtn.textContent = '📊 Export State';
   document.getElementById('saaContent').style.display      = 'none';
   document.getElementById('saaTable').style.display        = 'table';
   const _mt = document.getElementById('saaModeToggle'); if (_mt) _mt.style.display = 'flex';
@@ -9237,6 +9428,8 @@ function saaRenderForecastTable() {
   const _ma = document.getElementById('saaModeAnalysis'); if (_ma) { _ma.style.background = 'var(--light)'; _ma.style.color = 'var(--text)'; _ma.style.borderColor = 'var(--border)'; }
   const _mf = document.getElementById('saaModeForecasting'); if (_mf) { _mf.style.background = '#1d4ed8'; _mf.style.color = '#fff'; _mf.style.borderColor = '#1d4ed8'; }
   const _ml2 = document.getElementById('saaModeLabel'); if (_ml2) { _ml2.textContent = '🔮 FORECAST'; _ml2.style.color = '#1d4ed8'; }
+  const _expPill2 = document.getElementById('saaExportPill'); if (_expPill2) _expPill2.style.display = 'flex';
+  const _expBtn2  = document.getElementById('saaExportBtn');  if (_expBtn2)  _expBtn2.textContent = '🔮 Export Forecast';
   const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
 
   const now    = new Date();
@@ -9310,10 +9503,15 @@ function saaRenderForecastTable() {
     const totals = [];
     for (const _r of saaData) {
       const _nm  = normFn(_r.code);
+      // Skip SKUs that have already been superseded by a replacement in the dataset —
+      // their demand is captured by the replacement row, so counting them here would
+      // inflate the 80/20 totals and push genuinely important new SKUs down the ranking.
+      if (replacedByMap[_nm]) continue;
       const _alt = saaAltSkuOverrides[_nm] || saaReplacements[_nm] || '';
       const _sn  = _alt ? normFn(_alt) : _nm;
       const _isE = (_r.crmName||_r.desc||'').toUpperCase().startsWith('EOL');
-      const _sf  = _freeByNorm80[_sn] || 0;
+      // Use the current SKU's own free stock for the backorder adjustment (not the predecessor's)
+      const _sf  = _freeByNorm80[_nm] || 0;
       const _fa  = (!_isE || _alt) && _sf < 0 ? Math.abs(_sf) : 0;
       const _f   = saaForecastNextMonths(_r, nextMonths, _fa);
       fcstCache.set(_r.code, _f);
