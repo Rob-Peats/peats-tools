@@ -2718,11 +2718,27 @@ async function githubLoadCatalog() {
     const resp = await fetch(url, { cache: 'no-store' });
     if (!resp.ok) throw new Error(`GitHub ${resp.status}: ${resp.statusText}`);
     const arrayBuf = await resp.arrayBuffer();
-    const wb  = XLSX.read(arrayBuf, { type: 'array', cellStyles: true });
+    // Fix: XLSX.js 0.18.5 silently skips sheets whose Target path starts with "./"
+    // Strip the "./" prefix from worksheet rels so all sheets parse correctly.
+    let fixedBuf = arrayBuf;
+    try {
+      const zip = await JSZip.loadAsync(arrayBuf);
+      const relsFile = zip.file('xl/_rels/workbook.xml.rels');
+      if (relsFile) {
+        let relsXml = await relsFile.async('string');
+        const orig = relsXml;
+        relsXml = relsXml.replace(/Target="\.\//g, 'Target="');
+        if (relsXml !== orig) {
+          zip.file('xl/_rels/workbook.xml.rels', relsXml);
+          fixedBuf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 1 } });
+        }
+      }
+    } catch(e) {}
+    const wb  = XLSX.read(fixedBuf, { type: 'array', cellStyles: true });
     const ws  = wb.Sheets[wb.SheetNames[0]];
     const all = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
     const fileName = GITHUB_CONFIG.catalogPath.split('/').pop();
-    parseCatalog(all, fileName, wb, arrayBuf);
+    parseCatalog(all, fileName, wb, fixedBuf);
     // Push catalog to Export iframe if it is already open
     const ef = document.getElementById('exportFrame');
     if (ef && ef.contentWindow) {
@@ -2732,7 +2748,7 @@ async function githubLoadCatalog() {
           try { ef.contentWindow.loadWebAssets(state.catalog); } catch(e){}
         }
       } else if (ef.contentWindow.loadFromArrayBuffer) {
-        try { ef.contentWindow.loadFromArrayBuffer(arrayBuf.slice(0), fileName); } catch(e){}
+        try { ef.contentWindow.loadFromArrayBuffer(fixedBuf.slice(0), fileName); } catch(e){}
       }
     }
     // Push catalog to SOA v2 iframe if it is already open
@@ -3039,21 +3055,39 @@ function processFile(file, type) {
 
   if (!file.name.match(/\.(xlsx|xls)$/i)) { showToast('⚠ Please upload an .xlsx or .xls file.'); return; }
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     try {
-      const wb  = XLSX.read(e.target.result, { type: 'binary', cellStyles: true });
-      const ws  = wb.Sheets[wb.SheetNames[0]];
-      const all = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      let arrayBuf = e.target.result;
       if (type === 'catalog') {
-        // Keep the original bytes so corrections can be written back into this exact file
-        let buf = null;
-        try { buf = Uint8Array.from(e.target.result, c => c.charCodeAt(0)).buffer; } catch (err) {}
-        parseCatalog(all, file.name, wb, buf);
+        // Fix: XLSX.js 0.18.5 silently skips sheets whose Target path starts with "./"
+        // Strip the "./" prefix from worksheet rels so all sheets (e.g. Replacements) parse correctly.
+        let fixedBuf = arrayBuf;
+        try {
+          const zip = await JSZip.loadAsync(arrayBuf);
+          const relsFile = zip.file('xl/_rels/workbook.xml.rels');
+          if (relsFile) {
+            let relsXml = await relsFile.async('string');
+            const orig = relsXml;
+            relsXml = relsXml.replace(/Target="\.\//g, 'Target="');
+            if (relsXml !== orig) {
+              zip.file('xl/_rels/workbook.xml.rels', relsXml);
+              fixedBuf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 1 } });
+            }
+          }
+        } catch(e2) {}
+        const wb  = XLSX.read(fixedBuf, { type: 'array', cellStyles: true });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        const all = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        parseCatalog(all, file.name, wb, fixedBuf);
+      } else {
+        const wb  = XLSX.read(arrayBuf, { type: 'array', cellStyles: true });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        const all = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        parseReport(all, file.name, wb);
       }
-      else                    parseReport(all, file.name, wb);
     } catch(err) { showToast('✗ Could not read file: ' + err.message); }
   };
-  reader.readAsBinaryString(file);
+  reader.readAsArrayBuffer(file);
 }
 
 function parseCatalog(rows, name, wb, rawBuf) {
@@ -7551,7 +7585,7 @@ async function saveExcludedToCatalog() {
 
     const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${cells}</sheetData></worksheet>`;
     zip.file(partPath, sheetXml);
-    relsXml = relsXml.replace('</Relationships>', `<Relationship Id="${newRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="./${partPath.replace('xl/','')}"/></Relationships>`);
+    relsXml = relsXml.replace('</Relationships>', `<Relationship Id="${newRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="${partPath.replace('xl/','')}"/></Relationships>`);
     wbXml   = wbXml.replace('</sheets>', `<sheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="${esc(EXCL_SHEET_NAME)}" sheetId="${maxSid+1}" r:id="${newRid}"/></sheets>`);
     ctXml   = ctXml.replace('</Types>', `<Override PartName="/${partPath}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`);
 
@@ -9645,7 +9679,7 @@ async function saaSaveReplacementsToCatalog() {
       '<sheetData>' + cells + '</sheetData></worksheet>';
     zip.file(partPath, sheetXml);
     relsXml = relsXml.replace('</Relationships>',
-      '<Relationship Id="' + newRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="./' + partPath.replace('xl/','') + '"/></Relationships>');
+      '<Relationship Id="' + newRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="' + partPath.replace('xl/','') + '"/></Relationships>');
     wbXml = wbXml.replace('</sheets>',
       '<sheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="' + esc(REPLACEMENTS_SHEET_NAME) + '" sheetId="' + (maxSid+1) + '" r:id="' + newRid + '"/></sheets>');
     ctXml = ctXml.replace('</Types>',
