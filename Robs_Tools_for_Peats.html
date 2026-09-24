@@ -2879,6 +2879,7 @@ const state = {
   rawRows:        [],
   fileName:       '',
   catalog:        {},    // peatscode (uppercase) → { cost, retail, brand }
+  catalogNorm:    {},    // normalised Peats code → Peats code (populated on catalog load)
   catalogName:    '',
   catalogBrands:  [],    // sorted unique brand names from column A
   selectedBrands: new Set(), // empty = all brands; non-empty = filter to these brands
@@ -5350,6 +5351,13 @@ function renderTable() {
   body.innerHTML = display.map(({ row, sugg, prices, hasOrder }) => {
     const partKey  = String(row[cfg.partCol] || '');
     const isExcl   = state.excluded.has(partKey);
+    // ── CRM/catalog lookups — must be before infoBase ──
+    const _rawSku   = String(row[cfg.partCol] || '').trim();
+    const _effSku   = effectiveSku(_rawSku, state.retailerId) || _rawSku;
+    const _nm       = normCode(_effSku);
+    const _inCat    = !!(_nm && state.catalogNorm && state.catalogNorm[_nm]);
+    const _crmName  = (_nm && ogCrmNameMap[_nm]) || null;
+    const desc      = bestDesc(_nm, String(row[cfg.infoCols[descIdx]] || ''), ogCrmNameMap, state.catalog, state.catalogNorm);
     const INFO_WIDTHS = ['w-supplier','w-group','w-part','w-part','w-part'];
     const infoBase = tableInfoIdxs.map((i, pos) => {
       const val = row[cfg.infoCols[i]] != null ? String(row[cfg.infoCols[i]]) : '';
@@ -5360,11 +5368,9 @@ function renderTable() {
       if (cfg.infoCols[i] === cfg.partCol && val) {
         const effVal = effectiveSku(val, state.retailerId);
         const _vnm   = normCode(effVal || val);
-        const _vinCat = !!(_vnm && state.catalogNorm[_vnm]);
+        const _vinCat = !!(_vnm && state.catalogNorm && state.catalogNorm[_vnm]);
         const _vcrmName = (_vnm && ogCrmNameMap[_vnm]) || null;
-        const _catTagHtml = _inCat !== undefined
-          ? `<span style="display:block;margin-top:2px">${crmBadgeSpan(_vcrmName, _vinCat)}</span>`
-          : '';
+        const _catTagHtml = `<span style="display:block;margin-top:2px">${crmBadgeSpan(_vcrmName, _vinCat)}</span>`;
         if (effVal && effVal.toUpperCase() !== val.toUpperCase()) {
           return `<td title="${val.replace(/"/g,'&quot;')} → ${effVal.replace(/"/g,'&quot;')}">`
             + `<span style="display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(val)}</span>`
@@ -5376,12 +5382,6 @@ function renderTable() {
       }
       return `<td title="${val.replace(/"/g,'&quot;')}"><div class="trunc-cell ${cls}"${widthSt}>${val}</div></td>`;
     }).join('');
-    const _rawSku   = String(row[cfg.partCol] || '').trim();
-    const _effSku   = effectiveSku(_rawSku, state.retailerId) || _rawSku;
-    const _nm       = normCode(_effSku);
-    const _inCat    = !!(_nm && state.catalogNorm[_nm]);
-    const _crmName  = (_nm && ogCrmNameMap[_nm]) || null;
-    const desc      = bestDesc(_nm, String(row[cfg.infoCols[descIdx]] || ''), ogCrmNameMap, state.catalog, state.catalogNorm);
 
     const pricingOn      = pricingActive && !state.noPriceUpdate.has(partKey);
     const showPricingChk = hasPriceChk && pricingActive && hasRawPriceDiff(row, cfg);
@@ -6266,7 +6266,7 @@ function injectConvCrmStatus() {
     }
 
     const nm = normCode(rawSku);
-    const inCatalog = !!(state.catalogNorm && state.catalogNorm[nm]);
+    const inCatalog = !!(nm && state.catalogNorm && state.catalogNorm[nm]);
     const crmName = convCrmNameMap[nm] || null;
 
     // Status cell
