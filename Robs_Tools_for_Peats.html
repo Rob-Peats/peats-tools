@@ -865,13 +865,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   font-size: 11px; color: var(--muted); margin-top: 8px;
   display: flex; align-items: center; gap: 6px;
 }
-/* ── CRM status badges (OG + OC) ── */
-.crm-badge { display:inline-block;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px;letter-spacing:.04em;line-height:1.4;white-space:nowrap; }
-.crm-badge.eol  { background:#fee2e2;color:#b91c1c; }
-.crm-badge.tbd  { background:#fef9c3;color:#92400e; }
-.crm-badge.curr { background:#dcfce7;color:#166534; }
-.crm-badge.none { background:#f3f4f6;color:#9ca3af; }
-.crm-badge.cat  { background:#dbeafe;color:#1e40af; }
+/* CRM status badges use inline styles matching the Stock Analysis tool */
 </style>
 </head>
 <body>
@@ -3944,11 +3938,15 @@ function getCrmStatusClass(crmName, inCatalog) {
   if (u.startsWith('TBD')) return 'tbd';
   return 'curr';
 }
-/** Inline badge span for use inside cells */
+/** Inline badge span for use inside cells — matches the Stock Analysis tool style */
 function crmBadgeSpan(crmName, inCatalog) {
-  const cls  = getCrmStatusClass(crmName, inCatalog);
-  const labels = { eol:'EOL', tbd:'TBD', curr:'✓', none:'—', cat:'📋' };
-  return `<span class="crm-badge ${cls}">${labels[cls] || '—'}</span>`;
+  const BASE = 'display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;white-space:nowrap;';
+  if (!inCatalog) return `<span style="${BASE}background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;">—</span>`;
+  if (!crmName)   return `<span style="${BASE}background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">📋</span>`;
+  const u = crmName.toUpperCase();
+  if (u.startsWith('EOL')) return `<span style="${BASE}background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">EOL</span>`;
+  if (u.startsWith('TBD')) return `<span style="${BASE}background:#fef3c7;color:#b45309;border:1px solid #fcd34d;">TBD</span>`;
+  return `<span style="${BASE}background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">Current</span>`;
 }
 /** Standalone <td> for the Status column */
 function crmStatusTd(crmName, inCatalog) {
@@ -6228,9 +6226,13 @@ function injectConvCrmStatus() {
   const thead = document.getElementById('convTableHead');
   if (!tbody || !thead) return;
 
-  // Remove any previously injected status elements
+  // Remove any previously injected status elements and undo colspan widening
   thead.querySelectorAll('.conv-crm-th').forEach(el => el.remove());
   tbody.querySelectorAll('.conv-crm-td').forEach(el => el.remove());
+  tbody.querySelectorAll('td[data-crm-colspan]').forEach(el => {
+    el.setAttribute('colspan', String(Math.max(1, Number(el.getAttribute('colspan') || 1) - 1)));
+    el.removeAttribute('data-crm-colspan');
+  });
 
   // Insert Status th in every header row (after first th = chk or first column)
   thead.querySelectorAll('tr').forEach(tr => {
@@ -6255,12 +6257,19 @@ function injectConvCrmStatus() {
       if (skuTd) rawSku = (skuTd.dataset.sku || '').trim();
     }
     if (!rawSku) {
-      // Total/summary row — just insert an empty cell
-      const firstTd = tr.querySelector('td');
-      if (firstTd) {
-        const td = document.createElement('td');
-        td.className = 'conv-crm-td';
-        firstTd.insertAdjacentElement('afterend', td);
+      // Separator / group-header row — widen the spanning cell rather than inserting an extra td
+      const spanning = tr.querySelector('td[colspan]');
+      if (spanning) {
+        spanning.setAttribute('colspan', String(Number(spanning.getAttribute('colspan') || 1) + 1));
+        spanning.setAttribute('data-crm-colspan', '1'); // mark so we can undo on next run
+      } else {
+        // Non-spanning summary row — insert empty cell
+        const firstTd = tr.querySelector('td');
+        if (firstTd) {
+          const td = document.createElement('td');
+          td.className = 'conv-crm-td';
+          firstTd.insertAdjacentElement('afterend', td);
+        }
       }
       return;
     }
@@ -13367,6 +13376,7 @@ function renderConvTable() {
   _renderConvTableCore();
   injectConvBoBadges();
   injectConvCrmStatus();
+  injectConvReplacementCol();
   if (convCrmFetchState === 'idle' && getCrmPat()) {
     setTimeout(() => fetchConvCrmNames(), 50); // slight delay so DOM is settled
   }
