@@ -865,7 +865,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   font-size: 11px; color: var(--muted); margin-top: 8px;
   display: flex; align-items: center; gap: 6px;
 }
-/* CRM status badges use inline styles matching the Stock Analysis tool */
+/* CRM status badges use inline styles matching the Stock Management tool */
 </style>
 </head>
 <body>
@@ -976,10 +976,10 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <span class="hub-card-launch">View Status →</span>
     </div>
 
-    <!-- Stock Analysis -->
+    <!-- Stock Management -->
     <div class="hub-card" onclick="launchTool('stockanalysis')">
       <div class="hub-card-icon">📊</div>
-      <h3>Stock Analysis</h3>
+      <h3>Stock Management</h3>
       <p>Live stock positions pulled direct from the CRM — free stock, on order, shortfalls, EOL/TBD flags, price bands, and weeks of cover by brand.</p>
       <span class="hub-card-launch">Open →</span>
     </div>
@@ -1891,7 +1891,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 </div><!-- /tool-soa2 -->
 
 <!-- ══════════════════════════════════════════════════
-     TOOL: Stock Analysis
+     TOOL: Stock Management
      ══════════════════════════════════════════════════ -->
 <div id="tool-stockanalysis" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
 
@@ -2059,7 +2059,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- PILL 2: Brands (Load button inside panel, same pattern as Stock Analysis) -->
+    <!-- PILL 2: Brands (Load button inside panel, same pattern as Stock Management) -->
     <div class="brand-filter-wrap t-pill" id="asBrandWrap"
       style="min-width:140px;position:relative;">
       <span class="t-label" style="align-self:center;">Brands</span>
@@ -3938,7 +3938,7 @@ function getCrmStatusClass(crmName, inCatalog) {
   if (u.startsWith('TBD')) return 'tbd';
   return 'curr';
 }
-/** Inline badge span for use inside cells — matches the Stock Analysis tool style */
+/** Inline badge span for use inside cells — matches the Stock Management tool style */
 function crmBadgeSpan(crmName, inCatalog) {
   const BASE = 'display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em;white-space:nowrap;';
   if (!inCatalog) return `<span style="${BASE}background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;">—</span>`;
@@ -7484,6 +7484,7 @@ function injectOgReplacementCol() {
     const td   = document.createElement('td');
     td.style.cssText = 'text-align:center;vertical-align:middle;padding:4px 8px;white-space:nowrap';
 
+    const smLink = '<a href="javascript:void(0)" onclick="openStockMgmtForSku(\'' + escHtml(raw) + '\')" style="display:block;margin-top:4px;font-size:10px;color:var(--brand);opacity:.6;text-decoration:none;white-space:nowrap" title="Open in Stock Management">→ Stock Mgmt</a>';
     if (repl) {
       const isActive = !!(convState.skuOverrides[raw] && convState.skuOverrides[raw] === repl);
       td.innerHTML =
@@ -7491,12 +7492,13 @@ function injectOgReplacementCol() {
         '<input type="checkbox" ' + (isActive ? 'checked' : '') +
         ' data-raw="' + escHtml(raw) + '" data-repl="' + escHtml(repl) + '"' +
         ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--brand)"' +
-        ' title="' + (isActive ? 'Replacement active — untick to revert to ' + escHtml(raw) : 'Tick to switch to replacement SKU ' + escHtml(repl)) + '">';
+        ' title="' + (isActive ? 'Replacement active — untick to revert to ' + escHtml(raw) : 'Tick to switch to replacement SKU ' + escHtml(repl)) + '">' +
+        smLink;
       td.querySelector('input').addEventListener('change', function() {
         toggleOgReplacement(this.getAttribute('data-raw'), this.getAttribute('data-repl'), this);
       });
     } else {
-      td.innerHTML = '<span style="color:var(--muted);font-size:11px">—</span>';
+      td.innerHTML = '<span style="color:var(--muted);font-size:11px">—</span>' + smLink;
     }
     row.appendChild(td);
   });
@@ -8215,6 +8217,19 @@ function setHeaderClearBtn(tool) {
   btn.textContent = tool === 'soa' ? '↺ Reload' : '↺ Clear All';
 }
 
+// Open Stock Management and pre-fill the search with a specific SKU
+function openStockMgmtForSku(sku) {
+  launchTool('stockanalysis');
+  // Allow the tool's onOpen to finish before setting the search value
+  setTimeout(function() {
+    const inp = document.getElementById('saaSearch');
+    if (inp) {
+      inp.value = sku;
+      inp.dispatchEvent(new Event('input'));
+    }
+  }, 150);
+}
+
 function launchTool(tool) {
   activeTool = tool;
   // Reset scroll so the tool's toolbar is never hidden behind the sticky header
@@ -8312,7 +8327,7 @@ function launchTool(tool) {
     if (banner) banner.style.display = (!state.catalog || !Object.keys(state.catalog).length) ? 'block' : 'none';
   } else if (tool === 'stockanalysis') {
     document.getElementById('tool-stockanalysis').style.display = 'flex';
-    setToolName('Stock Analysis');
+    setToolName('Stock Management');
     saaOnOpen();
   } else if (tool === 'agedstock') {
     document.getElementById('tool-agedstock').style.display = 'flex';
@@ -8448,7 +8463,7 @@ async function saaExportExcel() {
   try {
     const isForecast = saaView === 'forecast';
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet(isForecast ? 'Forecast' : 'Stock Analysis');
+    const ws = wb.addWorksheet(isForecast ? 'Forecast' : 'Stock Management');
 
     // ── Common header style ──────────────────────────────────────────────────
     const HDR_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
@@ -10202,7 +10217,7 @@ function _saaRefreshExcludePills() {
   }
 }
 
-// ── End Stock Analysis ──────────────────────────────────────────────────────
+// ── End Stock Management ──────────────────────────────────────────────────────
 
 
 // ════════════════════════════════════════════════════
@@ -12912,17 +12927,20 @@ function injectConvReplacementCol() {
       if (repl) {
         const isActive = !!(convState.skuOverrides[raw] && convState.skuOverrides[raw] === repl);
         const cbId = 'repl_conv_' + norm;
+        const smLinkC = '<a href="javascript:void(0)" onclick="openStockMgmtForSku(\'' + escHtml(raw) + '\')" style="display:block;margin-top:4px;font-size:10px;color:var(--brand);opacity:.6;text-decoration:none;white-space:nowrap" title="Open in Stock Management">→ Stock Mgmt</a>';
         td.innerHTML =
           '<div style="font-size:11.5px;font-weight:700;color:var(--brand);margin-bottom:3px">' + escHtml(repl) + '</div>' +
           '<input type="checkbox" id="' + cbId + '" ' + (isActive ? 'checked' : '') +
           ' data-raw="' + escHtml(raw) + '" data-repl="' + escHtml(repl) + '"' +
           ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--brand)"' +
-          ' title="' + (isActive ? 'Replacement active — untick to revert to ' + escHtml(raw) : 'Tick to switch to replacement SKU ' + escHtml(repl)) + '">';
+          ' title="' + (isActive ? 'Replacement active — untick to revert to ' + escHtml(raw) : 'Tick to switch to replacement SKU ' + escHtml(repl)) + '">' +
+          smLinkC;
         td.querySelector('input').addEventListener('change', function() {
           toggleConvReplacement(this.getAttribute('data-raw'), this.getAttribute('data-repl'), this);
         });
       } else {
-        td.innerHTML = '<span style="color:var(--muted);font-size:11px">—</span>';
+        const smLinkC = '<a href="javascript:void(0)" onclick="openStockMgmtForSku(\'' + escHtml(raw) + '\')" style="display:block;margin-top:4px;font-size:10px;color:var(--brand);opacity:.6;text-decoration:none;white-space:nowrap" title="Open in Stock Management">→ Stock Mgmt</a>';
+        td.innerHTML = '<span style="color:var(--muted);font-size:11px">—</span>' + smLinkC;
       }
 
       row.appendChild(td);
@@ -15549,11 +15567,17 @@ function renderJoycesPreview(data) {
   for (var i = 0; i < products.length; i++) {
     var p = products[i];
     var entry = (showCost || showRetail) ? catalogLookup(convState.skuOverrides[p.sku] || p.sku) : null;
-    var hasCostDiff   = showCost && entry && entry.cost != null && Math.abs(p.unitCost - entry.cost) > 0.005;
+
+    // ── Special price takes precedence over catalogue cost ──
+    var sp = (showCost && convState.specialPricingEnabled && convState.specialCustomer)
+      ? (convState.specialPrices[p.sku.toUpperCase()] || null) : null;
+    var isSpecial     = sp != null;
+    var displayCost   = isSpecial ? sp : (entry && entry.cost != null ? entry.cost : null);
+    var hasCostDiff   = showCost && displayCost != null && Math.abs(p.unitCost - displayCost) > 0.005;
     var hasRetailInfo = showRetail && entry && entry.retail != null;
     var isOn = hasCostDiff && convState.priceOn.has(p.sku);
-    var effP = isOn ? entry.cost : p.unitCost;
-    var effTotal = isOn ? Math.round(entry.cost * p.qty * 100) / 100 : p.totalCost;
+    var effP = isOn ? displayCost : p.unitCost;
+    var effTotal = isOn ? Math.round(displayCost * p.qty * 100) / 100 : p.totalCost;
     totalVal += effTotal;
     var margin        = (hasRetailInfo && entry.retail > 0) ? ((entry.retail / 1.23) - effP) / (entry.retail / 1.23) * 100 : null;
     var rowStyle      = i%2===1 ? 'background:var(--light)' : '';
@@ -15568,13 +15592,20 @@ function renderJoycesPreview(data) {
       }
     }
 
-    // Cost diff = strikethrough; retail = supplementary RRP info only (no comparison)
+    // Cost: special price (💎) takes priority; otherwise catalogue diff strikethrough
     var priceCell;
     if (hasCostDiff) {
-      priceCell = '<td class="updated-cost" style="text-align:center;line-height:1.6">'
+      var priceTip = isSpecial
+        ? '💎 Special agreed price for ' + escHtml(convState.specialCustomer.name)
+        : 'Catalog price difference';
+      priceCell = '<td class="updated-cost" style="text-align:center;line-height:1.6" title="' + priceTip + '">'
         + '<span class="old-val">€' + p.unitCost.toFixed(2) + '</span>'
-        + '<span class="new-val">€' + entry.cost.toFixed(2) + '</span>'
+        + '<span class="new-val">' + (isSpecial ? '💎 ' : '') + '€' + displayCost.toFixed(2) + '</span>'
         + '</td>';
+    } else if (isSpecial) {
+      // Special price matches PO price — flag it in pink without strikethrough
+      priceCell = '<td style="text-align:center;color:#be185d;font-weight:700" title="💎 Special agreed price for ' + escHtml(convState.specialCustomer.name) + '">'
+        + '💎 €' + p.unitCost.toFixed(2) + '</td>';
     } else {
       priceCell = '<td style="text-align:center">€' + p.unitCost.toFixed(2) + '</td>';
     }
