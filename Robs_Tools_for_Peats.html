@@ -2980,8 +2980,10 @@ function onRetailerChange() {
   try { localStorage.setItem('peats_last_retailer', state.retailerId); } catch(e) {}
   sel.classList.remove('unselected');
   const cfg = RETAILERS[state.retailerId];
-  document.getElementById('dropRetailerLabel').textContent = cfg.name;
-  document.getElementById('retailerToggleLabel').textContent = cfg.name;
+  const _dropLbl = document.getElementById('dropRetailerLabel');
+  if (_dropLbl) _dropLbl.textContent = cfg.name;
+  const _togLbl = document.getElementById('retailerToggleLabel');
+  if (_togLbl) _togLbl.textContent = cfg.name;
 
   // Restore saved prefs for this retailer
   const prefs = getPrefs();
