@@ -4,6 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rob's Tools – Peats</title>
+<!-- ── Sentry Error Tracking ─────────────────────────────────────────── -->
+<script
+  src="https://js-de.sentry-cdn.com/7cc95b8fc3c2e2749f1019f6e48ee3c8.min.js"
+  crossorigin="anonymous"
+></script>
+<script>
+  Sentry.onLoad(function() {
+    Sentry.init({
+      dsn: 'https://7cc95b8fc3c2e2749f1019f6e48ee3c8@o4512155559985152.ingest.de.sentry.io/4512155612020816',
+      environment: window.location.hostname.includes('localhost') ? 'development' : 'production',
+      beforeSend(event) {
+        // Mirror error to local activity log so it appears in the admin panel too
+        try {
+          const msg = (event.exception && event.exception.values && event.exception.values[0])
+            ? event.exception.values[0].value : (event.message || 'unknown error');
+          if (typeof logEvent === 'function') logEvent('app', 'uncaught error', msg, 'error');
+        } catch(e) {}
+        // Strip any accidental PAT/token values from error context
+        if (event.extra) {
+          Object.keys(event.extra).forEach(k => {
+            if (/pat|token|secret|key/i.test(k)) delete event.extra[k];
+          });
+        }
+        return event;
+      }
+    });
+  });
+</script>
+<!-- ───────────────────────────────────────────────────────────────────── -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1205,6 +1234,56 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           </div>
           <div id="serpProxyStatus" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION 4: Activity Log ════════════════════════════════════════ -->
+    <div style="border:2px solid #374151;border-radius:14px;overflow:hidden">
+      <!-- Section header -->
+      <div style="background:#374151;padding:14px 22px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">📋</span>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:.02em">Activity Log</div>
+          <div style="font-size:11.5px;color:rgba(255,255,255,.75)">Usage events stored locally in this browser — up to 500 entries</div>
+        </div>
+        <span id="adminLogCount" style="font-size:12px;color:rgba(255,255,255,.6);font-family:monospace"></span>
+      </div>
+      <div style="padding:22px;background:var(--white);display:flex;flex-direction:column;gap:14px">
+
+        <!-- Filters + actions -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="adminLogToolFilter" placeholder="Filter by tool / action…"
+            oninput="renderAdminLog()"
+            style="flex:1;min-width:160px;font-size:12.5px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--white);color:var(--text)" />
+          <select id="adminLogLevelFilter" onchange="renderAdminLog()"
+            style="font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--white);color:var(--text)">
+            <option value="">All levels</option>
+            <option value="info">🔵 Info</option>
+            <option value="warn">🟡 Warn</option>
+            <option value="error">🔴 Error</option>
+          </select>
+          <button onclick="logExportCsv()"
+            style="background:#374151;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">⬇ Export CSV</button>
+          <button onclick="if(confirm('Clear all log entries?'))logClear();"
+            style="background:transparent;color:var(--red);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 Clear Log</button>
+        </div>
+
+        <!-- Table -->
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead>
+              <tr style="background:var(--light);border-bottom:1px solid var(--border)">
+                <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap">Timestamp</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Tool</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Action</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Detail</th>
+                <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">Lvl</th>
+              </tr>
+            </thead>
+            <tbody id="adminLogTable"></tbody>
+          </table>
+        </div>
+
       </div>
     </div>
 
@@ -2778,10 +2857,12 @@ async function githubLoadCatalog() {
     _ghBadge('✓ Peats Catalogue Synced');
     setTimeout(() => _ghBadge('', true), 4000);
     console.log('[GitHub] Catalog loaded:', fileName);
+    logEvent('catalog', 'auto-loaded from GitHub', fileName, 'info');
   } catch (err) {
     _ghBadge('⚠ Catalog load failed', false);
     setTimeout(() => _ghBadge('', true), 5000);
     console.warn('[GitHub] Catalog auto-load failed:', err.message);
+    logEvent('catalog', 'GitHub load failed', err.message, 'error');
     // Silent fail — user can still upload manually
   }
 }
@@ -2854,6 +2935,7 @@ async function githubPushCatalog(blob) {
   // After a successful push, update our local buffer to match what we just committed
   // so any subsequent push in this session starts from the correct base
   state.catalogRawBuf = arrBuf;
+  logEvent('catalog', 'pushed to GitHub', `${Math.round(arrBuf.byteLength/1024)} KB`, 'info');
   return true;
 }
 
@@ -3254,9 +3336,11 @@ function parseCatalog(rows, name, wb, rawBuf) {
 
   if (!count) {
     showToast('⚠ Catalog loaded but 0 products found — check the file format.');
+    logEvent('catalog', 'load warning', '0 products found — check file format', 'warn');
   } else {
     state.catalogLoadTime = new Date();
     showToast(`✓ Catalog loaded — ${count.toLocaleString()} products · code column: "${state.catalogCols.Code}"`);
+    logEvent('catalog', 'loaded', `${count} products`, 'info');
   }
   if (state.rawRows.length) { renderSummary(); renderTable(); }
   // Sync conv tool catalog UI and brand filter whenever catalog is loaded from either section
@@ -5940,6 +6024,7 @@ async function _downloadExcelAppend(cfg) {
   const buffer = await wb.xlsx.writeBuffer();
   triggerDownload(buffer, `${base}_ORDER.xlsx`);
   showToast('✓ Downloaded ' + base + '_ORDER.xlsx');
+  logEvent('conversion', 'order exported', base + '_ORDER.xlsx', 'info');
 }
 
 /// ── Dominic Smith-style: 4-section layout ──
@@ -6073,6 +6158,7 @@ async function _downloadExcelSections(cfg) {
   const buffer = await wb.xlsx.writeBuffer();
   triggerDownload(buffer, outName);
   showToast('✓ Downloaded ' + outName);
+  logEvent('conversion', 'order exported', outName, 'info');
 }
 
 // ════════════════════════════════════════════════════
@@ -7374,8 +7460,10 @@ async function _downloadCRM() {
 
   if (filesCreated === 0) {
     showToast('⚠ No branches have suggested quantities to export.');
+    logEvent('backorder', 'export skipped', 'no branches with suggested quantities', 'warn');
   } else {
     showToast(`✓ Downloaded ${filesCreated} CRM file${filesCreated>1?'s':''} (one per branch)`);
+    logEvent('backorder', 'exported', filesCreated + ' CRM file(s)', 'info');
   }
 }
 
@@ -8234,6 +8322,7 @@ function openStockMgmtForSku(sku) {
 
 function launchTool(tool) {
   activeTool = tool;
+  logEvent(tool, 'open', '', 'info');
   // Reset scroll so the tool's toolbar is never hidden behind the sticky header
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
@@ -8312,6 +8401,7 @@ function launchTool(tool) {
     document.getElementById('tool-crmsettings').style.display = 'flex';
     setToolName('CRM API Settings');
     crmSettingsOnOpen();
+    renderAdminLog();
   } else if (tool === 'webimport') {
     document.getElementById('tool-webimport').style.display = 'flex';
     setToolName('Web Data Sync');
@@ -8389,6 +8479,7 @@ let saaLoadedBrands = new Set();    // brands whose stock has been fetched
 let saaFetching     = false;
 let saaReplacements    = {};   // normNewSku → rawOldSku (predecessor map from Replacements tab)
 let saaAltSkuOverrides = {};   // normCode → rawAltSku (manual user entries; localStorage)
+let saaReplacedByMap   = {};   // normOldSku → rawNewSku — built once in saaRebuildData, shared by all renderers
 let saaMonthlyDataMap  = {};   // normCode → [{year,month,qty},...] (CRM monthly data; pending)
 let saaSeasonalIndices = null; // [12 floats] or null until monthly data loaded
 const SAA_ALT_SKU_KEY  = 'peats_saa_alt_skus';
@@ -8475,7 +8566,6 @@ async function saaExportExcel() {
 
     // ── Filter rows matching current view ────────────────────────────────────
     const q = (document.getElementById('saaSearch')?.value || '').toLowerCase().trim();
-    const normFn = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
     let rows = saaData.filter(function(r) {
       if (saaExcludeTBD && (r.crmName||r.desc).toUpperCase().startsWith('TBD')) return false;
       if (saaExcludeEOL && (r.crmName||r.desc).toUpperCase().startsWith('EOL')) return false;
@@ -8506,23 +8596,18 @@ async function saaExportExcel() {
         return { label: MNAMES[d.getMonth()] + " '" + String(d.getFullYear()).slice(2), month: d.getMonth(), year: d.getFullYear() };
       });
 
-      // Build replacedBy map (same logic as render)
-      const replacedByMap = {};
-      for (const _r of saaData) {
-        const _nrm = normFn(_r.code);
-        const _rawOld = saaAltSkuOverrides[_nrm] || saaReplacements[_nrm] || '';
-        if (_rawOld) replacedByMap[normFn(_rawOld)] = _r.code;
-      }
+      // Use the shared replacement map built in saaRebuildData
+      const replacedByMap = saaReplacedByMap;
 
       // Build 80/20 set (same logic as render — reuse fcstCache built in renderForecastTable if available)
       const freeByNorm = {};
-      for (const _r of saaData) freeByNorm[normFn(_r.code)] = _r.free || 0;
+      for (const _r of saaData) freeByNorm[normCode(_r.code)] = _r.free || 0;
 
       const eighty20exp = new Set();
       if (saaSeasonalIndices) {
         const totals = [];
         for (const _r of saaData) {
-          const _nm  = normFn(_r.code);
+          const _nm  = normCode(_r.code);
           if (replacedByMap[_nm]) continue;
           const _alt = saaAltSkuOverrides[_nm] || saaReplacements[_nm] || '';
           const _isE = (_r.crmName||_r.desc||'').toUpperCase().startsWith('EOL');
@@ -8572,9 +8657,9 @@ async function saaExportExcel() {
       });
 
       rows.forEach(r => {
-        const norm    = normFn(r.code);
+        const norm    = normCode(r.code);
         const altRaw  = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
-        const srcNorm = altRaw ? normFn(altRaw) : norm;
+        const srcNorm = altRaw ? normCode(altRaw) : norm;
         const series  = saaMonthlyDataMap[srcNorm];
         const isEol   = (r.crmName||r.desc||'').toUpperCase().startsWith('EOL');
         const isTbd   = (r.crmName||r.desc||'').toUpperCase().startsWith('TBD');
@@ -8736,10 +8821,12 @@ async function saaExportExcel() {
       a.href = url; a.download = 'Stock_Analysis_' + new Date().toISOString().slice(0, 10) + '.xlsx';
       a.click(); URL.revokeObjectURL(url);
       showToast('✓ Stock analysis exported — ' + rows.length + ' rows.');
+      logEvent('stockanalysis', 'exported Excel', rows.length + ' rows', 'info');
     }
   } catch(e) {
     showToast('✗ Export failed: ' + e.message);
     console.error('[saaExportExcel]', e);
+    logEvent('stockanalysis', 'export failed', e.message, 'error');
   } finally {
     if (btn) { btn.textContent = origLabel; btn.disabled = false; }
   }
@@ -8883,6 +8970,15 @@ function saaRebuildData() {
                 soldLast3Mo: s.soldLast3Mo || 0, crmName: s.crmName || null });
   });
   saaData = rows;
+
+  // Build shared replacement map once — normOldSku → rawNewSku
+  // Used by saaRenderTable, saaRenderForecastTable, and saaExportExcel
+  saaReplacedByMap = {};
+  for (const _rb of saaData) {
+    const _nrb = normCode(_rb.code);
+    const _rawOld = saaAltSkuOverrides[_nrb] || saaReplacements[_nrb] || '';
+    if (_rawOld) saaReplacedByMap[normCode(_rawOld)] = _rb.code;
+  }
 }
 
 /**
@@ -8890,7 +8986,7 @@ function saaRebuildData() {
  * Tries ShortDescription then Description on ProductItems — 400s are silently swallowed.
  * Returns Map<sku, string> of CRM descriptions.
  */
-async function fetchSaaCrmNames(skus) {
+async function fetchCrmNames(skus) {
   const pat = getCrmPat();
   if (!pat || !skus.length) return new Map();
   const result = new Map();
@@ -8909,16 +9005,17 @@ async function fetchSaaCrmNames(skus) {
         const resp = await fetch(url, {
           headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
         });
-        if (!resp.ok) { allOk = false; break; }
+        if (!resp.ok) { allOk = false; logEvent(activeTool || '?', 'CRM fetch error', `HTTP ${resp.status} on ${field}`, 'error'); break; }
         const data = await resp.json();
         (data.value || []).forEach(item => {
           const v = item[field];
           if (v) tmpMap.set(item.ProductItemId, v);
         });
-      } catch(e) { allOk = false; break; }
+      } catch(e) { allOk = false; logEvent(activeTool || '?', 'CRM fetch error', String(e), 'error'); break; }
     }
     if (allOk && tmpMap.size > 0) {
       tmpMap.forEach((v,k) => result.set(k, v));
+      logEvent(activeTool || '?', 'CRM names fetched', `${tmpMap.size} SKUs via ${field}`, 'info');
       break; // found a working field
     }
   }
@@ -8944,7 +9041,7 @@ async function fetchOgCrmNames() {
   });
   const peatsCodes = Object.values(normToPeats);
   try {
-    const nameMap = await fetchSaaCrmNames(peatsCodes);
+    const nameMap = await fetchCrmNames(peatsCodes);
     nameMap.forEach((name, code) => {
       const nm = normCode(code);
       if (nm) ogCrmNameMap[nm] = name;
@@ -8979,7 +9076,7 @@ async function fetchConvCrmNames() {
   convCrmFetchState = 'loading';
   convCrmNameMap = {};
   try {
-    const nameMap = await fetchSaaCrmNames(peatsCodes);
+    const nameMap = await fetchCrmNames(peatsCodes);
     nameMap.forEach((name, code) => {
       const nm = normCode(code);
       if (nm) convCrmNameMap[nm] = name;
@@ -9061,7 +9158,7 @@ async function saaLoadForSelectedBrands() {
     newStockMap.forEach((v, k) => saaStockMap.set(k, v));
     // Fetch CRM product descriptions for TBD/EOL detection (graceful — 400s silently ignored)
     try {
-      const crmNames = await fetchSaaCrmNames(skusToFetch);
+      const crmNames = await fetchCrmNames(skusToFetch);
       crmNames.forEach((name, sku) => {
         const entry = saaStockMap.get(sku);
         if (entry) entry.crmName = name;
@@ -9310,19 +9407,11 @@ function saaRenderTable() {
   const fmtInt = v => v != null ? Math.round(v).toLocaleString('en-IE') : '—';
   const TD = 'padding:5px 10px;white-space:nowrap;text-align:center;';
 
-  // Build replacedBy map for State view (same logic as Forecast view)
-  const _stateReplacedByMap = {};
-  for (const _sr of saaData) {
-    const _snrm = normCode(_sr.code);
-    const _srawOld = saaAltSkuOverrides[_snrm] || saaReplacements[_snrm] || '';
-    if (_srawOld) _stateReplacedByMap[normCode(_srawOld)] = _sr.code;
-  }
-
   document.getElementById('saaTableBody').innerHTML = rows.map(r => {
     const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700;' : (r.free===0 ? 'color:#d68910;font-weight:600;' : '');
     const projStyle = r.proj != null && r.proj < 0 ? 'color:#c0392b;font-weight:700;' : '';
     const bg = STATUS_BG[r.status] || '';
-    const _stReplacedBy = _stateReplacedByMap[normCode(r.code)] || '';
+    const _stReplacedBy = saaReplacedByMap[normCode(r.code)] || '';
     const _stAltRaw = saaAltSkuOverrides[normCode(r.code)] || saaReplacements[normCode(r.code)] || '';
     const _stAltFromLocal = _stAltRaw && !!(saaAltSkuOverrides[normCode(r.code)]);
     const _stCodeCell = _stReplacedBy
@@ -9688,7 +9777,6 @@ function saaRenderForecastTable() {
   });
 
   const hasCrmData = saaSeasonalIndices != null;
-  const normFn     = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const NCOLS      = 14; // [✓] | Brand | Code | Desc | State | Trend | M1 | M2 | M3 | Free Stock | On Order | Sug. Order | 80/20 | Status
 
   // Filter by search + state tab
@@ -9709,22 +9797,17 @@ function saaRenderForecastTable() {
 
   // Free stock lookup by normalised code — used for backorder trend adjustment
   const freeByNorm = {};
-  for (const _r of saaData) freeByNorm[normFn(_r.code)] = _r.free || 0;
+  for (const _r of saaData) freeByNorm[normCode(_r.code)] = _r.free || 0;
 
-  // Reverse replacement map: normOldSku → rawNewSku — lets old SKU rows show "Replaced by X"
-  const replacedByMap = {};
-  for (const _r of saaData) {
-    const _nrm = normFn(_r.code);
-    const _rawOld = saaAltSkuOverrides[_nrm] || saaReplacements[_nrm] || '';
-    if (_rawOld) replacedByMap[normFn(_rawOld)] = _r.code;
-  }
+  // Use the shared replacement map built in saaRebuildData
+  const replacedByMap = saaReplacedByMap;
 
   // Apply column sort when a sort column is active (brand|code is the secondary/default order)
   if (saaFcstSortCol) {
     const _stVal = r => { const n=(r.crmName||r.desc||'').toUpperCase(); return n.startsWith('EOL')?2:n.startsWith('TBD')?1:0; };
     const _trVal = r => {
-      const _n=normFn(r.code), _a=saaAltSkuOverrides[_n]||saaReplacements[_n]||'';
-      const _s=_a?normFn(_a):_n, _ser=saaMonthlyDataMap[_s];
+      const _n=normCode(r.code), _a=saaAltSkuOverrides[_n]||saaReplacements[_n]||'';
+      const _s=_a?normCode(_a):_n, _ser=saaMonthlyDataMap[_s];
       if (!_ser||!_ser.length) return -9999;
       const _isE=(r.crmName||r.desc||'').toUpperCase().startsWith('EOL');
       const _fAdj=(!_isE||_a)&&(freeByNorm[_s]||0)<0?Math.abs(freeByNorm[_s]||0):0;
@@ -9747,14 +9830,14 @@ function saaRenderForecastTable() {
   const eighty20set = new Set(); // r.code → is in top 80% of Q4 forecast qty
   if (hasCrmData) {
     const _freeByNorm80 = {};
-    for (const _r of saaData) _freeByNorm80[normFn(_r.code)] = _r.free || 0;
+    for (const _r of saaData) _freeByNorm80[normCode(_r.code)] = _r.free || 0;
     // Pre-compute which replacement SKUs actually have forecast data, so we only
     // exclude an old SKU from the 80/20 ranking when its replacement genuinely
     // inherits its demand. If the replacement has zero/null forecast the old SKU's
     // demand would silently vanish from the ranking — so we keep the old SKU in.
     const _replacementHasFcst = {};
     for (const _r2 of saaData) {
-      const _n2  = normFn(_r2.code);
+      const _n2  = normCode(_r2.code);
       const _a2  = saaAltSkuOverrides[_n2] || saaReplacements[_n2] || '';
       if (!_a2) continue; // not a replacement row
       const _isE2 = (_r2.crmName||_r2.desc||'').toUpperCase().startsWith('EOL');
@@ -9762,19 +9845,19 @@ function saaRenderForecastTable() {
       const _fa2  = (!_isE2 || _a2) && _sf2 < 0 ? Math.abs(_sf2) : 0;
       const _f2   = saaForecastNextMonths(_r2, nextMonths, _fa2);
       const _tot2 = _f2 ? _f2.reduce((s,x)=>s+(x&&x.predicted!=null?x.predicted:0),0) : 0;
-      if (_tot2 > 0) _replacementHasFcst[normFn(_a2)] = true; // old code → replacement has data
+      if (_tot2 > 0) _replacementHasFcst[normCode(_a2)] = true; // old code → replacement has data
     }
 
     const totals = [];
     for (const _r of saaData) {
-      const _nm  = normFn(_r.code);
+      const _nm  = normCode(_r.code);
       // Skip SKUs that have already been superseded by a replacement that has forecast data —
       // their demand is captured by the replacement row. But if the replacement has no
       // forecast (no historical sales, no inheritance), keep the old SKU in the ranking
       // so its demand is not silently lost from the 80/20 calculation.
       if (replacedByMap[_nm] && _replacementHasFcst[_nm]) continue;
       const _alt = saaAltSkuOverrides[_nm] || saaReplacements[_nm] || '';
-      const _sn  = _alt ? normFn(_alt) : _nm;
+      const _sn  = _alt ? normCode(_alt) : _nm;
       const _isE = (_r.crmName||_r.desc||'').toUpperCase().startsWith('EOL');
       // Use the current SKU's own free stock for the backorder adjustment (not the predecessor's)
       const _sf  = _freeByNorm80[_nm] || 0;
@@ -9983,10 +10066,10 @@ function saaRenderForecastTable() {
   </tr>`;
 
   document.getElementById('saaTableBody').innerHTML = rows.map(r => {
-    const norm    = normFn(r.code);
+    const norm    = normCode(r.code);
     const altRaw  = saaAltSkuOverrides[norm] || saaReplacements[norm] || '';
     const altFromLocal = !!saaAltSkuOverrides[norm]; // true = local only (not yet pushed to catalog)
-    const srcNorm = altRaw ? normFn(altRaw) : norm;
+    const srcNorm = altRaw ? normCode(altRaw) : norm;
     const series  = saaMonthlyDataMap[srcNorm];
     // Backorder adjustment: for supply-constrained products, outstanding backorders
     // represent unfulfilled demand not captured in shipped-qty figures.
@@ -10092,9 +10175,8 @@ function saaShowPredecessorModal() {
   // Refresh from catalog state in case it loaded after the tool was opened
   saaLoadReplacements();
   const rows = saaData.slice().sort((a,b) => (a.brand+'|'+a.code).localeCompare(b.brand+'|'+b.code));
-  const normFn = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const rowsHtml = rows.map(r => {
-    const norm     = normFn(r.code);
+    const norm     = normCode(r.code);
     const override = saaAltSkuOverrides[norm] || '';
     const fromMap  = saaReplacements[norm] || '';
     const current  = override || fromMap;
@@ -10152,10 +10234,9 @@ function saaShowPredecessorModal() {
 
 function saaUpdatePushCount() {
   // Update Push button label with count of entries that differ from catalog
-  const normFn2 = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   let count = 0;
   document.querySelectorAll('#saaPredModal input[data-sku]').forEach(function(inp) {
-    const norm = normFn2(inp.getAttribute('data-sku'));
+    const norm = normCode(inp.getAttribute('data-sku'));
     const val  = inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
     const catalogVal = (saaReplacements[norm] || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
     if (val !== catalogVal) count++;
@@ -10165,9 +10246,8 @@ function saaUpdatePushCount() {
 }
 
 function saaSavePredecessors() {
-  const normFn = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   document.querySelectorAll('#saaPredModal input[data-sku]').forEach(inp => {
-    const norm = normFn(inp.getAttribute('data-sku'));
+    const norm = normCode(inp.getAttribute('data-sku'));
     const val  = inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
     if (val) saaAltSkuOverrides[norm] = val;
     else     delete saaAltSkuOverrides[norm];
@@ -10176,7 +10256,7 @@ function saaSavePredecessors() {
   document.getElementById('saaPredModal').remove();
   showToast('✅ Predecessor SKUs saved.');
   // Fetch data for any newly added predecessor SKUs
-  const newSkus = Object.values(saaAltSkuOverrides).filter(s => !saaMonthlyDataMap[normFn(s)]);
+  const newSkus = Object.values(saaAltSkuOverrides).filter(s => !saaMonthlyDataMap[normCode(s)]);
   if (newSkus.length && localStorage.getItem('peats_crm_pat')) {
     saaLoadMonthlyDataForSkus(newSkus).then(({loaded}) => {
       if (loaded > 0) { saaSeasonalIndices = saaComputeSeasonalIndices(); }
@@ -10192,9 +10272,8 @@ async function saaSaveReplacementsToCatalog() {
   // where the modal was opened before parseCatalog() had finished loading the catalog.
   saaLoadReplacements();
   // Flush any pending modal changes first (same logic as saaSavePredecessors)
-  const normFn = code => String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   document.querySelectorAll('#saaPredModal input[data-sku]').forEach(inp => {
-    const norm = normFn(inp.getAttribute('data-sku'));
+    const norm = normCode(inp.getAttribute('data-sku'));
     const val  = inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
     if (val) saaAltSkuOverrides[norm] = val;
     else     delete saaAltSkuOverrides[norm];
@@ -10300,7 +10379,7 @@ async function saaSaveReplacementsToCatalog() {
       var normNew = e[0], rawOld = e[1];
       var rawNew = (state.catalogNorm && state.catalogNorm[normNew]) || normNew;
       state.replacementsNewToOld[normNew] = rawOld;
-      state.replacementsOldToNew[normFn(rawOld)] = rawNew;
+      state.replacementsOldToNew[normCode(rawOld)] = rawNew;
     });
     saaLoadReplacements(); // sync saaReplacements from updated state
 
@@ -10312,7 +10391,7 @@ async function saaSaveReplacementsToCatalog() {
     document.getElementById('saaPredModal') && document.getElementById('saaPredModal').remove();
 
     // Trigger CRM data load for any predecessor SKUs not yet loaded, then re-render forecast
-    var _newPredSkus = Object.values(allRepls).filter(function(s){ return !saaMonthlyDataMap[normFn(s)]; });
+    var _newPredSkus = Object.values(allRepls).filter(function(s){ return !saaMonthlyDataMap[normCode(s)]; });
     if (_newPredSkus.length && localStorage.getItem('peats_crm_pat')) {
       saaLoadMonthlyDataForSkus(_newPredSkus).then(function(result) {
         if (result && result.loaded > 0) { saaSeasonalIndices = saaComputeSeasonalIndices(); }
@@ -10327,8 +10406,10 @@ async function saaSaveReplacementsToCatalog() {
       // up to date (we just built it from allRepls), and a GitHub CDN re-fetch at this
       // point risks returning a stale version that would overwrite valid local state.
       showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' pushed to catalog — colleagues get them on next load.');
+      logEvent('stockanalysis', 'replacements pushed', nPairs + ' pairs → GitHub', 'info');
     } else if (!GH_READY) {
       showToast('✔ ' + nPairs + ' replacement' + (nPairs===1?'':'s') + ' saved — re-upload this catalog to share with others.');
+      logEvent('stockanalysis', 'replacements saved locally', nPairs + ' pairs', 'info');
     }
   } catch(err) {
     showToast('✗ Could not save replacements: ' + err.message);
@@ -11302,7 +11383,7 @@ async function asLoadForSelectedBrands() {
     // ── Step 2: CRM product names for TBD/EOL detection ──
     asShowProgress(2, asStepNames[1]);
     try {
-      const crmNames = await fetchSaaCrmNames(skusToFetch);
+      const crmNames = await fetchCrmNames(skusToFetch);
       crmNames.forEach((name, sku) => {
         const entry = asStockMap.get(sku);
         if (entry) entry.crmName = name;
@@ -12704,6 +12785,74 @@ function brandSelMatch(brand, selectedSet) {
   if (selectedSet.has(brand)) return true;           // exact match
   if (selectedSet.has('AVSL') && AVSL_BRANDS.has(brand)) return true;
   return false;
+}
+
+// ── Activity Log ───────────────────────────────────────────
+const LOG_KEY      = 'peats_activity_log';
+const LOG_MAX      = 500;
+const LOG_LEVELS   = { info: '🔵', warn: '🟡', error: '🔴' };
+
+function logEvent(tool, action, detail, level = 'info') {
+  try {
+    const entries = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+    entries.unshift({
+      ts:     new Date().toISOString(),
+      tool:   tool   || '—',
+      action: action || '—',
+      detail: detail || '',
+      level:  level
+    });
+    if (entries.length > LOG_MAX) entries.length = LOG_MAX;
+    localStorage.setItem(LOG_KEY, JSON.stringify(entries));
+  } catch(e) { /* storage unavailable — silently skip */ }
+}
+
+function logGetEntries() {
+  try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function logClear() {
+  try { localStorage.removeItem(LOG_KEY); } catch(e) {}
+  renderAdminLog();
+}
+
+function logExportCsv() {
+  const entries = logGetEntries();
+  const header  = 'Timestamp,Tool,Action,Detail,Level';
+  const escCsv  = v => '"' + String(v||'').replace(/"/g,'""') + '"';
+  const rows    = entries.map(e => [e.ts, e.tool, e.action, e.detail, e.level].map(escCsv).join(','));
+  const blob    = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' });
+  const a       = document.createElement('a');
+  a.href        = URL.createObjectURL(blob);
+  a.download    = 'peats_activity_log_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function renderAdminLog() {
+  const wrap = document.getElementById('adminLogTable');
+  if (!wrap) return;
+  const toolFilter  = (document.getElementById('adminLogToolFilter')?.value  || '').toLowerCase();
+  const levelFilter = (document.getElementById('adminLogLevelFilter')?.value || '');
+  let   entries = logGetEntries();
+  if (toolFilter)  entries = entries.filter(e => e.tool.toLowerCase().includes(toolFilter) || e.action.toLowerCase().includes(toolFilter));
+  if (levelFilter) entries = entries.filter(e => e.level === levelFilter);
+  const count = document.getElementById('adminLogCount');
+  if (count) count.textContent = entries.length + ' entries';
+  if (!entries.length) {
+    wrap.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted);font-size:13px;">No log entries yet.</td></tr>';
+    return;
+  }
+  wrap.innerHTML = entries.map(e => {
+    const icon = LOG_LEVELS[e.level] || '⚪';
+    const ts   = e.ts.replace('T',' ').replace(/\.\d+Z$/,' UTC');
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:5px 10px;font-size:11px;color:var(--muted);white-space:nowrap;font-family:monospace;">${ts}</td>
+      <td style="padding:5px 10px;font-size:12px;font-weight:700;white-space:nowrap;">${escHtml(e.tool)}</td>
+      <td style="padding:5px 10px;font-size:12px;white-space:nowrap;">${escHtml(e.action)}</td>
+      <td style="padding:5px 10px;font-size:11.5px;color:var(--muted);max-width:320px;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(e.detail)}">${escHtml(e.detail)}</td>
+      <td style="padding:5px 10px;font-size:14px;text-align:center;">${icon}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── Admin PIN ──────────────────────────────────────────────
