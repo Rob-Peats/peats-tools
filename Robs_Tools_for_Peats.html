@@ -12511,9 +12511,10 @@ function asResetDiscounts() {
 // ── Export to Excel ───────────────────────────────────
 
 async function asExportExcel() {
-  if (!asData.length) { showToast('No data to export.'); return; }
+  if (!asData.length && !asSlowData.length) { showToast('No data to export.'); return; }
 
-  const rows      = asGetFilteredRows();
+  const agedRows  = asGetFilteredRows();
+  const slowRows  = asSlowData.slice(); // all slow rows (apply current slow view filter)
   const useThumbs = !!document.getElementById('asThumbnailToggle')?.checked;
   const dateStr   = new Date().toISOString().slice(0, 10);
   const filename  = 'Aged_Stock_' + dateStr + '.xlsx';
@@ -12521,123 +12522,250 @@ async function asExportExcel() {
 
   if (btn) { btn.textContent = '⏳ Exporting…'; btn.disabled = true; btn.style.opacity = '.65'; }
 
+  // ── helpers ──────────────────────────────────────────────────────────
+  // Round number to max 2dp (avoids floating-point noise like 1.2300000001)
+  const r2 = v => (v != null && typeof v === 'number') ? Math.round(v * 100) / 100 : v;
+
+  // Style a header row
+  const styleHeader = (row, fillArgb) => {
+    row.eachCell(cell => {
+      cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillArgb } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+      cell.border    = { bottom: { style: 'thin', color: { argb: 'FF3A6CB5' } } };
+    });
+    row.height = 24;
+  };
+
+  // Auto-fit columns: walk all data rows and take max content length per column
+  const autoFitCols = (ws, colDefs, dataRows, minW, maxW) => {
+    const widths = colDefs.map(c => Math.max(minW, String(c.header).length + 2));
+    dataRows.forEach(rowArr => {
+      rowArr.forEach((val, ci) => {
+        const len = val != null ? String(val).length : 0;
+        if (len > widths[ci]) widths[ci] = Math.min(maxW, len);
+      });
+    });
+    ws.columns = colDefs.map((c, i) => ({ ...c, width: widths[i] }));
+  };
+
+  // Apply alignment + number formats to a data row (by 0-based column index set)
+  const applyRowFormats = (exRow, numericIdxs, currencyIdxs, pctIdxs, specialFn) => {
+    exRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
+      const ci = colNum - 1;
+      const isNum = numericIdxs.has(ci) || currencyIdxs.has(ci) || pctIdxs.has(ci);
+      cell.alignment = { vertical: 'middle', horizontal: isNum ? 'center' : 'left' };
+    });
+    currencyIdxs.forEach(ci => {
+      const cell = exRow.getCell(ci + 1);
+      if (cell.value != null) cell.numFmt = '"€"#,##0.00';
+    });
+    pctIdxs.forEach(ci => {
+      const cell = exRow.getCell(ci + 1);
+      if (cell.value != null) cell.numFmt = '0.00"%"';
+    });
+    numericIdxs.forEach(ci => {
+      const cell = exRow.getCell(ci + 1);
+      if (cell.value != null && typeof cell.value === 'number') cell.numFmt = '#,##0.##';
+    });
+    if (specialFn) specialFn(exRow);
+  };
+
   try {
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Peats Tools';
     wb.created = new Date();
 
-    const ws = wb.addWorksheet('Aged Stock', {
-      views: [{ state: 'frozen', ySplit: 1 }]
-    });
-
-    const cols = [
-      ...(useThumbs ? [{ header: 'Image',           key: 'img',       width: 12 }] : []),
-      { header: 'Brand',           key: 'brand',      width: 18 },
-      { header: 'Code',            key: 'code',       width: 14 },
-      { header: 'Description',     key: 'desc',       width: 44 },
-      { header: 'Free Stock',      key: 'free',       width: 12 },
-      { header: 'Stock Value (€)', key: 'stockVal',   width: 16 },
-      { header: 'Last Sold',       key: 'lastSold',   width: 15 },
-      { header: 'Dormant',         key: 'dormant',    width: 15 },
-      { header: 'Band C (€)',       key: 'bandC',      width: 13 },
-      { header: 'Band F (€)',       key: 'bandF',      width: 13 },
-      { header: 'Discount %',      key: 'discount',   width: 12 },
-      { header: 'Clearance (€)',   key: 'clearance',  width: 15 },
-    ];
-    ws.columns = cols;
-
-    ws.getRow(1).eachCell(cell => {
-      cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
-      cell.border    = { bottom: { style: 'thin', color: { argb: 'FF3A6CB5' } } };
-    });
-    ws.getRow(1).height = 24;
-
     const IMG_PROXY = 'https://peats-img-proxy.rob-noonan.workers.dev/?ref=';
-    const imgOff = useThumbs ? 1 : 0;
 
-    for (let ri = 0; ri < rows.length; ri++) {
-      const r         = rows[ri];
-      const rowHeight = useThumbs ? 56 : 20;
+    // ════════════════════════════════════════════════════
+    // SHEET 1 — AGED STOCK
+    // ════════════════════════════════════════════════════
+    if (agedRows.length) {
+      const ws1 = wb.addWorksheet('Aged Stock', { views: [{ state: 'frozen', ySplit: 1 }] });
+      const imgOff = useThumbs ? 1 : 0;
 
-      const lastSoldStr = r.lastSoldDate
-        ? (r.lastSoldDate.getDate() + ' ' + AS_MONTHS[r.lastSoldDate.getMonth()] + ' ' + r.lastSoldDate.getFullYear())
-        : 'Never sold';
-      const dormantStr = r.dormantMonths != null
-        ? (r.dormantMonths + ' month' + (r.dormantMonths === 1 ? '' : 's'))
-        : 'Never sold';
+      const agedColDefs = [
+        ...(useThumbs ? [{ header: 'Image',           key: 'img'      }] : []),
+        { header: 'Brand',           key: 'brand'    },
+        { header: 'Code',            key: 'code'     },
+        { header: 'Description',     key: 'desc'     },
+        { header: 'Free Stock',      key: 'free'     },
+        { header: 'Stock Value (€)', key: 'stockVal' },
+        { header: 'Last Sold',       key: 'lastSold' },
+        { header: 'Dormant',         key: 'dormant'  },
+        { header: 'Band C (€)',      key: 'bandC'    },
+        { header: 'Band F (€)',      key: 'bandF'    },
+        { header: 'Discount %',      key: 'discount' },
+        { header: 'Clearance (€)',   key: 'clearance'},
+      ];
 
-      const rowValues = {
-        ...(useThumbs ? { img: '' } : {}),
-        brand:     r.brand,
-        code:      r.code,
-        desc:      r.crmName || r.desc,
-        free:      r.free,
-        stockVal:  r.stockValue != null ? r.stockValue : null,
-        lastSold:  lastSoldStr,
-        dormant:   dormantStr,
-        bandC:     r.bandC  != null ? r.bandC  : null,
-        bandF:     r.bandF  != null ? r.bandF  : null,
-        discount:  r.discount  || 0,
-        clearance: r.clearance != null ? r.clearance : null,
-      };
-
-      const exRow = ws.addRow(rowValues);
-      exRow.height = rowHeight;
-
-      if (ri % 2 === 1) {
-        exRow.eachCell(cell => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F9FC' } };
-        });
-      }
-
-      const stockValCell  = exRow.getCell(imgOff + 5);
-      const retailCell    = exRow.getCell(imgOff + 8);
-      const bandCCell     = exRow.getCell(imgOff + 9);
-      const bandFCell     = exRow.getCell(imgOff + 10);
-      const clearanceCell = exRow.getCell(imgOff + 12);
-
-      if (stockValCell.value  != null) stockValCell.numFmt  = '"€"#,##0.00';
-      if (retailCell.value    != null) retailCell.numFmt    = '"€"#,##0.00';
-      if (bandCCell.value     != null) { bandCCell.numFmt   = '"€"#,##0.00'; bandCCell.font = { color: { argb: 'FF0891B2' } }; }
-      if (bandFCell.value     != null) { bandFCell.numFmt   = '"€"#,##0.00'; bandFCell.font = { color: { argb: 'FF7C3AED' } }; }
-      if (clearanceCell.value != null) {
-        clearanceCell.numFmt = '"€"#,##0.00';
-        clearanceCell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E8' } };
-        clearanceCell.font   = { bold: true, color: { argb: 'FFB45309' } };
-      }
-
-      exRow.eachCell(cell => {
-        if (!cell.alignment) cell.alignment = { vertical: 'middle' };
-        else cell.alignment = Object.assign({ vertical: 'middle' }, cell.alignment);
+      // Build preview data arrays for auto-fit (skip image col)
+      const agedPreview = agedRows.map(r => {
+        const lastSoldStr = r.lastSoldDate
+          ? (r.lastSoldDate.getDate() + ' ' + AS_MONTHS[r.lastSoldDate.getMonth()] + ' ' + r.lastSoldDate.getFullYear())
+          : 'Never sold';
+        const dormantStr = r.dormantMonths != null
+          ? (r.dormantMonths + ' month' + (r.dormantMonths === 1 ? '' : 's'))
+          : 'Never sold';
+        return [
+          ...(useThumbs ? [''] : []),
+          r.brand, r.code, r.crmName || r.desc,
+          r.free, r.stockValue != null ? r.stockValue : '',
+          lastSoldStr, dormantStr,
+          r.bandC != null ? r.bandC : '', r.bandF != null ? r.bandF : '',
+          r.discount || 0, r.clearance != null ? r.clearance : '',
+        ];
       });
+      autoFitCols(ws1, agedColDefs, agedPreview, 8, 48);
 
-      if (useThumbs) {
-        try {
-          const resp = await fetch(IMG_PROXY + encodeURIComponent(r.code));
-          if (resp.ok) {
-            const blob = await resp.blob();
-            if (blob.size > 100) {
-              const buf   = await blob.arrayBuffer();
-              const isPng = (blob.type || '').includes('png');
-              const imgId = wb.addImage({ buffer: buf, extension: isPng ? 'png' : 'jpeg' });
-              ws.addImage(imgId, {
-                tl: { col: 0, row: ri + 1 },
-                br: { col: 1, row: ri + 2 },
-                editAs: 'oneCell'
-              });
-            }
+      styleHeader(ws1.getRow(1), 'FF1A3C6E');
+
+      // 0-based column indices for formatting
+      const agedNumIdx  = new Set([imgOff + 4]);          // Free Stock
+      const agedCurrIdx = new Set([imgOff + 5, imgOff + 8, imgOff + 9, imgOff + 11]); // Stock Val, BandC, BandF, Clearance
+      const agedPctIdx  = new Set([imgOff + 10]);          // Discount %
+
+      for (let ri = 0; ri < agedRows.length; ri++) {
+        const r = agedRows[ri];
+        const lastSoldStr = r.lastSoldDate
+          ? (r.lastSoldDate.getDate() + ' ' + AS_MONTHS[r.lastSoldDate.getMonth()] + ' ' + r.lastSoldDate.getFullYear())
+          : 'Never sold';
+        const dormantStr = r.dormantMonths != null
+          ? (r.dormantMonths + ' month' + (r.dormantMonths === 1 ? '' : 's'))
+          : 'Never sold';
+
+        const rowValues = [
+          ...(useThumbs ? [''] : []),
+          r.brand, r.code, r.crmName || r.desc,
+          r.free,
+          r2(r.stockValue),
+          lastSoldStr, dormantStr,
+          r2(r.bandC), r2(r.bandF),
+          r2(r.discount) || 0,
+          r2(r.clearance),
+        ];
+
+        const exRow = ws1.addRow(rowValues);
+        exRow.height = useThumbs ? 56 : 20;
+
+        if (ri % 2 === 1) {
+          exRow.eachCell(cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F9FC' } };
+          });
+        }
+
+        applyRowFormats(exRow, agedNumIdx, agedCurrIdx, agedPctIdx, row => {
+          const bandCCell     = row.getCell(imgOff + 9);
+          const bandFCell     = row.getCell(imgOff + 10);
+          const clearanceCell = row.getCell(imgOff + 12);
+          if (bandCCell.value     != null) bandCCell.font     = { color: { argb: 'FF0891B2' } };
+          if (bandFCell.value     != null) bandFCell.font     = { color: { argb: 'FF7C3AED' } };
+          if (clearanceCell.value != null) {
+            clearanceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E8' } };
+            clearanceCell.font = { bold: true, color: { argb: 'FFB45309' } };
+            clearanceCell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
-        } catch(imgErr) { /* skip image on error */ }
+        });
+
+        if (useThumbs) {
+          try {
+            const resp = await fetch(IMG_PROXY + encodeURIComponent(r.code));
+            if (resp.ok) {
+              const blob = await resp.blob();
+              if (blob.size > 100) {
+                const buf   = await blob.arrayBuffer();
+                const isPng = (blob.type || '').includes('png');
+                const imgId = wb.addImage({ buffer: buf, extension: isPng ? 'png' : 'jpeg' });
+                ws1.addImage(imgId, { tl: { col: 0, row: ri + 1 }, br: { col: 1, row: ri + 2 }, editAs: 'oneCell' });
+              }
+            }
+          } catch(imgErr) { /* skip */ }
+        }
       }
+
+      ws1.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: agedColDefs.length } };
     }
 
-    ws.autoFilter = {
-      from: { row: 1, column: 1 },
-      to:   { row: 1, column: cols.length }
-    };
+    // ════════════════════════════════════════════════════
+    // SHEET 2 — SLOW MOVING STOCK
+    // ════════════════════════════════════════════════════
+    if (slowRows.length) {
+      const ws2 = wb.addWorksheet('Slow Moving Stock', { views: [{ state: 'frozen', ySplit: 1 }] });
 
+      const slowColDefs = [
+        { header: 'Brand',          key: 'brand'    },
+        { header: 'Code',           key: 'code'     },
+        { header: 'Description',    key: 'desc'     },
+        { header: 'Free Stock',     key: 'free'     },
+        { header: '3Mo Sales',      key: 'sales3Mo' },
+        { header: 'Avg/Mo',         key: 'avgMo'    },
+        { header: 'Weeks Cover',    key: 'wksCover' },
+        { header: 'Created',        key: 'created'  },
+        { header: 'Band C (€)',     key: 'bandC'    },
+        { header: 'Band F (€)',     key: 'bandF'    },
+        { header: 'Discount %',     key: 'discount' },
+        { header: 'Clearance (€)',  key: 'clearance'},
+      ];
+
+      const fmtDate = d => d ? (d.getDate() + ' ' + AS_MONTHS[d.getMonth()] + ' ' + d.getFullYear()) : '—';
+
+      const slowPreview = slowRows.map(r => [
+        r.brand, r.code, r.crmName || r.desc,
+        r.free, r.sales3Mo, r2(r.avgMonthly), r2(r.weeksOfCoverage),
+        fmtDate(r.createdDate),
+        r.bandC != null ? r.bandC : '', r.bandF != null ? r.bandF : '',
+        r.discount || 0, r.clearance != null ? r.clearance : '',
+      ]);
+      autoFitCols(ws2, slowColDefs, slowPreview, 8, 48);
+
+      styleHeader(ws2.getRow(1), 'FF0E7490');
+
+      // 0-based column indices
+      const slowNumIdx  = new Set([3, 4, 5, 6]); // Free Stock, 3Mo Sales, Avg/Mo, Wks Cover
+      const slowCurrIdx = new Set([8, 9, 11]);    // Band C, Band F, Clearance
+      const slowPctIdx  = new Set([10]);           // Discount %
+
+      slowRows.forEach((r, ri) => {
+        const rowValues = [
+          r.brand, r.code, r.crmName || r.desc,
+          r.free, r.sales3Mo, r2(r.avgMonthly), r2(r.weeksOfCoverage),
+          fmtDate(r.createdDate),
+          r2(r.bandC), r2(r.bandF),
+          r2(r.discount) || 0,
+          r2(r.clearance),
+        ];
+
+        const exRow = ws2.addRow(rowValues);
+        exRow.height = 20;
+
+        if (ri % 2 === 1) {
+          exRow.eachCell(cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7FEFF' } };
+          });
+        }
+
+        applyRowFormats(exRow, slowNumIdx, slowCurrIdx, slowPctIdx, row => {
+          const wksCoverCell  = row.getCell(7);
+          const bandCCell     = row.getCell(9);
+          const bandFCell     = row.getCell(10);
+          const clearanceCell = row.getCell(12);
+          if (wksCoverCell.value > 26)  wksCoverCell.font = { bold: true, color: { argb: 'FFB91C1C' } };
+          else if (wksCoverCell.value > 12) wksCoverCell.font = { color: { argb: 'FFB45309' } };
+          if (bandCCell.value     != null) bandCCell.font     = { color: { argb: 'FF0891B2' } };
+          if (bandFCell.value     != null) bandFCell.font     = { color: { argb: 'FF7C3AED' } };
+          if (clearanceCell.value != null) {
+            clearanceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E8' } };
+            clearanceCell.font = { bold: true, color: { argb: 'FFB45309' } };
+            clearanceCell.alignment = { vertical: 'middle', horizontal: 'center' };
+          }
+        });
+      });
+
+      ws2.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: slowColDefs.length } };
+    }
+
+    // ── write & download ──────────────────────────────
     const buffer = await wb.xlsx.writeBuffer();
     const blob   = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -12648,7 +12776,11 @@ async function asExportExcel() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 8000);
 
-    showToast('✓ Exported ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' → ' + filename);
+    const msg = [
+      agedRows.length ? agedRows.length + ' aged' : '',
+      slowRows.length ? slowRows.length + ' slow-moving' : '',
+    ].filter(Boolean).join(' + ');
+    showToast('✓ Exported ' + msg + ' lines → ' + filename);
 
   } catch(err) {
     console.error('asExportExcel:', err);
