@@ -2018,6 +2018,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
   <!-- Big summary cards (hidden until data loaded) — cards above tabs like backorder tool -->
   <div id="saaSummaryCards" style="display:none;flex-shrink:0;padding:14px 20px;gap:12px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;"></div>
+  <!-- Forecast KPI health bar (shown only in forecast mode, hidden in state mode) -->
+  <div id="saaFcstKpiBar" style="display:none;flex-shrink:0;padding:0 20px 14px;gap:10px;background:var(--light);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-direction:row;align-items:stretch;"></div>
 
 
   <!-- Table / content area -->
@@ -8378,6 +8380,7 @@ let saaBrands       = [];
 let saaSelBrands    = new Set();    // selected brands — empty = none selected
 let saaView         = 'all';
 let saaForecastStateFilter = 'all';  // 'all' | 'current' | 'tbd' | 'eol'
+let saaForecastKpiFilter   = null;   // null | 'key' | 'ordneeded' | 'stockout' | 'wellcovered'
 let saaExcludeTBD   = false;
 let saaExcludeEOL   = false;
 let saaSalesPeriod  = 3;           // months denominator for avg/month
@@ -8554,7 +8557,7 @@ async function saaExportExcel() {
         { header: nextMonths[2].label + ' LY Actual',       key: 'm3ly',    width: Math.max(20, nextMonths[2].label.length + 10) },
         { header: 'Free Stock',                             key: 'free',    width: 14 },
         { header: 'On Order',                               key: 'onOrder', width: 12 },
-        { header: 'Sug. Order (Q4 Gap)',                    key: 'sugOrd',  width: 22 },
+        { header: 'Sug. Order (' + nextMonths[0].label.split(' ')[0] + '–' + nextMonths[2].label.split(' ')[0] + ' Gap)', key: 'sugOrd', width: 22 },
         { header: '80/20',                                  key: 'key8020', width: 10 },
         { header: 'Status (' + nextMonths[0].label + ')',   key: 'status',  width: Math.max(22, nextMonths[0].label.length + 10) },
       ];
@@ -9125,8 +9128,9 @@ function saaRenderAll() {
   document.getElementById('saaContent').style.display      = 'none';
   document.getElementById('saaTable').style.display        = 'table';
   const _mt = document.getElementById('saaModeToggle'); if (_mt) _mt.style.display = 'flex';
-  const _pb = document.getElementById('saaPredPill'); if (_pb) _pb.style.display = 'none';
+  const _pb = document.getElementById('saaPredPill'); if (_pb) _pb.style.display = 'flex';
   const _cp2 = document.getElementById('saaCachePill'); if (_cp2) _cp2.style.display = 'none';
+  const _kpiBar = document.getElementById('saaFcstKpiBar'); if (_kpiBar) _kpiBar.style.display = 'none';
   const _ma = document.getElementById('saaModeAnalysis'); if (_ma) { _ma.style.background = 'var(--brand)'; _ma.style.color = '#fff'; _ma.style.borderColor = 'var(--border)'; }
   const _mf = document.getElementById('saaModeForecasting'); if (_mf) { _mf.style.background = 'var(--light)'; _mf.style.color = 'var(--text)'; _mf.style.borderColor = 'var(--border)'; }
   const _ml = document.getElementById('saaModeLabel'); if (_ml) { _ml.textContent = '📊 STATE'; _ml.style.color = 'var(--brand)'; }
@@ -9306,13 +9310,27 @@ function saaRenderTable() {
   const fmtInt = v => v != null ? Math.round(v).toLocaleString('en-IE') : '—';
   const TD = 'padding:5px 10px;white-space:nowrap;text-align:center;';
 
+  // Build replacedBy map for State view (same logic as Forecast view)
+  const _stateReplacedByMap = {};
+  for (const _sr of saaData) {
+    const _snrm = normCode(_sr.code);
+    const _srawOld = saaAltSkuOverrides[_snrm] || saaReplacements[_snrm] || '';
+    if (_srawOld) _stateReplacedByMap[normCode(_srawOld)] = _sr.code;
+  }
+
   document.getElementById('saaTableBody').innerHTML = rows.map(r => {
     const freeStyle = r.free < 0 ? 'color:#c0392b;font-weight:700;' : (r.free===0 ? 'color:#d68910;font-weight:600;' : '');
     const projStyle = r.proj != null && r.proj < 0 ? 'color:#c0392b;font-weight:700;' : '';
     const bg = STATUS_BG[r.status] || '';
+    const _stReplacedBy = _stateReplacedByMap[normCode(r.code)] || '';
+    const _stAltRaw = saaAltSkuOverrides[normCode(r.code)] || saaReplacements[normCode(r.code)] || '';
+    const _stAltFromLocal = _stAltRaw && !!(saaAltSkuOverrides[normCode(r.code)]);
+    const _stCodeCell = _stReplacedBy
+      ? `<span style="text-decoration:line-through;opacity:.5;">${escHtml(r.code)}</span><div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaced by ${escHtml(_stReplacedBy)}</div>`
+      : `${escHtml(r.code)}${_stAltRaw ? `<div style="font-size:10px;color:#1d4ed8;font-weight:600;font-family:monospace;margin-top:4px;white-space:normal;">Replaces ${escHtml(_stAltRaw)} ${_stAltFromLocal ? '<span title="Saved in this browser only" style="font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;background:#ede9fe;color:#6d28d9;font-family:sans-serif;vertical-align:middle;">⬆ local</span>' : '<span title="In catalog" style="font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;background:#d1fae5;color:#065f46;font-family:sans-serif;vertical-align:middle;">✔ catalog</span>'}</div>` : ''}`;
     return `<tr style="background:${bg};border-bottom:1px solid #d1d5db;">
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td style="${TD}font-family:monospace;font-weight:700;">${_stCodeCell}</td>
       <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.crmName||r.desc)}">${escHtml(r.desc)}</td>
       <td style="${TD}padding:4px 8px;">
         ${(()=>{const t=(r.crmName||r.desc).toUpperCase();
@@ -9730,13 +9748,31 @@ function saaRenderForecastTable() {
   if (hasCrmData) {
     const _freeByNorm80 = {};
     for (const _r of saaData) _freeByNorm80[normFn(_r.code)] = _r.free || 0;
+    // Pre-compute which replacement SKUs actually have forecast data, so we only
+    // exclude an old SKU from the 80/20 ranking when its replacement genuinely
+    // inherits its demand. If the replacement has zero/null forecast the old SKU's
+    // demand would silently vanish from the ranking — so we keep the old SKU in.
+    const _replacementHasFcst = {};
+    for (const _r2 of saaData) {
+      const _n2  = normFn(_r2.code);
+      const _a2  = saaAltSkuOverrides[_n2] || saaReplacements[_n2] || '';
+      if (!_a2) continue; // not a replacement row
+      const _isE2 = (_r2.crmName||_r2.desc||'').toUpperCase().startsWith('EOL');
+      const _sf2  = _freeByNorm80[_n2] || 0;
+      const _fa2  = (!_isE2 || _a2) && _sf2 < 0 ? Math.abs(_sf2) : 0;
+      const _f2   = saaForecastNextMonths(_r2, nextMonths, _fa2);
+      const _tot2 = _f2 ? _f2.reduce((s,x)=>s+(x&&x.predicted!=null?x.predicted:0),0) : 0;
+      if (_tot2 > 0) _replacementHasFcst[normFn(_a2)] = true; // old code → replacement has data
+    }
+
     const totals = [];
     for (const _r of saaData) {
       const _nm  = normFn(_r.code);
-      // Skip SKUs that have already been superseded by a replacement in the dataset —
-      // their demand is captured by the replacement row, so counting them here would
-      // inflate the 80/20 totals and push genuinely important new SKUs down the ranking.
-      if (replacedByMap[_nm]) continue;
+      // Skip SKUs that have already been superseded by a replacement that has forecast data —
+      // their demand is captured by the replacement row. But if the replacement has no
+      // forecast (no historical sales, no inheritance), keep the old SKU in the ranking
+      // so its demand is not silently lost from the 80/20 calculation.
+      if (replacedByMap[_nm] && _replacementHasFcst[_nm]) continue;
       const _alt = saaAltSkuOverrides[_nm] || saaReplacements[_nm] || '';
       const _sn  = _alt ? normFn(_alt) : _nm;
       const _isE = (_r.crmName||_r.desc||'').toUpperCase().startsWith('EOL');
@@ -9767,6 +9803,109 @@ function saaRenderForecastTable() {
         if (brandTotal > 0 && cumulative / brandTotal >= 0.8) break;
       }
     }
+  }
+
+  // ── Forecast KPI aggregates (computed after 80/20 and fcstCache are ready) ──
+  const _fcstKpi = (() => {
+    let totalFcstUnits = 0, keyCount = 0, orderNeededCount = 0, orderNeededUnits = 0;
+    let stockOutCount = 0, wellCoveredCount = 0;
+    for (const _r of saaData) {
+      const _nm = normCode(_r.code);
+      if (replacedByMap[_nm]) continue; // SKU has been superseded — its demand is under the replacement
+      const _fcst = fcstCache.get(_r.code);
+      if (!_fcst) continue;
+      const _q3tot = _fcst.reduce((s, f) => s + (f && f.predicted != null ? f.predicted : 0), 0);
+      totalFcstUnits += _q3tot;
+      if (eighty20set.has(_r.code)) keyCount++;
+      const _avail = Math.max(0, (_r.free || 0) + (_r.onOrder || 0));
+      const _sugQty = Math.max(0, _q3tot - _avail);
+      if (_sugQty > 0) { orderNeededCount++; orderNeededUnits += _sugQty; }
+      else if (_q3tot > 0) wellCoveredCount++;
+      // Stock-out risk: next month's predicted demand exceeds available stock
+      const _m1 = _fcst[0];
+      if (_m1 && _m1.predicted != null && _m1.predicted > _avail) stockOutCount++;
+    }
+    return { totalFcstUnits, keyCount, orderNeededCount, orderNeededUnits, stockOutCount, wellCoveredCount };
+  })();
+
+  // ── KPI bar row filter (applied here where fcstCache + eighty20set are in scope) ──
+  if (saaForecastKpiFilter) {
+    rows = rows.filter(r => {
+      const _fcstR = fcstCache.get(r.code);
+      const _q3R   = _fcstR ? _fcstR.reduce((s,f)=>s+(f&&f.predicted!=null?f.predicted:0),0) : 0;
+      const _avR   = Math.max(0,(r.free||0)+(r.onOrder||0));
+      const _sugR  = Math.max(0, _q3R - _avR);
+      const _m1R   = _fcstR ? _fcstR[0] : null;
+      if (saaForecastKpiFilter === 'key')         return eighty20set.has(r.code);
+      if (saaForecastKpiFilter === 'ordneeded')   return _q3R > 0 && _sugR > 0;
+      if (saaForecastKpiFilter === 'stockout')    return !!_m1R && _m1R.predicted != null && _m1R.predicted > _avR;
+      if (saaForecastKpiFilter === 'wellcovered') return _q3R > 0 && _sugR <= 0;
+      return true;
+    });
+  }
+
+  // ── Render Forecast KPI bar ──────────────────────────────────────────────
+  const _kpiEl = document.getElementById('saaFcstKpiBar');
+  if (_kpiEl && hasCrmData) {
+    const _rangeLabel = nextMonths[0].label.split(' ')[0] + '–' + nextMonths[2].label;
+    const _kpiCards = [
+      {
+        label: _rangeLabel + ' Forecast',
+        val: Math.round(_fcstKpi.totalFcstUnits).toLocaleString('en-IE'),
+        sub: 'total predicted units',
+        col: '#1a3c6e', icon: '📦',
+        filter: null,
+        tip: 'Total predicted demand across all active SKUs for ' + _rangeLabel
+      },
+      {
+        label: 'Key SKUs',
+        val: _fcstKpi.keyCount,
+        sub: '80/20 demand drivers',
+        col: '#065f46', icon: '⭐',
+        filter: 'key',
+        tip: 'SKUs whose combined forecast accounts for 80% of total demand per brand'
+      },
+      {
+        label: 'Order Needed',
+        val: _fcstKpi.orderNeededCount,
+        sub: Math.round(_fcstKpi.orderNeededUnits).toLocaleString('en-IE') + ' units gap',
+        col: '#b45309', icon: '🛒',
+        filter: 'ordneeded',
+        tip: 'SKUs where free stock + on order does not cover the ' + _rangeLabel + ' forecast'
+      },
+      {
+        label: 'Stock Out Risk',
+        val: _fcstKpi.stockOutCount,
+        sub: nextMonths[0].label + ' demand > stock',
+        col: '#dc2626', icon: '⚠️',
+        filter: 'stockout',
+        tip: 'SKUs where next-month predicted demand exceeds current free stock + on order'
+      },
+      {
+        label: 'Well Covered',
+        val: _fcstKpi.wellCoveredCount,
+        sub: 'stock covers forecast',
+        col: '#15803d', icon: '✅',
+        filter: 'wellcovered',
+        tip: 'SKUs where free stock + on order covers the full ' + _rangeLabel + ' forecast'
+      },
+    ];
+    _kpiEl.innerHTML = _kpiCards.map(c => {
+      const active = saaForecastKpiFilter === c.filter && c.filter !== null;
+      const clickHandler = c.filter ? `onclick="saaForecastKpiFilter=(saaForecastKpiFilter==='${c.filter}'?null:'${c.filter}');saaRenderForecastTable();"` : '';
+      return `<div ${clickHandler} title="${c.tip}"
+        style="background:${active?c.col:'var(--white)'};border-radius:10px;padding:12px 16px;
+               border-bottom:3px solid ${c.col};box-shadow:${active?'0 4px 16px rgba(0,0,0,.18)':'var(--shadow)'};
+               flex:1;min-width:140px;${c.filter?'cursor:pointer;':'cursor:default;'}transition:all .15s;"
+        ${c.filter?`onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.13)'" onmouseout="this.style.boxShadow='${active?'0 4px 16px rgba(0,0,0,.18)':'var(--shadow)'}'"`:''}>
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:${active?'rgba(255,255,255,.8)':c.col};margin-bottom:4px;">${c.icon} ${c.label}</div>
+        <div style="font-size:26px;font-weight:800;color:${active?'#fff':c.col};line-height:1.1;">${c.val}</div>
+        <div style="font-size:10px;color:${active?'rgba(255,255,255,.75)':'var(--muted)'};margin-top:3px;">${c.sub}</div>
+      </div>`;
+    }).join('');
+    _kpiEl.style.display = 'flex';
+  } else if (_kpiEl) {
+    _kpiEl.style.display = 'none';
   }
 
   const TD  = 'padding:5px 10px;white-space:nowrap;text-align:center;';
@@ -9811,6 +9950,21 @@ function saaRenderForecastTable() {
   // Seasonal index is now rendered as a wide card in saaSummaryCards (see above)
   const indicesHtml = '';
 
+  // Dynamic label for the Suggested Order column — reflects which months are actually shown
+  // Computes "Oct–Dec" style range, or "Q1/Q2" if the months span a quarter boundary
+  const _qLabel = (() => {
+    const m0 = nextMonths[0].month, m2 = nextMonths[2].month;
+    const y0 = nextMonths[0].year, y2 = nextMonths[2].year;
+    const shortM = m => MNAMES[m].slice(0,3);
+    const rangeStr = y0 === y2
+      ? shortM(m0) + '–' + shortM(m2)
+      : shortM(m0) + '–' + shortM(m2) + ' \'' + String(y2).slice(2);
+    // Quarter of middle month
+    const midM = nextMonths[1].month;
+    const qNum = Math.floor(midM / 3) + 1;
+    return `Q${qNum} gap (${rangeStr})`;
+  })();
+
   document.getElementById('saaTableHead').innerHTML = banner + indicesHtml + `<tr>
     <th style="${TH}width:36px;padding:4px;" title="Uncheck to exclude from export"><input type="checkbox" id="saaFcstCheckAll" checked title="Select all / deselect all" onchange="document.querySelectorAll('.saa-fcst-chk').forEach(cb=>{cb.checked=this.checked;const c=cb.dataset.code;if(this.checked)saaFcstExcluded.delete(c);else saaFcstExcluded.add(c);});"></th>
     <th style="${TH}width:80px;">Brand</th>
@@ -9823,7 +9977,7 @@ function saaRenderForecastTable() {
     <th style="${TH}width:95px;">${nextMonths[2].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted · LY</span></th>
     <th style="${TH}width:80px;background:#e8f5e9;">Free Stock</th>
     <th style="${TH}width:80px;background:#e3f0fb;">On Order</th>
-    <th style="${TH}width:100px;background:#fef9c3;" title="Suggested order quantity = max(0, Q4 forecast total − (free stock + on order))">Sug. Order<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#92400e;">Q4 total gap</span></th>
+    <th style="${TH}width:100px;background:#fef9c3;" title="Suggested order quantity = max(0, forecast total for ${nextMonths[0].label}–${nextMonths[2].label} − (free stock + on order))">Sug. Order<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#92400e;">${_qLabel}</span></th>
     <th style="${TH}width:70px;" title="80/20 rule: SKUs whose combined Q4 forecast accounts for 80% of total predicted demand across all loaded brands">80/20</th>
     <th style="${TH}width:105px;">Status for ${nextMonths[0].label}<br><span style="font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;color:#4b5563;">predicted vs free+order</span></th>
   </tr>`;
@@ -9887,9 +10041,9 @@ function saaRenderForecastTable() {
     let sugOrderTd  = `<td style="${TD}background:#fef9c3;color:var(--muted);font-size:10px;">—</td>`;
     if (sugQty !== null) {
       if (sugQty > 0) {
-        sugOrderTd = `<td style="${TD}background:#fef9c3;color:#b45309;font-weight:700;" title="Order ${Math.round(sugQty).toLocaleString('en-IE')} units to cover Q4 forecast of ${q4Total.toLocaleString('en-IE')}">${Math.round(sugQty).toLocaleString('en-IE')}</td>`;
+        sugOrderTd = `<td style="${TD}background:#fef9c3;color:#b45309;font-weight:700;" title="Order ${Math.round(sugQty).toLocaleString('en-IE')} units to cover ${nextMonths[0].label}–${nextMonths[2].label} forecast of ${q4Total.toLocaleString('en-IE')}">${Math.round(sugQty).toLocaleString('en-IE')}</td>`;
       } else {
-        sugOrderTd = `<td style="${TD}background:#fef9c3;color:#16a34a;font-weight:700;" title="Stock covers Q4 forecast of ${q4Total.toLocaleString('en-IE')}">✓</td>`;
+        sugOrderTd = `<td style="${TD}background:#fef9c3;color:#16a34a;font-weight:700;" title="Stock covers ${nextMonths[0].label}–${nextMonths[2].label} forecast of ${q4Total.toLocaleString('en-IE')}">✓</td>`;
       }
     }
 
