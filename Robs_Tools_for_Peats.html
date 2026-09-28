@@ -21684,11 +21684,14 @@ function parseRonaynesPage(items, existingBounds) {
       if (it) headerY = Math.min(headerY, it.y);
     });
     detectedBounds = {
-      code:  codeItem  ? codeItem.x  - 3 : (refItem  ? refItem.x  + 30 : bounds.code),
-      desc:  descItem  ? descItem.x  - 3 : (codeItem ? codeItem.x + 30 : bounds.desc),
-      qty:   qtyItem   ? qtyItem.x   - 3 : bounds.qty,
-      price: priceItem ? priceItem.x - 3 : bounds.price,
-      total: totalItem ? totalItem.x - 3 : bounds.total
+      code:  codeItem  ? codeItem.x  - 3  : (refItem  ? refItem.x  + 30 : bounds.code),
+      desc:  descItem  ? descItem.x  - 3  : (codeItem ? codeItem.x + 30 : bounds.desc),
+      qty:   qtyItem   ? qtyItem.x   - 3  : bounds.qty,
+      // Use larger left-edge offsets for right-aligned numeric columns:
+      // right-aligned numbers start further left than the header text, so a small -3
+      // offset causes wide numbers (6+ chars) to spill into the wrong bucket.
+      price: priceItem ? priceItem.x - 10 : bounds.price,
+      total: totalItem ? totalItem.x - 8  : bounds.total
     };
     bounds = detectedBounds;
     showToast('📄 Ronaynes cols: code=' + Math.round(bounds.code) + ' desc=' + Math.round(bounds.desc) + ' qty=' + Math.round(bounds.qty) + ' price=' + Math.round(bounds.price), 4000);
@@ -21729,7 +21732,8 @@ function parseRonaynesPage(items, existingBounds) {
       } else if (x < bounds.desc) {
         // Code column — ignored per spec
       } else if (x < bounds.qty) {
-        descParts.push(s);
+        // Skip unit-type tokens (Each / EA / PCS) that sit in the Case/Units column
+        if (!/^(each|ea|pcs|unit|units)$/i.test(s)) descParts.push(s);
       } else if (x < bounds.price) {
         n = parseFloat(s.replace(/,/g, ''));
         if (!isNaN(n)) qtyVal = n;
@@ -22804,7 +22808,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v231 · 28 Sep 2026 · Add: SONY EXC brand in SOA Tools; Forecast cards compacted to one row with centred labels; Hub scrolls at narrow widths; Export tool Exclude TBD/EOL pill';
+const TOOL_BUILD = 'v232 · 28 Sep 2026 · Fix: Ronaynes parser — right-aligned price/total columns now map correctly; "Each" removed from descriptions';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
