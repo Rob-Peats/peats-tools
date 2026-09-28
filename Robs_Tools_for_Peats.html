@@ -8491,9 +8491,10 @@ function exportPushCrmInfo(frameEl) {
 }
 
 /** Fetches CRM name (ShortDescription/Description) + Created date for the given SKU list,
- *  then pushes the results to the export iframe as { normCode → {crmName, createdDate} }.
- *  Uses batches of 50 SKUs with 5 concurrent requests to keep total time under ~30 seconds.
- *  Triggered when the export tool's Status toggle is switched on. */
+ *  then pushes the results to the export iframe as { code → {crmName, createdDate} }.
+ *  Mirrors the Stock Management tool's fetchCrmNames() approach: sequential batches of 20,
+ *  try ShortDescription for ALL batches first, fall back to Description if that fails.
+ *  Also selects Created date for NEW-badge detection. */
 let _exportCrmFetchInProgress = false;
 async function exportFetchCrmStatus(skus) {
   const ef = document.getElementById('exportFrame');
@@ -8507,7 +8508,7 @@ async function exportFetchCrmStatus(skus) {
   _exportCrmFetchInProgress = true;
 
   try {
-    // Build the result map — seed with anything already in memory from Aged Stock tool
+    // Seed from anything already cached by the Aged Stock / Stock Management tools
     const crmInfo = {};
     asStockMap.forEach(function(v, k) {
       crmInfo[k] = { crmName: v.crmName || '', createdDate: v.createdDate ? v.createdDate.toISOString() : null };
@@ -8516,72 +8517,63 @@ async function exportFetchCrmStatus(skus) {
       if (!crmInfo[k]) crmInfo[k] = { crmName: '', createdDate: v.createdDate ? v.createdDate.toISOString() : null };
     });
 
-    // Push whatever we already have instantly (so previously-loaded brands show immediately)
+    // Push any cached data immediately so already-known brands render at once
     if (Object.keys(crmInfo).length > 0) {
       try { ef.contentWindow.postMessage({ type: 'peats-crm-status-data', data: Object.assign({}, crmInfo) }, '*'); } catch(e) {}
     }
 
-    // Only fetch SKUs we don't already have CRM data for
+    // Only fetch SKUs we don't already have data for
     const toFetch = (skus || []).filter(function(s) { return s && !crmInfo[s]; });
     if (!toFetch.length) {
-      // All data already cached — tell iframe we're done
       try { ef.contentWindow.postMessage({ type: 'peats-crm-status-done' }, '*'); } catch(e) {}
       return;
     }
 
-    // Prospect365 OData requires a $filter. Batch into 50 SKUs per request.
-    // Try ShortDescription first, fall back to Description.
-    // Run CONCURRENCY batches in parallel to finish in ~30s instead of ~5 minutes.
-    const BATCH = 50;
-    const CONCURRENCY = 5;
+    // Sequential batches of 20 — same as Stock Management's fetchCrmNames().
+    // Try ShortDescription,Created for ALL batches first; if any batch fails,
+    // retry everything with Description,Created.
+    const BATCH = 20;
+    const fields = ['ShortDescription', 'Description'];
 
-    // Build all batch arrays upfront
-    const batches = [];
-    for (let i = 0; i < toFetch.length; i += BATCH) {
-      batches.push(toFetch.slice(i, i + BATCH));
-    }
+    for (var fi = 0; fi < fields.length; fi++) {
+      const field = fields[fi];
+      var allOk = true;
+      const tmpInfo = {};
 
-    // Helper: fetch one batch, try ShortDescription then Description
-    async function fetchOneBatch(batch) {
-      const skuF = batch.map(function(s) { return "ProductItemId eq '" + s.replace(/'/g, "''") + "'"; }).join(' or ');
-      const fields = ['ShortDescription', 'Description'];
-      for (var fi = 0; fi < fields.length; fi++) {
-        const field = fields[fi];
-        const url = CRM_ODATA_BASE + '/ProductItems?$filter=' + encodeURIComponent(skuF)
+      for (let i = 0; i < toFetch.length; i += BATCH) {
+        const batch = toFetch.slice(i, i + BATCH);
+        const filterStr = batch.map(function(s) {
+          return "ProductItemId eq '" + s.replace(/'/g, "''") + "'";
+        }).join(' or ');
+        const url = CRM_ODATA_BASE + '/ProductItems?$filter=' + encodeURIComponent(filterStr)
           + '&$select=ProductItemId,' + field + ',Created';
         try {
-          const resp = await crmFetch(url, {
+          const resp = await fetch(url, {
             headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
           });
-          if (!resp.ok) continue;  // try next field
+          if (!resp.ok) { allOk = false; break; }
           const d = await resp.json();
           (d.value || []).forEach(function(item) {
-            const code = item.ProductItemId;
-            if (!code) return;
-            crmInfo[code] = { crmName: item[field] || '', createdDate: item.Created || null };
+            if (!item.ProductItemId) return;
+            tmpInfo[item.ProductItemId] = {
+              crmName:     item[field] || '',
+              createdDate: item.Created || null
+            };
           });
-          return;  // success — stop trying fields
-        } catch(e) { /* try next field */ }
+        } catch(e) { allOk = false; break; }
       }
+
+      if (allOk && Object.keys(tmpInfo).length > 0) {
+        // This field worked — merge into crmInfo and send to iframe
+        Object.assign(crmInfo, tmpInfo);
+        break;
+      }
+      // Otherwise loop again with the next field (Description)
     }
 
-    // Process all batches in parallel groups of CONCURRENCY
-    // Push progress to iframe after each group so badges appear incrementally
-    for (let g = 0; g < batches.length; g += CONCURRENCY) {
-      const group = batches.slice(g, g + CONCURRENCY).map(fetchOneBatch);
-      await Promise.all(group);
-
-      // Push progress after each group
-      const ef2 = document.getElementById('exportFrame');
-      if (ef2 && ef2.contentWindow) {
-        try { ef2.contentWindow.postMessage({ type: 'peats-crm-status-data', data: Object.assign({}, crmInfo) }, '*'); } catch(e) {}
-      }
-    }
-
-    // Final push — guarantees the iframe receives a done signal even if last group already pushed
     const ef2 = document.getElementById('exportFrame');
     if (ef2 && ef2.contentWindow) {
-      try { ef2.contentWindow.postMessage({ type: 'peats-crm-status-data', data: crmInfo }, '*'); } catch(e) {}
+      try { ef2.contentWindow.postMessage({ type: 'peats-crm-status-data', data: Object.assign({}, crmInfo) }, '*'); } catch(e) {}
       try { ef2.contentWindow.postMessage({ type: 'peats-crm-status-done' }, '*'); } catch(e) {}
     }
 
