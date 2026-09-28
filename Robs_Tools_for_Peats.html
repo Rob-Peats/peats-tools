@@ -21652,7 +21652,7 @@ function parseRonaynesPage(items, existingBounds) {
   // Last-resort: hardcoded defaults so a single-page PDF with unusual layout still attempts parsing.
 
   // Hardcoded defaults as absolute last resort (based on typical Ronaynes layout)
-  var DEFAULT_BOUNDS = { code: 115, desc: 178, qty: 395, price: 455, total: 515 };
+  var DEFAULT_BOUNDS = { code: 93, desc: 178, qty: 395, price: 455, total: 515 };
   var bounds = existingBounds || DEFAULT_BOUNDS;
   var detectedBounds = null;
   var headerY = null;
@@ -21684,7 +21684,10 @@ function parseRonaynesPage(items, existingBounds) {
       if (it) headerY = Math.min(headerY, it.y);
     });
     detectedBounds = {
-      code:  codeItem  ? codeItem.x  - 3  : (refItem  ? refItem.x  + 30 : bounds.code),
+      // Use a wider offset for code: Code-column values (x≈102) sit left of the header (x=108),
+      // so -3 isn't enough — use -15 to place the boundary between Your Ref values (~x≤75)
+      // and the Code values (~x=102), ensuring Code column is correctly ignored.
+      code:  codeItem  ? codeItem.x  - 15 : (refItem  ? refItem.x  + 60 : bounds.code),
       desc:  descItem  ? descItem.x  - 3  : (codeItem ? codeItem.x + 30 : bounds.desc),
       qty:   qtyItem   ? qtyItem.x   - 3  : bounds.qty,
       // Use larger left-edge offsets for right-aligned numeric columns:
@@ -22808,7 +22811,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v232 · 28 Sep 2026 · Fix: Ronaynes parser — right-aligned price/total columns now map correctly; "Each" removed from descriptions';
+const TOOL_BUILD = 'v232 · 28 Sep 2026 · Fix: Ronaynes — correct prices/qty; "Each" stripped from descriptions; Code column now correctly ignored (SKU only shows Your Ref.)';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
