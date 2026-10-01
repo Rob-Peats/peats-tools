@@ -3329,11 +3329,16 @@ function parseCatalog(rows, name, wb, rawBuf) {
 
   const cfg = RETAILERS[state.retailerId];
   if (cfg && cfg.allowPriceUpdate) {
-    document.getElementById('priceToggles').style.display = 'flex';
-    document.getElementById('retailerToggleLabel').textContent = cfg.name;
+    // Guard against catalog auto-loading before the Order Conversion Tool DOM is rendered
+    const _ptEl  = document.getElementById('priceToggles');
+    const _tlEl  = document.getElementById('retailerToggleLabel');
+    const _tcEl  = document.getElementById('toggleCost');
+    const _trEl  = document.getElementById('toggleRetail');
+    if (_ptEl) _ptEl.style.display = 'flex';
+    if (_tlEl) _tlEl.textContent = cfg.name;
     const prefs = getPrefs();
-    document.getElementById('toggleCost').checked   = prefs.updateCost;
-    document.getElementById('toggleRetail').checked = prefs.updateRetail;
+    if (_tcEl) _tcEl.checked = prefs.updateCost;
+    if (_trEl) _trEl.checked = prefs.updateRetail;
   }
 
   if (!count) {
@@ -22811,7 +22816,7 @@ async function downloadElectroCityCRM(data) {
 }
 
 // Build identifier — surfaced in the footer and console so the running copy is never ambiguous
-const TOOL_BUILD = 'v238 · 30 Sep 2026';
+const TOOL_BUILD = 'v239 · 01 Oct 2026';
 
 function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
