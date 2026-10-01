@@ -360,10 +360,7 @@ main { padding: 20px 24px; max-width: 1700px; margin: 0 auto; }
 .toolbar-slot .og-toolbar-pill { pointer-events: auto; }
 .toolbar-slot > * { pointer-events: auto; }
 .toolbar-slot:empty { display: none; }
-/* Not enough room to overlay — fall back to normal flow */
-@media (max-width: 1250px) {
-  .toolbar-slot { position: static; transform: none; flex: 1 0 100%; margin-top: 8px; }
-}
+/* v240 — slot always stays absolutely centred; title truncates around it */
 .tb-group {
   display: inline-flex; align-items: center; gap: 0;
   background: var(--light); border: 1px solid var(--border); border-radius: var(--r-md);
@@ -1448,7 +1445,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div id="boViewRow" style="display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--white);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
       <!-- Spacer left so tabs end up centred -->
       <div style="flex:1"></div>
-      <div id="boViewTabs" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div>
+      <div id="boViewTabs" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;justify-content:center;padding-bottom:2px"></div>
       <!-- Search pushed to far right -->
       <div style="flex:1;display:flex;justify-content:flex-end">
         <div class="search-x-wrap">
