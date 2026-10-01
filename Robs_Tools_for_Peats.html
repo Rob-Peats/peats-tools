@@ -360,7 +360,7 @@ main { padding: 20px 24px; max-width: 1700px; margin: 0 auto; }
 .toolbar-slot .og-toolbar-pill { pointer-events: auto; }
 .toolbar-slot > * { pointer-events: auto; }
 .toolbar-slot:empty { display: none; }
-/* v240 — slot always stays absolutely centred; title truncates around it */
+/* v241 — predecessor modal: merged Push to Catalog + Save Changes into one button */
 .tb-group {
   display: inline-flex; align-items: center; gap: 0;
   background: var(--light); border: 1px solid var(--border); border-radius: var(--r-md);
@@ -10360,9 +10360,8 @@ function saaShowPredecessorModal() {
       </table>
     </div>
     <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;align-items:center;">
-      <span style="font-size:11px;color:var(--muted);margin-right:auto;">Save keeps in browser only — Push shares with all users via catalog.</span>
-      <button id="saaPushCountBtn" onclick="saaSaveReplacementsToCatalog()" style="padding:7px 18px;border-radius:8px;background:#065f46;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;" title="Merge all replacements into the catalog Replacements tab and push to GitHub">Push to Catalog</button>
-      <button onclick="saaSavePredecessors()" style="padding:7px 20px;border-radius:8px;background:var(--brand);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;">Save Changes</button>
+      <span id="saaPredHint" style="font-size:11px;color:var(--muted);margin-right:auto;">Saves locally and pushes to catalog so all users get the update.</span>
+      <button id="saaPushCountBtn" onclick="saaSaveReplacementsToCatalog()" style="padding:7px 20px;border-radius:8px;background:var(--brand);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;">Save Changes</button>
       <button onclick="document.getElementById('saaPredModal').remove()" style="padding:7px 16px;border-radius:8px;background:var(--light);color:var(--text);font-weight:600;font-size:13px;border:1px solid var(--border);cursor:pointer;">Cancel</button>
     </div>
   </div>`;
@@ -10371,7 +10370,7 @@ function saaShowPredecessorModal() {
 }
 
 function saaUpdatePushCount() {
-  // Update Push button label with count of entries that differ from catalog
+  // Update Save button label with count of unsaved changes
   let count = 0;
   document.querySelectorAll('#saaPredModal input[data-sku]').forEach(function(inp) {
     const norm = normCode(inp.getAttribute('data-sku'));
@@ -10380,7 +10379,15 @@ function saaUpdatePushCount() {
     if (val !== catalogVal) count++;
   });
   const btn = document.getElementById('saaPushCountBtn');
-  if (btn) btn.textContent = count > 0 ? `Push ${count} Change${count===1?'':'s'}` : 'Push to Catalog';
+  if (btn) btn.textContent = count > 0 ? `Save ${count} Change${count===1?'':'s'}` : 'Save Changes';
+  // Update hint based on GitHub PAT availability
+  const hint = document.getElementById('saaPredHint');
+  if (hint) {
+    const hasPat = !!localStorage.getItem('peats_gh_pat');
+    hint.textContent = hasPat
+      ? 'Saves locally and pushes to catalog so all users get the update.'
+      : 'Saves locally — connect GitHub PAT to share with all users.';
+  }
 }
 
 function saaSavePredecessors() {
