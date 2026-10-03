@@ -360,7 +360,8 @@ main { padding: 20px 24px; max-width: 1700px; margin: 0 auto; }
 .toolbar-slot .og-toolbar-pill { pointer-events: auto; }
 .toolbar-slot > * { pointer-events: auto; }
 .toolbar-slot:empty { display: none; }
-/* v241 — predecessor modal: merged Push to Catalog + Save Changes into one button */
+/* v243 — thumbnail hover preview on SKU cells in aged/slow-stock tables */
+/* v242 — status badge removed from SKU cell (STATUS col only); OG retailer no longer auto-restores */
 .tb-group {
   display: inline-flex; align-items: center; gap: 0;
   background: var(--light); border: 1px solid var(--border); border-radius: var(--r-md);
@@ -2116,6 +2117,28 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
      Prefix  : as
      ════════════════════════════════════════════════════ -->
 <div id="tool-agedstock" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
+
+  <!-- v243: floating thumbnail preview panel (positioned by JS) -->
+  <div id="asCatalogPreview" style="
+    display:none;
+    position:fixed;
+    z-index:9999;
+    background:#fff;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    box-shadow:0 8px 32px rgba(0,0,0,.22);
+    padding:8px;
+    pointer-events:none;
+    transition:opacity .12s ease;
+    opacity:0;
+    max-width:1016px;
+  ">
+    <img id="asCatalogPreviewImg" src="" alt=""
+      style="display:block;width:1000px;max-width:80vw;height:auto;border-radius:6px;background:#f3f4f6;"
+      onerror="document.getElementById('asCatalogPreview').style.display='none';">
+    <div id="asCatalogPreviewLabel"
+      style="margin-top:5px;font-size:10px;font-family:monospace;font-weight:700;color:#6b7280;text-align:center;letter-spacing:.04em;"></div>
+  </div>
 
   <!-- ── Toolbar ── -->
   <div class="controls-top" style="background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;">
@@ -5458,15 +5481,14 @@ function renderTable() {
         const _vnm   = normCode(effVal || val);
         const _vinCat = !!(_vnm && state.catalogNorm && state.catalogNorm[_vnm]);
         const _vcrmName = (_vnm && ogCrmNameMap[_vnm]) || null;
-        const _catTagHtml = `<span style="display:block;margin-top:2px">${crmBadgeSpan(_vcrmName, _vinCat)}</span>`;
+        // v242: badge removed from SKU cell — it already shows in the dedicated STATUS column
         if (effVal && effVal.toUpperCase() !== val.toUpperCase()) {
           return `<td title="${val.replace(/"/g,'&quot;')} → ${effVal.replace(/"/g,'&quot;')}">`
             + `<span style="display:block;font-size:10px;color:var(--muted);text-decoration:line-through;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(val)}</span>`
             + `<span style="display:block;font-size:12px;font-weight:600;color:var(--brand);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(effVal)}</span>`
-            + _catTagHtml
             + `</td>`;
         }
-        return `<td title="${val.replace(/"/g,'&quot;')}"><div class="trunc-cell ${cls}"${widthSt}>${val}</div>${_catTagHtml}</td>`;
+        return `<td title="${val.replace(/"/g,'&quot;')}"><div class="trunc-cell ${cls}"${widthSt}>${val}</div></td>`;
       }
       return `<td title="${val.replace(/"/g,'&quot;')}"><div class="trunc-cell ${cls}"${widthSt}>${val}</div></td>`;
     }).join('');
@@ -12241,7 +12263,7 @@ function asRenderAgedTable() {
       <td style="${TD}padding:4px 8px;"><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="asToggleSelect('${r.code.replace(/'/g,"\'")}')" style="cursor:pointer;"></td>
       <td style="${TD}padding:4px 8px;">${stateBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:10px;opacity:.65;vertical-align:middle;">⚡</span>' : ''}</td>
       <td style="${TD}font-size:11px;color:var(--muted);">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td data-img-sku="${r.code}" style="${TD}font-family:monospace;font-weight:700;cursor:default;">${escHtml(r.code)}</td>
       <td style="${TD}">${sourceBadge}</td>
       <td style="padding:5px 10px;text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
@@ -12390,7 +12412,7 @@ function asRenderSlowTable() {
       <td style="${TD}"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="asToggleSelectSlow('${r.code}')" style="cursor:pointer;"></td>
       <td style="${TD}">${stateBadge}${asCachedSkus.has(r.code) ? ' <span title="Loaded from 7-day local cache" style="font-size:10px;opacity:.65;vertical-align:middle;">⚡</span>' : ''}</td>
       <td style="${TD}font-size:11px;color:var(--muted);text-align:left;">${escHtml(r.brand)}</td>
-      <td style="${TD}font-family:monospace;font-weight:700;">${escHtml(r.code)}</td>
+      <td data-img-sku="${r.code}" style="${TD}font-family:monospace;font-weight:700;cursor:default;">${escHtml(r.code)}</td>
       <td style="${TD}">${slowSrcBadge}</td>
       <td style="padding:5px 8px;text-align:left;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${escHtml(r.crmName || r.desc)}">${escHtml(r.crmName || r.desc)}</td>
@@ -12410,6 +12432,75 @@ function asRenderSlowTable() {
   }).join('') ||
   `<tr><td colspan="${colSpan}" style="padding:30px;text-align:center;color:var(--muted);">No slow moving stock found — all products are within 8 weeks cover.</td></tr>`;
 }
+
+// ── v243: Thumbnail hover preview ────────────────────────────────────────────
+(function asInitImgPreview() {
+  const DELAY   = 200;   // ms before showing
+  const MARGIN  = 14;    // px gap from the hovered cell
+  const panel   = document.getElementById('asCatalogPreview');
+  const img     = document.getElementById('asCatalogPreviewImg');
+  const label   = document.getElementById('asCatalogPreviewLabel');
+  if (!panel || !img) return;
+
+  let timer = null;
+
+  function showPreview(td, sku) {
+    const cat = (typeof state !== 'undefined') && state.catalog && state.catalog[sku];
+    const url = cat && (cat.imgUrl1 || cat.imgUrl2 || cat.imgUrl3 || cat.imgUrl4);
+    if (!url) return;
+
+    img.src = url;
+    label.textContent = sku;
+
+    // Position: measure after brief show to get real dimensions
+    panel.style.display = 'block';
+    panel.style.opacity = '0';
+
+    requestAnimationFrame(() => {
+      const rect    = td.getBoundingClientRect();
+      const pw      = panel.offsetWidth  || 1016;
+      const ph      = panel.offsetHeight || 200;
+      const vw      = window.innerWidth;
+      const vh      = window.innerHeight;
+
+      // Prefer showing to the right; flip left if it would clip
+      let left = rect.right + MARGIN;
+      if (left + pw > vw - 8) left = rect.left - pw - MARGIN;
+      if (left < 8) left = 8;
+
+      // Prefer aligning top edge with cell; shift up if clipping bottom
+      let top = rect.top;
+      if (top + ph > vh - 8) top = vh - ph - 8;
+      if (top < 8) top = 8;
+
+      panel.style.left = left + 'px';
+      panel.style.top  = top  + 'px';
+      panel.style.opacity = '1';
+    });
+  }
+
+  function hidePreview() {
+    clearTimeout(timer);
+    timer = null;
+    panel.style.opacity = '0';
+    setTimeout(() => { if (panel.style.opacity === '0') panel.style.display = 'none'; }, 130);
+  }
+
+  // Event delegation — covers both aged and slow tables
+  document.addEventListener('mouseover', function(e) {
+    const td = e.target.closest('td[data-img-sku]');
+    if (!td) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => showPreview(td, td.dataset.imgSku), DELAY);
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    const td = e.target.closest('td[data-img-sku]');
+    if (!td) return;
+    // Only hide if we're actually leaving the cell (not moving to a child)
+    if (!td.contains(e.relatedTarget)) hidePreview();
+  });
+})();
 
 // ── Slow Moving row selection (v115) ─────────────────────────────────────────
 
@@ -17528,18 +17619,7 @@ const SOA2_B64 = 'PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CjxtZXRhIG
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('retailerSelect').classList.add('unselected');
   document.getElementById('convRetailerSelect').classList.add('unselected');
-  // Restore last used retailer
-  try {
-    const lastR = localStorage.getItem('peats_last_retailer');
-    if (lastR) {
-      const sel = document.getElementById('retailerSelect');
-      if (sel && [...sel.options].some(o => o.value === lastR)) {
-        sel.value = lastR;
-        sel.classList.remove('unselected');
-        sel.dispatchEvent(new Event('change'));
-      }
-    }
-  } catch(e) {}
+  // v242: retailer dropdown always starts blank — no auto-restore of last used retailer
   // Hub is visible by default (tool divs are hidden)
 
   // Export iframe is initialised lazily in launchTool('export') so the catalog
