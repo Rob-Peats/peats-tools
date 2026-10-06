@@ -657,8 +657,10 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
   text-transform: uppercase; letter-spacing: .04em;
 }
+@keyframes crm-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
 .crm-status-ready   { background: var(--success-bg); color: var(--success-text); }
-.crm-status-done    { background: #e0f2fe; color: #0369a1; }
+.crm-status-open    { background: #fef9c3; color: #854d0e; animation: crm-pulse 1.2s ease-in-out infinite; }
+.crm-status-done    { background: #dcfce7; color: #15803d; }
 .crm-status-error   { background: #fee2e2; color: #b91c1c; }
 .crm-btn-copy {
   background: var(--light); border: 1px solid var(--border); color: var(--text);
@@ -17414,6 +17416,7 @@ function renderMarlboroPreview(data) {
     } else {
       priceCell = '<td style="text-align:center">€' + p.price.toFixed(2) + '</td>';
     }
+    var retailCell = showRetail ? '<td style="text-align:center">' + (hasRetailInfo ? '€' + entry.retail.toFixed(2) : '<span style="color:var(--muted)">—</span>') + '</td>' : '';
     var marginCell = showMarginCol
       ? '<td style="text-align:right;font-size:12px;color:' + (margin !== null ? (margin < 0 ? 'var(--red)' : 'var(--green)') : 'var(--muted)') + '">'
         + (margin !== null ? margin.toFixed(1) + '%' : '—') + '</td>'
@@ -29791,7 +29794,7 @@ function showCrmPushQueue() {
           });
           const ssVal  = (d.products || []).reduce((a, p) => a + (p.totalCost || 0), 0);
           const ssCode = d.accountCode || '';
-          const ssBad  = state.catalogName ? ssLines.filter(l => resolveCode(l.sku, rid).status === 'unmatched').length : 0;
+          const ssBad  = state.catalogName ? ssLines.filter(l => l.sku && l.sku.trim() && resolveCode(l.sku, rid).status === 'unmatched').length : 0;
           ssBranches.push({
             branchCode: ssCode,
             branchName: 'Soundstore ' + (d.branchName || ''),
