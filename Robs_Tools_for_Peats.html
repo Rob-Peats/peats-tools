@@ -2441,6 +2441,111 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 <div id="toast"></div>
 
 <script>
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║               ROB'S TOOLS FOR PEATS — TABLE OF CONTENTS                    ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  HTML TOOL PANELS (div#tool-*)                                              ║
+// ║    L1067  tool-crmsettings      CRM Settings / PAT config                  ║
+// ║    L1305  tool-webimport        Web Assets Importer                         ║
+// ║    L1364  tool-backorder        Backorder Tool                              ║
+// ║    L1491  tool-generator        Order Generator                             ║
+// ║    L1662  tool-conversion       Order Conversion (OC) Tool                  ║
+// ║    L1974  tool-soa / tool-soa2  SOA Template Tools (iframes)               ║
+// ║    L1984  tool-stockanalysis    Stock Analysis Tool                         ║
+// ║    L2130  tool-agedstock        Aged Stock Tool                             ║
+// ║    L2328  tool-brandengagement  Brand Engagement Tool                       ║
+// ║    L2437  tool-export           Export from Catalogue (iframe / EXPORT_B64) ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  CORE CONFIGURATION & STATE                                                 ║
+// ║    L2462  RETAILER CONFIGS      const RETAILERS — all retailer definitions  ║
+// ║    L2734  USERNAME GATE         Login / username prompt                     ║
+// ║    L2790  GITHUB CONFIGURATION  Repo / branch / path constants              ║
+// ║    L2836  githubLoadCatalog()   Auto-load catalog from GitHub on startup    ║
+// ║    L2893  GitHub push           Push updated catalog back to GitHub         ║
+// ║    L2971  const state = {}      Central shared state object                 ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  CATALOG & FILE HANDLING                                                    ║
+// ║    L2997  CONTROLS              Catalog drag-drop, file input wiring        ║
+// ║    L3110  DRAG & DROP           Generic drop zone helpers                   ║
+// ║    L3156  FILE PARSING          parseCatalog() — XLSX → state              ║
+// ║    L3215  parseCatalog()        Main catalog parse entry point              ║
+// ║    L3402  BRAND FILTER          Brand filter pill logic                     ║
+// ║    L3531  Telfords parse        Custom Telfords PO parser                   ║
+// ║    L3594  Redmonds parse        Custom Redmonds PO parser                   ║
+// ║    L3820  MULTI-REPORT MERGE    Merge multiple report files                 ║
+// ║    L4026  CATALOG LOOKUP        catalogLookup() / normCode()                ║
+// ║    L4037  CODE MATCHING ENGINE  SKU matching & normalisation                ║
+// ║    L7788  importReplacementsFromWorkbook()  Build replacementsOldToNew map  ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  ORDER GENERATOR TOOL                                                       ║
+// ║    L4772  SUGGESTED ORDER       Order suggestion logic                      ║
+// ║    L4777  EXISTING BACKORDERS   BO integration for Order Generator          ║
+// ║    L5014  SHOW / RESET RESULTS  Show/hide results panels                   ║
+// ║    L5059  SUMMARY CARDS         Summary card rendering                      ║
+// ║    L5162  CODE CHECK            Order Generator code check toolbar          ║
+// ║    L5255  TABLE RENDERING       OG table render functions                   ║
+// ║    L5566  EXCEL DOWNLOAD        OG Excel export                             ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  BACKORDER & BO OVERLAY                                                     ║
+// ║    L6194  BACKORDER TOOLS       Core BO tool functions                      ║
+// ║    L6203  CONV BACKORDER OVERLAY  BO overlay for OC tool (convBoMap)        ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  CRM & UTILS                                                                ║
+// ║    L7413  CRM DOWNLOAD          CRM push / per-branch file generation       ║
+// ║    L7500  UTILS                 Shared helpers (escHtml, normCode, etc.)    ║
+// ║    L7503  CHECKBOX / EXCLUSION  Row exclusion toggle helpers                ║
+// ║    L7631  EXCLUSION MANAGER     Exclusion manager modal                     ║
+// ║    L7986  HUB NAVIGATION        launchTool(), hub routing, theme            ║
+// ║    L8227  pushCatalogToExport() Push parsed catalog into Export iframe      ║
+// ║    L8364  launchTool()          Tool panel switcher                         ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  SPECIALIST TOOLS                                                           ║
+// ║    L10632 AGED STOCK TOOL       Aged stock analysis & reporting             ║
+// ║    L10691 BRAND ENGAGEMENT      Brand engagement reporting tool             ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  ORDER CONVERSION (OC) TOOL — CORE                                         ║
+// ║    L13332 const convState       OC tool state object                        ║
+// ║    L13479 rerenderConvPreview() Re-render without full parse                ║
+// ║    L13563 injectConvReplacementCol()  Inject Replacement column post-render ║
+// ║    L14094 renderConvTable()     Main OC render dispatcher                   ║
+// ║    L14543 renderMultiFilePreview()  Multi-PO / multi-file render            ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  ORDER CONVERSION — RETAILER RENDERERS                                      ║
+// ║    L15124 EASONS                renderEasonsPreview()                       ║
+// ║    L15442 GOLDEN DISC           renderGoldenDiscPreview()                   ║
+// ║    L15707 SMYTHS                renderSmythsPreview()                       ║
+// ║    L16033 JOYCES                renderJoycesPreview()                       ║
+// ║    L16487 CALLAGHANS            renderCallaghansPreview()                   ║
+// ║    L16884 JJS APPLIANCES        renderJJsPreview()                          ║
+// ║    L17642 WEB ASSETS IMPORTER   Web asset enrichment (images/descriptions)  ║
+// ║    L17621 EXPORT_B64            Base64 Export iframe HTML blob              ║
+// ║    L19341 McKENNAS LISTOWEL     renderMcKennasPreview()                     ║
+// ║    L19648 CAL FLAVINS           renderCalFlavinPreview()                    ║
+// ║    L19923 MD O'SHEA             renderMDOSheaPreview()                      ║
+// ║    L20213 EXPERT STORES         renderExpertStoresPreview()                 ║
+// ║    L20616 EXPERT NENAGH         renderExpertNenaghPreview()                 ║
+// ║    L20932 BRISCOES              renderBriscoesPreview()                     ║
+// ║    L21350 STAKELUMS             renderStakelumsPreview()                    ║
+// ║    L21722 RONAYNES              renderRonaynesPreview()                     ║
+// ║    L22146 REDMONDS              renderRedmondsPreview()                     ║
+// ║    L22484 ELECTROCITY           renderElectroCityPreview()                  ║
+// ║    L22953 CODE VALIDATION POPUP Universal code check popup                  ║
+// ║    L23475 IRWINS DUNGARVAN      renderIrwinsPreview()                       ║
+// ║    L23789 ROB TEST              renderRobTestPreview()                      ║
+// ║    L24023 UNIVERSAL CODE CHECK  Cross-retailer SKU code validation          ║
+// ║    L24115 LIVE STOCK CHECK      autoCheckConvStock() / CRM stock fetch      ║
+// ║    L25080 AIRPORT SHANNON       renderAirportShannonPreview()               ║
+// ║    L25344 AIRPORT CORK          renderAirportCorkPreview()                  ║
+// ║    L25602 TELFORDS              renderTelfordsPreview()                     ║
+// ║    L25956 AIRPORT DUBLIN        renderAirportDublinPreview()                ║
+// ║    L26113 TJ O'MAHONY           renderTJOMahonyPreview()                    ║
+// ║    L26355 KING & MOFFATT        renderKingMoffattPreview()                  ║
+// ║    L26605 ENNIS ELEC            renderEnnisElecPreview()                    ║
+// ║    L26876 BEATTYS               renderBeattysPreview()                      ║
+// ║    L27191 PETER MURPHY          renderPeterMurphyPreview()                  ║
+// ║    L27672 CRM PUSH QUEUE        CRM push queue & retry logic                ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
 // ── Search clear-X helpers ────────────────────────────────────────────────
 function _syncSearchX(inputId, btnId) {
   const inp = document.getElementById(inputId);
