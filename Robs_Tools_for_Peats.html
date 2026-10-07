@@ -2158,7 +2158,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     max-width:1016px;
   ">
     <img id="asCatalogPreviewImg" src="" alt=""
-      style="display:block;width:1000px;max-width:80vw;height:auto;border-radius:6px;background:#f3f4f6;"
+      style="display:block;max-width:min(1000px,80vw);max-height:calc(85vh - 48px);width:auto;height:auto;border-radius:6px;background:#f3f4f6;"
       onerror="document.getElementById('asCatalogPreview').style.display='none';">
     <div id="asCatalogPreviewLabel"
       style="margin-top:5px;font-size:10px;font-family:monospace;font-weight:700;color:#6b7280;text-align:center;letter-spacing:.04em;"></div>
@@ -12698,16 +12698,16 @@ function asRenderSlowTable() {
     img.src = url;
     label.textContent = sku;
 
-    // Position: measure after brief show to get real dimensions
+    // Position: measure after image loads to get true dimensions
     panel.style.display = 'block';
     panel.style.opacity = '0';
 
-    requestAnimationFrame(() => {
-      const rect    = td.getBoundingClientRect();
-      const pw      = panel.offsetWidth  || 1016;
-      const ph      = panel.offsetHeight || 200;
-      const vw      = window.innerWidth;
-      const vh      = window.innerHeight;
+    function reposition() {
+      const rect = td.getBoundingClientRect();
+      const pw   = panel.offsetWidth  || 400;
+      const ph   = panel.offsetHeight || 200;
+      const vw   = window.innerWidth;
+      const vh   = window.innerHeight;
 
       // Prefer showing to the right of the hovered cell; flip left if it would clip
       let left = rect.right + MARGIN;
@@ -12720,7 +12720,11 @@ function asRenderSlowTable() {
       panel.style.left = left + 'px';
       panel.style.top  = top  + 'px';
       panel.style.opacity = '1';
-    });
+    }
+
+    // Run once immediately (covers cached images), then again after load (covers fresh loads)
+    requestAnimationFrame(reposition);
+    img.onload = reposition;
   }
 
   function hidePreview() {
