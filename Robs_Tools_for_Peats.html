@@ -6704,7 +6704,6 @@ function boParse(rows, name) {
   document.getElementById('boResults').style.display = 'block';
   boUpdateCatalogUI();
   if (typeof updateBrandFilterUIs === 'function') updateBrandFilterUIs();
-  boPopulateBrandFilter();
 
   boRecalc();
   showToast(`✓ ${name} — ${lines.length} lines across ${boState.customers.length} customers.`);
@@ -6768,6 +6767,7 @@ function boRecalc() {
   });
 
   boState.custTotals = byCust;
+  boPopulateBrandFilter();
   boRender();
 }
 
