@@ -7016,6 +7016,28 @@ function boRender() {
   const eolVal      = eolLines.reduce((a,l) => a + (l.val||0), 0);
   const cancelVal   = cancelLines.reduce((a,l) => a + (l.val||0), 0);
 
+  // Brand filter summary card
+  let brandCardHtml = '';
+  if (boState.brandFilter && boState.brandFilter !== 'all') {
+    const bLines  = boState.lines.filter(l => (l.brand || '').toLowerCase() === boState.brandFilter);
+    const bTotal  = bLines.reduce((a,l) => a + (Number.isFinite(l.val) ? l.val : 0), 0);
+    const bDeliv  = bLines.filter(l => l.avail !== 'none' && !l.cancelled && !boState.excluded[l.ac])
+                          .reduce((a,l) => a + (Number.isFinite(l.sendValue) ? l.sendValue : 0), 0);
+    const bNoDeliv = bLines.filter(l => l.avail === 'none' && !l.cancelled)
+                           .reduce((a,l) => a + (Number.isFinite(l.val) ? l.val : 0), 0);
+    const bName   = (bLines[0] && bLines[0].brand) || boState.brandFilter;
+    const fmt     = v => '€' + v.toLocaleString('en-IE',{minimumFractionDigits:0,maximumFractionDigits:0});
+    brandCardHtml = `<div class="card" style="border-color:#1a3c6e;border-left:4px solid #1a3c6e">
+      <div class="card-label" style="color:#1a3c6e;font-weight:700">${escHtml(bName)}</div>
+      <div class="card-value" style="font-size:18px">${bLines.length} lines</div>
+      <div class="card-sub" style="display:flex;flex-direction:column;gap:2px;margin-top:4px">
+        <span>Total: <strong>${fmt(bTotal)}</strong></span>
+        <span style="color:#15803d">Deliverable: <strong>${fmt(bDeliv)}</strong></span>
+        <span style="color:#b91c1c">Not deliverable: <strong>${fmt(bNoDeliv)}</strong></span>
+      </div>
+    </div>`;
+  }
+
   document.getElementById('boSummaryCards').innerHTML = `
     <div class="card"><div class="card-label">Backorder Lines</div><div class="card-value">${boState.lines.length}</div><div class="card-sub">${boState.customers.length} customers</div></div>
     <div class="card green"><div class="card-label">Ready to Send</div><div class="card-value">${sendLines.length}</div><div class="card-sub">${sendCusts} cust · €${sendVal.toLocaleString('en-IE',{maximumFractionDigits:0})}</div></div>
@@ -7023,7 +7045,8 @@ function boRender() {
     <div class="card orange"><div class="card-label">TBD</div><div class="card-value">${tbdLines.length}</div><div class="card-sub">€${tbdVal.toLocaleString('en-IE',{maximumFractionDigits:0})}</div></div>
     <div class="card red"><div class="card-label">EOL</div><div class="card-value">${eolLines.length}</div><div class="card-sub">€${eolVal.toLocaleString('en-IE',{maximumFractionDigits:0})}</div></div>
     <div class="card red"><div class="card-label">Cancelled</div><div class="card-value">${cancelLines.length}</div><div class="card-sub">€${cancelVal.toLocaleString('en-IE',{maximumFractionDigits:0})} · ${nExcl} excl</div></div>
-    ${hasCat ? `<div class="card accent"><div class="card-label">Price Differences</div><div class="card-value">${diffs}</div><div class="card-sub">vs catalog cost</div></div>` : ''}`;
+    ${hasCat ? `<div class="card accent"><div class="card-label">Price Differences</div><div class="card-value">${diffs}</div><div class="card-sub">vs catalog cost</div></div>` : ''}
+    ${brandCardHtml}`;
 
   const NOTE = {
     all:'Every backorder line. Tick Send to force a line — that promotes the whole customer. Tick Cancel to mark a line cancelled.',
@@ -7542,7 +7565,7 @@ async function boExport() {
 
   // ── Brands sheet — all boState.lines (ignores screen filter), grouped by brand then SKU ──
   {
-    const bs = wb.addWorksheet('Brands');
+    const bs = wb.addWorksheet('Outstanding by Brand');
     bs.columns = [{width:16},{width:44},{width:8},{width:8},{width:9},{width:11},{width:13}];
     const bh = bs.addRow(['Stock Code','Description','Rqd','Stock','On Order','Outstanding','Value (€)']);
     bh.eachCell(c => { c.font = { bold:true, color:{argb:'FFFFFFFF'} };
