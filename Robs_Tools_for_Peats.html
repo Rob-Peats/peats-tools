@@ -1426,7 +1426,20 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 
       <div class="sep"></div>
 
-      <!-- Pill 4: Download -->
+      <!-- Pill 4: Brand Filter -->
+      <div class="cat-section" style="align-self:stretch">
+        <span class="cat-label">BRAND FILTER</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="boBrandFilter" onchange="boSetBrandFilter(this.value)"
+                  style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);cursor:pointer;min-width:120px">
+            <option value="all">All Brands</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Pill 5: Download -->
       <div class="dl-section" style="align-self:stretch">
         <button class="btn btn-amber" onclick="boExport()" style="font-size:13px;padding:10px 20px;font-weight:700;white-space:nowrap;">
           ↓ Export Report
@@ -6534,6 +6547,7 @@ const BO = { C_AC:0, C_DATE:1, C_TAG:2, C_ORDER:3, C_REF:4, C_CODE:5, C_STK:6,
 let boState = {
   fileName: '', rawRows: [], lines: [], customers: [],
   view: 'all', threshold: 150,
+  brandFilter: 'all',          // 'all' or lowercase brand name — filters the on-screen table
   overrides: {},   // lineId -> true  (manual Send)
   comments:  {},   // lineId -> text
   cancelled: {},   // lineId -> true  (writes "Cancel" in red)
@@ -6690,6 +6704,7 @@ function boParse(rows, name) {
   document.getElementById('boResults').style.display = 'block';
   boUpdateCatalogUI();
   if (typeof updateBrandFilterUIs === 'function') updateBrandFilterUIs();
+  boPopulateBrandFilter();
 
   boRecalc();
   showToast(`✓ ${name} — ${lines.length} lines across ${boState.customers.length} customers.`);
@@ -6892,6 +6907,26 @@ function boTagTitle(tag) {
 
 function boSetView(v) { boState.view = v; boRender(); }
 
+// ── Brand filter for the on-screen backorder table ─────────────────────────
+function boSetBrandFilter(val) {
+  boState.brandFilter = val || 'all';
+  boRender();
+}
+
+function boPopulateBrandFilter() {
+  const sel = document.getElementById('boBrandFilter');
+  if (!sel) return;
+  const brands = [...new Set(boState.lines.map(l => (l.brand || '').trim()).filter(Boolean))].sort();
+  // Rebuild options — keep current selection if still valid
+  const cur = boState.brandFilter || 'all';
+  sel.innerHTML = '<option value="all">All Brands</option>'
+    + brands.map(b => `<option value="${b.toLowerCase()}"${cur === b.toLowerCase() ? ' selected' : ''}>${b}</option>`).join('');
+  if (cur !== 'all' && !brands.some(b => b.toLowerCase() === cur)) {
+    boState.brandFilter = 'all';
+    sel.value = 'all';
+  }
+}
+
 function boVisibleLines() {
   const q = (document.getElementById('boSearch').value || '').toLowerCase();
   const exclT10 = !!(document.getElementById('boExclTag10') && document.getElementById('boExclTag10').checked);
@@ -6908,6 +6943,9 @@ function boVisibleLines() {
   else if (boState.view === 'tag10')     ls = ls.filter(l => l.tag10);
   else if (boState.view === 'tag11')     ls = ls.filter(l => l.tag11);
   else if (boState.view === 'pricediff') ls = ls.filter(l => l.cmp && l.cmp.changed);
+  // Brand filter (on-screen only — does not affect Excel export)
+  if (boState.brandFilter && boState.brandFilter !== 'all')
+    ls = ls.filter(l => (l.brand || '').toLowerCase() === boState.brandFilter);
   if (q) ls = ls.filter(l =>
     l.code.toLowerCase().includes(q) || l.desc.toLowerCase().includes(q) ||
     l.ac.toLowerCase().includes(q)   || (l.custName||'').toLowerCase().includes(q) ||
@@ -7008,6 +7046,7 @@ function boRender() {
     <th ${TH} style="width:340px">Description</th>
     <th ${TH} style="width:52px;text-align:center">Stock</th>
     <th ${TH} style="width:48px;text-align:center">Rqd</th>
+    <th ${TH} style="width:62px;text-align:center">On Order</th>
     <th ${TH} style="width:100px">Order No.</th>
     <th ${TH} style="width:52px;text-align:center">Send</th>
     <th ${TH} style="width:56px;text-align:center">Cancel</th>
@@ -7018,7 +7057,7 @@ function boRender() {
     ${hasCat ? `<th ${TH} style="width:80px;text-align:center">Cat. Cost</th>` : ''}
     ${hasBoRepl ? `<th ${TH} style="width:110px;text-align:center">Replacement</th>` : ''}
   </tr>`;
-  const NCOLS = hasCat ? (hasBoRepl ? 15 : 14) : (hasBoRepl ? 13 : 12);
+  const NCOLS = hasCat ? (hasBoRepl ? 16 : 15) : (hasBoRepl ? 14 : 13);
 
   // Group by customer
   const groups = [];
@@ -7049,7 +7088,7 @@ function boRender() {
     const sendable  = custLines.filter(l => !l.tag10 && !l.tag11 && !l.cancelled && l.avail !== 'none' && !boState.excluded[l.ac]);
     const anySend   = sendable.some(l => l.status === 'Send');
     const band = `<tr class="bo-band">
-      <td colspan="7" style="${bandTd}">
+      <td colspan="8" style="${bandTd}">
         <label style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-weight:700;color:#fff">
           <input type="checkbox" ${off?'':'checked'} onchange="boSetCustExcluded('${esc(g.ac)}',!this.checked)"
                  title="Untick to leave this customer out of the exported report"
@@ -7125,6 +7164,7 @@ function boRender() {
         <td style="font-size:12.5px;padding-right:4px"><div style="min-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${dcol};font-weight:${dwt};${l.cancelled?'text-decoration:line-through':''}" title="${esc(l.desc)}">${esc(l.desc)}</div></td>
         <td style="text-align:center;font-size:12.5px;font-weight:${l.stk>0?'700':'400'};color:${l.stk>0?'#15803d':'var(--muted)'}">${l.stk}</td>
         <td style="text-align:center;font-size:12.5px">${l.req}</td>
+        <td style="text-align:center;font-size:12.5px;color:${(l.onOrder>0)?'#1d4ed8':'var(--muted)'};font-weight:${(l.onOrder>0)?'700':'400'}">${l.onOrder > 0 ? l.onOrder : '—'}</td>
         <td style="font-size:11.5px;color:var(--muted);white-space:nowrap">${esc(l.order)}</td>
         <td style="text-align:center">${canTick
           ? `<input type="checkbox" ${l.status === 'Send' ? 'checked' : ''} onchange="boSetOverride('${l.id}',this.checked)"
@@ -7185,7 +7225,10 @@ function boReplacementCell(lineId, rawSku) {
 
 function boReset() {
   boState = { fileName:'', rawRows:[], lines:[], customers:[], view:'all', threshold:150,
+              brandFilter:'all',
               overrides:{}, comments:{}, cancelled:{}, excluded:{}, unsent:{} };
+  const bf = document.getElementById('boBrandFilter');
+  if (bf) { bf.innerHTML = '<option value="all">All Brands</option>'; bf.value = 'all'; }
   document.getElementById('boFileInput').value = '';
   const srch = document.getElementById('boSearch'); if (srch) { srch.value = ''; _syncSearchX('boSearch','boSearchXBtn'); }
   const thr  = document.getElementById('boThreshold'); if (thr) thr.value = '150';
@@ -7347,8 +7390,8 @@ async function boExport() {
   const sendLines = boState.lines.filter(l => l.status === 'Send' && !l.excluded && !l.cancelled);
   if (sendLines.length) {
     const sum = wb.addWorksheet('Send Summary');
-    sum.columns = [{ width:11 },{ width:34 },{ width:12 },{ width:7 },{ width:16 },{ width:44 },{ width:8 },{ width:8 },{ width:14 },{ width:12 },{ width:30 }];
-    const h = sum.addRow(['A/C','Customer','Date','Tag','Stock Code','Description','Stock','Rqd','Order No.','Net Total','Comment']);
+    sum.columns = [{ width:11 },{ width:34 },{ width:12 },{ width:7 },{ width:16 },{ width:44 },{ width:8 },{ width:8 },{ width:9 },{ width:14 },{ width:12 },{ width:30 }];
+    const h = sum.addRow(['A/C','Customer','Date','Tag','Stock Code','Description','Stock','Rqd','On Order','Order No.','Net Total','Comment']);
     h.eachCell(c => { c.font = { bold:true, color:{argb:'FFFFFFFF'} };
                       c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF1F6B3E'} };
                       c.alignment = { horizontal:'center' }; });
@@ -7359,22 +7402,23 @@ async function boExport() {
       const g = byCust[ac];
       let sub = 0;
       g.forEach(l => {
-        const rr = sum.addRow([l.ac, l.custName, l.date || '', l.tag || '', l.code, l.desc, l.stk, l.req, l.order,
+        const rr = sum.addRow([l.ac, l.custName, l.date || '', l.tag || '', l.code, l.desc, l.stk, l.req,
+                               l.onOrder || 0, l.order,
                                Number.isFinite(l.sendValue) ? Math.round(l.sendValue*100)/100 : 0,
                                boState.comments[l.id] || '']);
-        rr.getCell(10).numFmt = '#,##0.00';
+        rr.getCell(11).numFmt = '#,##0.00';
         if (l.eol || l.tbd) rr.getCell(6).font = { bold:true, color:{ argb: l.eol ? 'FFB91C1C':'FFB45309' } };
         sub += l.sendValue;
       });
-      const sr = sum.addRow(['', g[0].custName + ' — total', '', '', '', '', '', '', '', Math.round(sub*100)/100, '']);
+      const sr = sum.addRow(['', g[0].custName + ' — total', '', '', '', '', '', '', '', '', Math.round(sub*100)/100, '']);
       sr.font = { bold:true };
-      sr.getCell(10).numFmt = '#,##0.00';
+      sr.getCell(11).numFmt = '#,##0.00';
       sr.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8F4EA'} }; });
       grand += sub;
     });
-    const gr = sum.addRow(['', 'GRAND TOTAL TO SEND', '', '', '', '', '', '', '', Math.round(grand*100)/100, '']);
+    const gr = sum.addRow(['', 'GRAND TOTAL TO SEND', '', '', '', '', '', '', '', '', Math.round(grand*100)/100, '']);
     gr.font = { bold:true, size:12 };
-    gr.getCell(10).numFmt = '#,##0.00';
+    gr.getCell(11).numFmt = '#,##0.00';
     gr.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFC6F6D5'} }; });
     sum.views = [{ state:'frozen', ySplit:1 }];
   }
@@ -7385,16 +7429,17 @@ async function boExport() {
    ['Cancelled', boState.lines.filter(l => l.cancelled && !l.tag10), 'FFB91C1C']].forEach(([nm, ls, argb]) => {
     if (!ls.length) return;
     const sh = wb.addWorksheet(nm);
-    sh.columns = [{ width:11 },{ width:34 },{ width:12 },{ width:7 },{ width:16 },{ width:44 },{ width:8 },{ width:8 },{ width:14 },{ width:12 },{ width:12 }];
-    const hh = sh.addRow(['A/C','Customer','Date','Tag','Stock Code','Description','Stock','Rqd','Order No.','Net Total','Status']);
+    sh.columns = [{ width:11 },{ width:34 },{ width:12 },{ width:7 },{ width:16 },{ width:44 },{ width:8 },{ width:8 },{ width:9 },{ width:14 },{ width:12 },{ width:12 }];
+    const hh = sh.addRow(['A/C','Customer','Date','Tag','Stock Code','Description','Stock','Rqd','On Order','Order No.','Net Total','Status']);
     hh.eachCell(c => { c.font = { bold:true, color:{argb:'FFFFFFFF'} };
                        c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb } };
                        c.alignment = { horizontal:'center' }; });
     ls.forEach(l => {
-      const rr = sh.addRow([l.ac, l.custName, l.date || '', l.tag || '', l.code, l.desc, l.stk, l.req, l.order,
+      const rr = sh.addRow([l.ac, l.custName, l.date || '', l.tag || '', l.code, l.desc, l.stk, l.req,
+                            l.onOrder || 0, l.order,
                             Number.isFinite(l.val) ? l.val : 0, l.status || '']);
       rr.getCell(6).font = { bold:true, color:{ argb } };
-      rr.getCell(10).numFmt = '#,##0.00';
+      rr.getCell(11).numFmt = '#,##0.00';
     });
     sh.views = [{ state:'frozen', ySplit:1 }];
   });
@@ -7403,8 +7448,8 @@ async function boExport() {
   const t10 = boState.lines.filter(l => l.tag10 && !l.excluded);
   if (t10.length) {
     const ts = wb.addWorksheet('Tag 10');
-    ts.columns = [{width:11},{width:32},{width:12},{width:7},{width:16},{width:44},{width:8},{width:8},{width:14},{width:13}];
-    const th = ts.addRow(['A/C','Customer','Date','Tag','Stock Code','Description','Stock','Rqd','Order No.','Net Total']);
+    ts.columns = [{width:11},{width:32},{width:12},{width:7},{width:16},{width:44},{width:8},{width:8},{width:9},{width:14},{width:13}];
+    const th = ts.addRow(['A/C','Customer','Date','Tag','Stock Code','Description','Stock','Rqd','On Order','Order No.','Net Total']);
     th.eachCell(c => { c.font = { bold:true, color:{argb:'FFFFFFFF'} };
                        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF334155'} };
                        c.alignment = { horizontal:'center' }; });
@@ -7416,8 +7461,8 @@ async function boExport() {
       let sub = 0;
       byC[ac].forEach(l => {
         const rr = ts.addRow([l.ac, l.custName, l.date || '', l.tag || '', l.code, l.desc,
-                              l.stk, l.req, l.order, Number.isFinite(l.val) ? l.val : 0]);
-        rr.getCell(10).numFmt = '#,##0.00';
+                              l.stk, l.req, l.onOrder || 0, l.order, Number.isFinite(l.val) ? l.val : 0]);
+        rr.getCell(11).numFmt = '#,##0.00';
         // Highlight availability: green tint for full stock, blue for partial, no tint for none
         if (l.avail === 'full') {
           rr.getCell(7).font = { bold:true, color:{argb:'FF15803D'} };
@@ -7432,9 +7477,9 @@ async function boExport() {
         if (l.avail === 'full' || l.avail === 'part') { t10availVal += l.val; t10availLines++; }
         else { t10unavailVal += l.val; t10unavailLines++; }
       });
-      const sr = ts.addRow(['', byC[ac][0].custName + ' — total', '', '', '', '', '', '', '', Math.round(sub*100)/100]);
+      const sr = ts.addRow(['', byC[ac][0].custName + ' — total', '', '', '', '', '', '', '', '', Math.round(sub*100)/100]);
       sr.font = { bold:true };
-      sr.getCell(10).numFmt = '#,##0.00';
+      sr.getCell(11).numFmt = '#,##0.00';
       sr.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEDF0F7'} }; });
       t10grand += sub;
     });
@@ -7444,27 +7489,27 @@ async function boExport() {
 
     // Total value on Tag 10
     const gr2 = ts.addRow(['', 'TOTAL VALUE IN DESPATCH (TAG 10)', '', '', '', '',
-                           '', t10.length + ' lines', '', Math.round(t10grand*100)/100]);
+                           '', t10.length + ' lines', '', '', Math.round(t10grand*100)/100]);
     gr2.font = { bold:true, size:11 };
-    gr2.getCell(10).numFmt = '#,##0.00';
+    gr2.getCell(11).numFmt = '#,##0.00';
     gr2.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFCBD5E1'} }; });
 
     // Goods available to go (stock >= required, or partial stock)
     const grAvail = ts.addRow(['', 'AVAILABLE TO GO (stock on hand)', '', '', '', '',
-                               '', t10availLines + ' lines', '', Math.round(t10availVal*100)/100]);
+                               '', t10availLines + ' lines', '', '', Math.round(t10availVal*100)/100]);
     grAvail.font = { bold:true, size:11 };
-    grAvail.getCell(10).numFmt = '#,##0.00';
+    grAvail.getCell(11).numFmt = '#,##0.00';
     grAvail.getCell(2).font = { bold:true, size:11, color:{argb:'FF15803D'} };
-    grAvail.getCell(10).font = { bold:true, size:11, color:{argb:'FF15803D'} };
+    grAvail.getCell(11).font = { bold:true, size:11, color:{argb:'FF15803D'} };
     grAvail.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE6F4EC'} }; });
 
     // Goods not available (no stock)
     const grUnavail = ts.addRow(['', 'NOT AVAILABLE (no stock)', '', '', '', '',
-                                 '', t10unavailLines + ' lines', '', Math.round(t10unavailVal*100)/100]);
+                                 '', t10unavailLines + ' lines', '', '', Math.round(t10unavailVal*100)/100]);
     grUnavail.font = { bold:true, size:11 };
-    grUnavail.getCell(10).numFmt = '#,##0.00';
+    grUnavail.getCell(11).numFmt = '#,##0.00';
     grUnavail.getCell(2).font = { bold:true, size:11, color:{argb:'FFB91C1C'} };
-    grUnavail.getCell(10).font = { bold:true, size:11, color:{argb:'FFB91C1C'} };
+    grUnavail.getCell(11).font = { bold:true, size:11, color:{argb:'FFB91C1C'} };
     grUnavail.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFEF4F4'} }; });
 
     ts.views = [{ state:'frozen', ySplit:1 }];
@@ -7493,6 +7538,73 @@ async function boExport() {
     });
     ps.views = [{ state:'frozen', ySplit:1 }];
     ps.autoFilter = { from:{row:1,column:1}, to:{row:1,column:11} };
+  }
+
+  // ── Brands sheet — all boState.lines (ignores screen filter), grouped by brand then SKU ──
+  {
+    const bs = wb.addWorksheet('Brands');
+    bs.columns = [{width:16},{width:44},{width:8},{width:8},{width:9},{width:11},{width:13}];
+    const bh = bs.addRow(['Stock Code','Description','Rqd','Stock','On Order','Outstanding','Value (€)']);
+    bh.eachCell(c => { c.font = { bold:true, color:{argb:'FFFFFFFF'} };
+                       c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF1A3C6E'} };
+                       c.alignment = { horizontal:'center' }; });
+
+    // Group all lines by brand (lower-cased key, display name preserved)
+    const brandMap = {};  // key: brand lowercase → { name, skus: { code → { desc, lines[] } } }
+    boState.lines.forEach(l => {
+      const bkey = (l.brand || 'No Brand').trim();
+      const blo  = bkey.toLowerCase();
+      if (!brandMap[blo]) brandMap[blo] = { name: bkey, skus: {} };
+      const code = l.code || '';
+      if (!brandMap[blo].skus[code]) brandMap[blo].skus[code] = { desc: l.desc || '', stk: l.stk || 0, onOrder: l.onOrder || 0, lines: [] };
+      brandMap[blo].skus[code].lines.push(l);
+    });
+
+    let grandRqd = 0, grandOutstanding = 0, grandVal = 0;
+
+    Object.keys(brandMap).sort().forEach(blo => {
+      const { name, skus } = brandMap[blo];
+      let brandRqd = 0, brandOutstanding = 0, brandVal = 0;
+
+      Object.keys(skus).sort().forEach(code => {
+        const { desc, stk, onOrder, lines } = skus[code];
+        const totalRqd = lines.reduce((a, l) => a + (l.req || 0), 0);
+        const outstanding = Math.max(0, totalRqd - stk);
+        // Pro-rate val by outstanding proportion of each line
+        const lineVal = lines.reduce((a, l) => {
+          const req = l.req || 1;
+          const out = Math.max(0, req - (l.stk || 0));
+          return a + (Number.isFinite(l.val) ? l.val * (out / req) : 0);
+        }, 0);
+
+        const dr = bs.addRow([code, desc, totalRqd, stk, onOrder, outstanding, Math.round(lineVal*100)/100]);
+        dr.getCell(7).numFmt = '#,##0.00';
+        if (outstanding > 0) dr.getCell(6).font = { bold:true, color:{argb:'FFB91C1C'} };
+
+        brandRqd += totalRqd;
+        brandOutstanding += outstanding;
+        brandVal += lineVal;
+      });
+
+      // Brand subtotal row
+      const br = bs.addRow(['', name + ' — TOTAL', brandRqd, '', '', brandOutstanding, Math.round(brandVal*100)/100]);
+      br.font = { bold:true };
+      br.getCell(7).numFmt = '#,##0.00';
+      br.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEDF0F7'} }; });
+      br.getCell(2).font = { bold:true, color:{argb:'FF1A3C6E'} };
+
+      grandRqd += brandRqd;
+      grandOutstanding += brandOutstanding;
+      grandVal += brandVal;
+    });
+
+    // Grand total
+    const bgr = bs.addRow(['', 'GRAND TOTAL', grandRqd, '', '', grandOutstanding, Math.round(grandVal*100)/100]);
+    bgr.font = { bold:true, size:12 };
+    bgr.getCell(7).numFmt = '#,##0.00';
+    bgr.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFCBD5E1'} }; });
+
+    bs.views = [{ state:'frozen', ySplit:1 }];
   }
 
   const base = boState.fileName.replace(/\.(xlsx|xls)$/i, '');
