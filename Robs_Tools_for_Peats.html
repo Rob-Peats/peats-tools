@@ -599,6 +599,13 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 }
 html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,255,255,.07); }
 
+/* ── Hub token status chips ── */
+#hubTokenBar { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; position:relative; z-index:1; }
+.ts-chip { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 11px;border-radius:99px;border:1px solid var(--border);color:var(--muted);background:var(--white);letter-spacing:.01em;transition:color .3s, border-color .3s, background .3s; }
+.ts-chip .ts-dot { width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0; }
+.ts-chip.ts-ok  { border-color:var(--green);color:var(--green);background:rgba(22,163,74,.08); }
+.ts-chip.ts-err { border-color:#dc2626;color:#dc2626;background:rgba(220,38,38,.08); }
+
 /* ── Tool breadcrumb nav ── */
 .tool-nav { background: var(--white); border-bottom: 1px solid var(--border); padding: 7px 20px; display: flex; align-items: center; gap: 10px; }
 .tool-nav-back { background: none; border: 1px solid var(--border); cursor: pointer; color: var(--brand); font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 6px; display: flex; align-items: center; gap: 5px; transition: background .15s; }
@@ -1046,6 +1053,12 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <span class="hub-card-launch">Open Admin →</span>
     </div>
 
+  </div>
+
+  <!-- Token status — auto-checked on load -->
+  <div id="hubTokenBar">
+    <div id="tsCrm" class="ts-chip ts-checking"><span class="ts-dot"></span> CRM — checking…</div>
+    <div id="tsGh"  class="ts-chip ts-checking"><span class="ts-dot"></span> Catalog sync — checking…</div>
   </div>
 
   <!-- Unlock footer — hidden once PIN is entered -->
@@ -17872,6 +17885,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Check if this page load was triggered by "Get Latest" and show version feedback
   checkReloadResult();
+  // Validate tokens on hub load so users see status immediately
+  runHubTokenChecks();
 });
 
 
@@ -23158,6 +23173,55 @@ function forceReload() {
   try { sessionStorage.setItem('peats_prev_build', TOOL_BUILD); } catch(e) {}
   const base = window.location.href.split('?')[0].split('#')[0];
   window.location.replace(base + '?v=' + Date.now());
+}
+
+// ── Hub token status checks ──────────────────────────────────────────────────
+function setTsChip(el, state, text) {
+  el.className = 'ts-chip ts-' + state;
+  el.innerHTML = '<span class="ts-dot"></span> ' + text;
+}
+
+async function runHubTokenChecks() {
+  const crmEl = document.getElementById('tsCrm');
+  const ghEl  = document.getElementById('tsGh');
+  if (!crmEl || !ghEl) return;
+
+  // Run both checks in parallel
+  const [crmResult, ghResult] = await Promise.allSettled([
+    (async () => {
+      const pat = (typeof getCrmPat === 'function') ? getCrmPat() : '';
+      if (!pat) return { state: 'err', text: 'CRM — token not set' };
+      try {
+        const r = await fetch(CRM_BASE + '/search/Division?q=peats&take=1', {
+          headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' }
+        });
+        if (r.ok)                            return { state: 'ok',  text: 'CRM — connected' };
+        if (r.status === 401 || r.status === 403) return { state: 'err', text: 'CRM — token rejected (' + r.status + ')' };
+        return { state: 'err', text: 'CRM — error ' + r.status };
+      } catch(e) {
+        return { state: 'err', text: 'CRM — unreachable' };
+      }
+    })(),
+    (async () => {
+      const tok = (typeof getGhToken === 'function') ? getGhToken() : '';
+      if (!tok) return { state: 'err', text: 'Catalog sync — token not set' };
+      try {
+        const r = await fetch('https://api.github.com/user', {
+          headers: { 'Authorization': 'Bearer ' + tok }
+        });
+        if (r.ok)             return { state: 'ok',  text: 'Catalog sync — connected' };
+        if (r.status === 401) return { state: 'err', text: 'Catalog sync — token rejected' };
+        return { state: 'err', text: 'Catalog sync — error ' + r.status };
+      } catch(e) {
+        return { state: 'err', text: 'Catalog sync — unreachable' };
+      }
+    })()
+  ]);
+
+  const crm = crmResult.status === 'fulfilled' ? crmResult.value : { state: 'err', text: 'CRM — check failed' };
+  const gh  = ghResult.status  === 'fulfilled' ? ghResult.value  : { state: 'err', text: 'Catalog sync — check failed' };
+  setTsChip(crmEl, crm.state, crm.text);
+  setTsChip(ghEl,  gh.state,  gh.text);
 }
 // On load: if this was a "Get Latest" reload, compare build strings and show feedback next to the button
 function checkReloadResult() {
@@ -31017,7 +31081,6 @@ function markCrmDone(idx) {
   &copy; <script>document.write(new Date().getFullYear())</script> Robert Noonan. All rights reserved.
   <span style="display:inline-block;margin-left:10px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;font-family:monospace;font-size:10px;color:var(--muted)"><script>(function(){var d=new Date();document.write('Build V1.'+(d.getMonth()+1)+d.getDate());})()</script></span>
   <span style="display:inline-flex;align-items:center;gap:6px;margin-left:14px">
-    <button onclick="forceReload()" title="Force-reload to pick up the latest version" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;cursor:pointer;opacity:.85;padding:3px 9px;border-radius:6px;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.85'">⟳ Get Latest</button>
     <button onclick="toggleTheme()" title="Toggle dark / light mode" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;cursor:pointer;opacity:.85;padding:3px 9px;border-radius:6px;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.85'">☀ / ☾</button>
   </span>
 </footer>
