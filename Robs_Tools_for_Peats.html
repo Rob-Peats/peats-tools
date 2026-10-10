@@ -124,7 +124,7 @@ html[data-theme="dark"] .log.warn { background: #1a1a0a; border-color: #5a4a00; 
 html[data-theme="dark"] .sep-col { background: var(--border); }
 html[data-theme="dark"] .excl-count { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.3); color: #f87171; }
 
-body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); min-height: 100vh; font-size: 14px; overflow-x: hidden; }
+body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); height: 100vh; overflow: hidden; font-size: 14px; }
 table, th, td, input, button, select, textarea { font-family: inherit; }
 
 /* ── Username gate overlay ── */
@@ -537,8 +537,8 @@ tr.excluded { background: #f7f8fc; }
 #toast.show { opacity: 1; }
 
 /* ── Hub ── */
-/* 64px header + 65px footer — the hub fills exactly what's left, so no page scroll */
-#hub { min-height: 0; height: calc(100vh - 130px); display: flex; flex-direction: column; align-items: center; justify-content: safe center; padding: 14px 20px; gap: 10px; background: var(--light); position: relative; overflow-y: auto; overflow-x: hidden; }
+/* 64px header + 36px footer — the hub fills exactly what's left, so no page scroll */
+#hub { min-height: 0; height: calc(100vh - 100px); display: flex; flex-direction: column; align-items: center; justify-content: safe center; padding: 14px 20px; gap: 10px; background: var(--light); position: relative; overflow-y: auto; overflow-x: hidden; }
 .hub-watermark { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .07; z-index: 0; }
 /* Content sits above the watermark — without this the dot grid paints over the
    cards and makes them look washed out. */
@@ -576,7 +576,7 @@ html[data-theme="dark"] .hub-card:nth-child(8) { background: linear-gradient(158
 html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158deg, #1f2937 0%, var(--white) 78%); --tool-accent: #9ca3af; }
 @media (max-width: 900px) {
   .hub-cards { grid-template-columns: repeat(2, 1fr); max-width: 620px; }
-  #hub { height: auto; min-height: calc(100vh - 130px); }
+  #hub { height: auto; min-height: calc(100vh - 100px); }
 }
 @media (max-width: 560px) {
   .hub-cards { grid-template-columns: 1fr; max-width: 340px; }
@@ -31054,7 +31054,7 @@ function markCrmDone(idx) {
   </div>
 </div>
 
-<footer style="text-align:center;padding:28px 20px 20px;color:var(--muted);font-size:12px;">
+<footer style="text-align:center;padding:10px 20px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;">
   &copy; <script>document.write(new Date().getFullYear())</script> Robert Noonan. All rights reserved.
   <span style="display:inline-block;margin-left:10px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;font-family:monospace;font-size:10px;color:var(--muted)"><script>(function(){var d=new Date();document.write('Build V1.'+(d.getMonth()+1)+d.getDate());})()</script></span>
   <span style="display:inline-flex;align-items:center;gap:6px;margin-left:14px">
