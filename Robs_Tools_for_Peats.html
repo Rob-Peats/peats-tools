@@ -547,9 +547,9 @@ tr.excluded { background: #f7f8fc; }
 .hub-intro h2 { font-size: 25px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
 .hub-intro p { color: var(--muted); font-size: 14px; }
 /* Nine tools in a clean 3 × 3 grid. */
-.hub-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 960px; width: 100%; }
+.hub-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 960px; width: 100%; }
 /* Each tool carries its own tint. --tool-accent drives the hover outline. */
-.hub-card { background: var(--white); border-radius: 14px; padding: 14px 14px; box-shadow: var(--shadow); border: 2px solid transparent; cursor: pointer; transition: box-shadow .2s, transform .15s; text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.hub-card { background: var(--white); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); border: 2px solid transparent; cursor: pointer; transition: box-shadow .2s, transform .15s; text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .hub-card:nth-child(1) { --tool-accent: #1d6fb8; background: linear-gradient(158deg, #c3ddf5 0%, #e8f2fb 82%); }
 .hub-card:nth-child(2) { --tool-accent: #b8791d; background: linear-gradient(158deg, #f4d9ab 0%, #fbf1e0 82%); }
 .hub-card:nth-child(3) { --tool-accent: #1f7a4d; background: linear-gradient(158deg, #bce0cd 0%, #e4f3ea 82%); }
@@ -583,9 +583,9 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 }
 .hub-card:hover { box-shadow: 0 8px 26px rgba(26,60,110,.13); transform: translateY(-3px); }
 /* The call to action gains a box outline on hover instead of the card lighting up */
-.hub-card-icon { font-size: 28px; margin-bottom: 4px; line-height: 1; flex-shrink: 0; }
-.hub-card h3 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; line-height: 1.25; }
-.hub-card p { color: var(--muted); font-size: 12px; line-height: 1.45; margin-bottom: 8px; flex: 1; }
+.hub-card-icon { font-size: 22px; margin-bottom: 2px; line-height: 1; flex-shrink: 0; }
+.hub-card h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; line-height: 1.25; }
+.hub-card p { color: var(--muted); font-size: 11.5px; line-height: 1.38; margin-bottom: 6px; flex: 1; }
 .hub-card-launch { color: var(--brand); font-weight: 700; font-size: 13px; margin-top: auto;
   border: 1.5px solid transparent; border-radius: 8px; padding: 5px 16px;
   opacity: 0; transition: border-color .18s, background .18s, color .18s, opacity .18s; }
@@ -31077,7 +31077,8 @@ function markCrmDone(idx) {
   <span style="display:inline-flex;align-items:center;gap:6px;margin-left:14px">
     <div id="tsCrm" class="ts-chip ts-checking"><span class="ts-dot"></span> CRM — checking…</div>
     <div id="tsGh"  class="ts-chip ts-checking"><span class="ts-dot"></span> Catalog sync — checking…</div>
-    <button onclick="toggleTheme()" title="Toggle dark / light mode" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;cursor:pointer;opacity:.85;padding:3px 9px;border-radius:6px;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.85'">☀ / ☾</button>
+    <button onclick="forceReload()" title="Force-reload to clear cached version (same as Ctrl+Shift+R)" style="background:none;border:1px solid #9aa0ae;color:#4a5168;font-size:11px;font-family:inherit;cursor:pointer;padding:3px 9px;border-radius:6px;transition:all .2s;font-weight:600" onmouseover="this.style.borderColor='var(--brand)';this.style.color='var(--brand)'" onmouseout="this.style.borderColor='#9aa0ae';this.style.color='#4a5168'">⟳ Force Refresh</button>
+    <button onclick="toggleTheme()" title="Toggle dark / light mode" style="background:none;border:1px solid #9aa0ae;color:#4a5168;font-size:11px;font-family:inherit;cursor:pointer;padding:3px 9px;border-radius:6px;transition:all .2s;font-weight:600" onmouseover="this.style.borderColor='var(--brand)';this.style.color='var(--brand)'" onmouseout="this.style.borderColor='#9aa0ae';this.style.color='#4a5168'">☀ / ☾</button>
   </span>
 </footer>
 
