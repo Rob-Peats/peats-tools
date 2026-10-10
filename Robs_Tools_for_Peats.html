@@ -538,14 +538,14 @@ tr.excluded { background: #f7f8fc; }
 
 /* ── Hub ── */
 /* 64px header + 65px footer — the hub fills exactly what's left, so no page scroll */
-#hub { min-height: 0; height: calc(100vh - 130px); display: flex; flex-direction: column; align-items: center; justify-content: safe center; padding: 24px 20px; gap: 20px; background: var(--light); position: relative; overflow-y: auto; overflow-x: hidden; }
+#hub { min-height: 0; height: calc(100vh - 130px); display: flex; flex-direction: column; align-items: center; justify-content: safe center; padding: 14px 20px; gap: 10px; background: var(--light); position: relative; overflow-y: auto; overflow-x: hidden; }
 .hub-watermark { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .07; z-index: 0; }
 /* Content sits above the watermark — without this the dot grid paints over the
    cards and makes them look washed out. */
 .hub-intro, .hub-cards { position: relative; z-index: 1; }
 .hub-intro { text-align: center; }
-.hub-intro h2 { font-size: 25px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
-.hub-intro p { color: var(--muted); font-size: 14px; }
+.hub-intro h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+.hub-intro p { color: var(--muted); font-size: 13px; }
 /* Nine tools in a clean 3 × 3 grid. */
 .hub-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 960px; width: 100%; }
 /* Each tool carries its own tint. --tool-accent drives the hover outline. */
@@ -1055,7 +1055,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   </div>
 
   <!-- Unlock footer — hidden once PIN is entered -->
-  <div id="hubAdminUnlockRow" style="margin-top:18px;display:flex;justify-content:center;">
+  <div id="hubAdminUnlockRow" style="margin-top:4px;display:flex;justify-content:center;">
     <button onclick="showHubUnlockPin()"
       style="display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--border);
              border-radius:99px;padding:7px 18px;font-size:12px;font-weight:600;color:var(--muted);
@@ -23217,24 +23217,7 @@ async function runHubTokenChecks() {
   setTsChip(crmEl, crm.state, crm.text);
   setTsChip(ghEl,  gh.state,  gh.text);
 }
-// On load: if this was a "Get Latest" reload, compare build strings and show feedback next to the button
-function checkReloadResult() {
-  try {
-    if (!window.location.search.includes('v=')) return;
-    const prev = sessionStorage.getItem('peats_prev_build');
-    if (!prev) return;
-    sessionStorage.removeItem('peats_prev_build');
-    const btn = document.querySelector('button[onclick="forceReload()"]');
-    if (!btn) return;
-    const isNew = prev !== TOOL_BUILD;
-    const msg = document.createElement('span');
-    msg.style.cssText = 'font-size:11px;font-weight:700;margin-left:6px;transition:opacity .5s';
-    msg.style.color   = isNew ? '#15803d' : '#d97706';
-    msg.textContent   = isNew ? '✓ Updated to ' + TOOL_BUILD : '⚠ Same version — try again shortly';
-    btn.insertAdjacentElement('afterend', msg);
-    setTimeout(() => { msg.style.opacity = '0'; setTimeout(() => msg.remove(), 500); }, isNew ? 5000 : 8000);
-  } catch(e) {}
-}
+function checkReloadResult() { /* no-op — version feedback removed */ }
 try { console.log('%cRob\'s Tools for Peats — BUILD ' + TOOL_BUILD, 'background:#1a3c6e;color:#fff;padding:3px 9px;border-radius:4px;font-weight:700'); } catch(e) {}
 
 async function downloadSoundstoreCRM(data) {
