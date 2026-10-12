@@ -601,31 +601,25 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 }
 html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,255,255,.07); }
 
-/* ── Hub fun extras ── */
-/* Survival tip card */
-.hub-tip-row { display: flex; align-items: flex-start; gap: 12px; max-width: 960px; width: 100%; position: relative; z-index: 1; }
-.hub-tip-card { flex: 1; background: #fff; border: 2px solid #e2e8f0; border-radius: 14px; box-shadow: 0 2px 10px rgba(15,42,78,.08); padding: 12px 18px; display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
-.hub-tip-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 1px; }
-.hub-tip-body { min-width: 0; }
-.hub-tip-label { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #94a3b8; margin-bottom: 3px; }
-.hub-tip-text { font-size: 12.5px; font-weight: 600; color: #0f2a4e; line-height: 1.45; }
-html[data-theme="dark"] .hub-tip-card { background: var(--white); border-color: var(--border); }
-html[data-theme="dark"] .hub-tip-text { color: var(--text); }
 
-/* Tamagotchi mascot — fixed bottom-right corner */
-#tamaFixed { position: fixed; bottom: 28px; right: 28px; z-index: 50; display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: opacity .4s; }
-#tamaFixed.tama-hidden { opacity: 0; }
-.tama-bob { animation: tama-idle 2.6s ease-in-out infinite; transform-origin: bottom center; }
-.tama-bob.tripping { animation: tama-trip 1.5s ease-in-out forwards !important; }
-.tama-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-align: center; margin-top: 4px; letter-spacing: .06em; text-transform: uppercase; }
-/* Animations */
-@keyframes tama-idle  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes tama-blink { 0%,88%,100%{opacity:1} 90%,97%{opacity:0} }
-@keyframes tama-wave  { 0%,55%,100%{transform:rotate(0deg)} 60%{transform:rotate(-30deg)} 65%{transform:rotate(18deg)} 70%{transform:rotate(-25deg)} 75%{transform:rotate(12deg)} 82%{transform:rotate(-6deg)} 88%{transform:rotate(0deg)} }
-@keyframes tama-trip  { 0%{transform:translateY(0) rotate(0deg)} 12%{transform:translateY(4px) rotate(14deg)} 26%{transform:translateY(0) rotate(-9deg)} 42%{transform:translateY(7px) rotate(22deg)} 58%{transform:translateY(2px) rotate(-6deg)} 74%{transform:translateY(0) rotate(4deg)} 88%{transform:translateY(-1px) rotate(-2deg)} 100%{transform:translateY(0) rotate(0deg)} }
-/* SVG elements */
-.tama-eyes-group { animation: tama-blink 5s steps(1) infinite; }
-.tama-arm-right { transform-box: fill-box; transform-origin: top center; animation: tama-wave 7s ease-in-out infinite 1.2s; }
+/* ── Hub card animations ── */
+@keyframes card-cascade {
+  from { opacity: 0; translate: 0 28px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+@keyframes card-float {
+  0%,100% { translate: 0 0; }
+  50%     { translate: 0 -5px; }
+}
+/* Cascade: applied per-card via JS with inline animation-delay */
+.hub-card.card-entering {
+  animation: card-cascade 440ms cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+/* Float: applied per-card via JS after cascade completes.
+   Uses CSS `translate` (not `transform`) so hover's transform: translateY(-3px) still works cleanly. */
+.hub-card.card-floating {
+  animation: card-float var(--float-dur,4s) ease-in-out infinite var(--float-delay,0s);
+}
 
 /* ── Hub token status chips ── */
 .ts-chip { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 11px;border-radius:99px;border:1px solid var(--border);color:var(--muted);background:var(--white);letter-spacing:.01em;transition:color .3s, border-color .3s, background .3s; }
@@ -1000,16 +994,6 @@ html[data-theme="dark"] .hub-tip-text { color: var(--text); }
   <div class="hub-intro">
     <p>Select a tool to get started</p>
   </div>
-  <!-- Survival tip card (full width) -->
-  <div class="hub-tip-row" id="hubFunRow">
-    <div class="hub-tip-card">
-      <div class="hub-tip-icon">💡</div>
-      <div class="hub-tip-body">
-        <div class="hub-tip-label">Today's Sales Survival Tip</div>
-        <div class="hub-tip-text" id="hubTipText">Loading wisdom…</div>
-      </div>
-    </div>
-  </div>
 
   <div class="hub-cards">
 
@@ -1109,63 +1093,6 @@ html[data-theme="dark"] .hub-tip-text { color: var(--text); }
   </div>
 </div>
 
-<!-- ── Wee Willie — fixed mascot, bottom-right corner ── -->
-<div id="tamaFixed" class="tama-hidden">
-  <div class="tama-bob" id="tamaBob">
-    <svg width="120" height="160" viewBox="0 0 48 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="display:block;image-rendering:pixelated;">
-      <!-- Hard hat brim -->
-      <rect x="5"  y="12" width="38" height="5"  fill="#f59e0b"/>
-      <!-- Hard hat crown -->
-      <rect x="10" y="3"  width="28" height="11" rx="3" fill="#f59e0b"/>
-      <!-- Hat badge (teal) -->
-      <rect x="20" y="4"  width="8"  height="5"  rx="1" fill="#0891b2"/>
-      <rect x="22" y="5"  width="4"  height="3"  fill="#fff" opacity=".8"/>
-
-      <!-- Head -->
-      <rect x="11" y="17" width="26" height="20" rx="3" fill="#fde68a"/>
-
-      <!-- Eyes (blinking group) -->
-      <g class="tama-eyes-group">
-        <rect x="16" y="23" width="6"  height="6"  rx="1" fill="#0f2a4e"/>
-        <rect x="26" y="23" width="6"  height="6"  rx="1" fill="#0f2a4e"/>
-        <rect x="17" y="24" width="3"  height="3"  fill="#fff"/>
-        <rect x="27" y="24" width="3"  height="3"  fill="#fff"/>
-      </g>
-
-      <!-- Mouth — big cheeky grin -->
-      <rect x="18" y="32" width="12" height="3"  rx="1" fill="#b45309"/>
-      <rect x="18" y="33" width="12" height="2"  rx="1" fill="#f87171" opacity=".45"/>
-      <rect x="18" y="33" width="2"  height="2"  rx="0" fill="#fde68a"/>
-      <rect x="28" y="33" width="2"  height="2"  rx="0" fill="#fde68a"/>
-
-      <!-- Body: hi-vis teal jacket -->
-      <rect x="9"  y="37" width="30" height="19" rx="2" fill="#0891b2"/>
-      <!-- Hi-vis yellow stripe -->
-      <rect x="9"  y="43" width="30" height="5"  fill="#fde68a" opacity=".8"/>
-      <!-- Chest badge -->
-      <rect x="13" y="38" width="8"  height="6"  rx="1" fill="#fff" opacity=".9"/>
-      <rect x="14" y="39" width="6"  height="4"  rx="0" fill="#0891b2" opacity=".5"/>
-
-      <!-- Left arm (static, hanging) -->
-      <rect x="1"  y="37" width="8"  height="15" rx="3" fill="#0891b2"/>
-      <rect x="1"  y="51" width="8"  height="5"  rx="2" fill="#fde68a"/>
-
-      <!-- Right arm (waving — separate group, pivots from shoulder) -->
-      <g class="tama-arm-right" transform="translate(39,37)">
-        <rect x="0"  y="0"  width="8"  height="15" rx="3" fill="#0891b2"/>
-        <rect x="0"  y="14" width="8"  height="5"  rx="2" fill="#fde68a"/>
-      </g>
-
-      <!-- Legs -->
-      <rect x="13" y="56" width="9"  height="7"  rx="2" fill="#1e3a5f"/>
-      <rect x="26" y="56" width="9"  height="7"  rx="2" fill="#1e3a5f"/>
-      <!-- Boots -->
-      <rect x="11" y="61" width="13" height="3"  rx="2" fill="#374151"/>
-      <rect x="26" y="61" width="13" height="3"  rx="2" fill="#374151"/>
-    </svg>
-  </div>
-  <div class="tama-label">Wee Willie</div>
-</div>
 
 <!-- ══════════════════════════════════════════════════
      TOOL: CRM API Settings
@@ -13661,94 +13588,71 @@ const ADMIN_PIN = '2012'; // change this to your preferred PIN
 let hubAdminUnlocked = false;    // true once correct PIN entered this session
 let _pinLaunchTool   = null;     // if set, launch this tool on PIN success; else just unlock hub tiles
 
-// ── Hub fun: daily survival tip + Tamagotchi ────────────────────────────────
-(function initHubFun() {
-  const TIPS = [
-    "If a customer says \"we'll see how it goes with one unit\", they mean they're ordering 200 units from someone else.",
-    "The product is never the problem. The shelf position is always the problem.",
-    "A well-placed POS display is worth three sales calls. No one ever believed this until they tried it.",
-    "\"We're overstocked at the moment\" is retail for \"please call us again in exactly six weeks.\"",
-    "The customer who haggles hardest on price is usually the one who reorders fastest.",
-    "Rule of thumb: if it needs explaining, it needs better packaging.",
-    "Promotional pricing works best when the original price is one no one was actually paying.",
-    "A product nobody can find on the shelf is a product that doesn't exist.",
-    "The best time to push a new line is when a competitor's line is out of stock. The second best time is right now.",
-    "Every buyer says they want something different. What they want is something slightly different that sells exactly the same.",
-    "\"We'll trial it over Christmas\" means they want a full range, credit terms, and a sale-or-return arrangement.",
-    "Margin is not a feeling. Check the numbers before agreeing to anything at a trade show.",
-    "The product that looks best on a planogram is not always the product that sells best. But it usually is.",
-    "Never underestimate the power of a buyer who is two coffees in and had a good morning.",
-    "A customer who asks for the spec sheet has already decided not to buy. A customer who asks for stock availability has already decided to buy.",
-    "\"We'll discuss it at the next meeting\" is the retail equivalent of putting something in a drawer and hoping it goes away.",
-    "There is no such thing as a bad product. There are products in the wrong shop at the wrong price with the wrong facing.",
-    "A reorder means the product works. A reorder with an increased quantity means the buyer is taking credit for your idea.",
-    "The first person to mention price in a negotiation loses. The first person to mention stock availability wins.",
-    "A five-star product in a two-star location is a three-star outcome.",
-    "Customers don't buy what they need. They buy what they can see, reach, and justify to themselves in under eight seconds.",
-    "If your rep says \"the customer loves it\" and the customer hasn't reordered, the customer does not love it.",
-    "A buyer's silence after a pitch means either they're very interested or they've mentally moved on. It's 50/50. Guess wrong and you'll know immediately.",
-    "Free stock works. Discount works. Both together works better. None of them work if the product is in the wrong aisle.",
-    "The difference between a complaint and a compliment is usually one phone call answered on the first ring.",
-    "Never schedule a sales visit for a Monday morning or a Friday afternoon. You will not get the version of the buyer you were hoping for.",
-    "A planogram nobody follows is just a very expensive suggestion.",
-    "The customer who orders the least always has the most questions. This is not a coincidence.",
-    "If the feedback from three different buyers is the same, it is market intelligence. If it's from one buyer, it is one buyer's opinion.",
-    "A product launch without staff training is a product launch without a product launch.",
-    "The best follow-up email is the one that arrives before the buyer has to ask where their order is.",
-    "Sell-through data is the most important number in the room. It is also the number least likely to be in the room.",
-    "A trade show conversation is not a sales call. It is market research with better snacks.",
-    "The buyer who says they're happy with their current supplier is always taking your call for a reason.",
-    "End-of-aisle space is worth three times an in-aisle facing. Everyone knows this. Half the industry still doesn't act on it.",
-    "If you can't explain your margin structure in two sentences, your margin structure is the problem.",
-    "A product that ships late once is forgiven. A product that ships late twice is delisted.",
-    "\"We'll see how the season goes\" is buyer-speak for \"we don't believe your forecast but we're too polite to say so.\"",
-    "The easiest sale you will ever make is to a buyer who had a bad experience with your competitor last week.",
-    "A catalogue nobody reads is not a catalogue. It is a very expensive brochure in a drawer.",
-    "The difference between a line that sells and a line that doesn't is usually six centimetres of shelf space.",
-    "A sample that gets left on the buyer's desk is doing more work than a rep who emails twice a week.",
-    "Every brand thinks their product is self-explanatory. No product is self-explanatory.",
-    "Call your best customer once for no reason other than to check in. Do this every quarter. You will not regret it.",
-    "A buyer who replies to emails at 6am is not someone who loves their job. They are someone you should keep very happy.",
-  ];
 
-  function setTip() {
-    var el = document.getElementById('hubTipText');
-    if (!el) return;
-    var day = new Date();
-    var idx = (day.getFullYear() * 1000 + day.getMonth() * 31 + day.getDate()) % TIPS.length;
-    el.textContent = '"' + TIPS[idx] + '"';
-  }
-  setTip();
+// ── Hub card cascade + wave animation ───────────────────────────────────────
+(function initHubCardAnim() {
+  var CASCADE_STAGGER = 68;   // ms between each card arriving
+  var CASCADE_DUR     = 440;  // ms per card (matches CSS)
+  var FLOAT_BASE      = 4200; // ms for one float cycle
 
-  // Tamagotchi: random trip every 25–45 seconds
-  function scheduleTamaTrip() {
-    var delay = 25000 + Math.random() * 20000;
-    setTimeout(function() {
-      var bob = document.getElementById('tamaBob');
-      if (!bob) return;
-      bob.classList.add('tripping');
+  function animateHubCards() {
+    // Visible, non-hidden cards only
+    var cards = Array.from(document.querySelectorAll('.hub-cards .hub-card')).filter(function(c) {
+      return c.style.display !== 'none';
+    });
+    if (!cards.length) return;
+
+    // 1 — Reset: clear any running float, hide cards
+    cards.forEach(function(c) {
+      c.classList.remove('card-entering', 'card-floating');
+      c.style.removeProperty('--float-dur');
+      c.style.removeProperty('--float-delay');
+      c.style.opacity = '0';
+    });
+
+    // 2 — Cascade: stagger each card left→right, top→bottom
+    cards.forEach(function(c, i) {
       setTimeout(function() {
-        bob.classList.remove('tripping');
-        scheduleTamaTrip();
-      }, 1600);
-    }, delay);
-  }
-  scheduleTamaTrip();
+        c.style.opacity = '';            // let the animation control opacity
+        c.style.animationDelay = (i * CASCADE_STAGGER) + 'ms';
+        c.classList.add('card-entering');
+      }, i * CASCADE_STAGGER);
+    });
 
-  // Show/hide Willie based on hub visibility
-  var _tamaEl = document.getElementById('tamaFixed');
+    // 3 — Hand off to float wave once cascade settles
+    var handoffAt = cards.length * CASCADE_STAGGER + CASCADE_DUR + 120;
+    setTimeout(function() {
+      cards.forEach(function(c, i) {
+        c.classList.remove('card-entering');
+        c.style.removeProperty('animation-delay');
+
+        // Wave phase: diagonal flow left→right with slight top→bottom offset
+        // so the "breeze" sweeps across the grid naturally
+        var col   = i % 3;
+        var row   = Math.floor(i / 3);
+        var phase = -(col * 480 + row * 160); // ms into the cycle (negative = pre-offset)
+        var dur   = FLOAT_BASE + col * 180;   // slight duration variation by column
+
+        c.style.setProperty('--float-dur',   dur + 'ms');
+        c.style.setProperty('--float-delay', phase + 'ms');
+        c.classList.add('card-floating');
+      });
+    }, handoffAt);
+  }
+
+  // Run on load
+  animateHubCards();
+
+  // Re-run every time the hub becomes visible (user returns from a tool)
   var _hub = document.getElementById('hub');
-  if (_tamaEl && _hub) {
-    // Show immediately if hub is visible on load
-    if (_hub.style.display !== 'none') _tamaEl.classList.remove('tama-hidden');
-    var _tamaObs = new MutationObserver(function() {
-      if (_hub.style.display === 'none') {
-        _tamaEl.classList.add('tama-hidden');
-      } else {
-        _tamaEl.classList.remove('tama-hidden');
+  if (_hub) {
+    var _hubAnim = new MutationObserver(function() {
+      if (_hub.style.display !== 'none') {
+        // Small timeout so the hub is fully repainted before we start
+        setTimeout(animateHubCards, 40);
       }
     });
-    _tamaObs.observe(_hub, { attributes: true, attributeFilter: ['style'] });
+    _hubAnim.observe(_hub, { attributes: true, attributeFilter: ['style'] });
   }
 })();
 
