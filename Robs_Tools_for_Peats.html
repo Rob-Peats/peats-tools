@@ -601,6 +601,32 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 }
 html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,255,255,.07); }
 
+/* ── Hub fun extras ── */
+/* Survival tip card */
+.hub-tip-row { display: flex; align-items: flex-start; gap: 12px; max-width: 960px; width: 100%; position: relative; z-index: 1; }
+.hub-tip-card { flex: 1; background: #fff; border: 2px solid #e2e8f0; border-radius: 14px; box-shadow: 0 2px 10px rgba(15,42,78,.08); padding: 12px 18px; display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.hub-tip-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 1px; }
+.hub-tip-body { min-width: 0; }
+.hub-tip-label { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #94a3b8; margin-bottom: 3px; }
+.hub-tip-text { font-size: 12.5px; font-weight: 600; color: #0f2a4e; line-height: 1.45; }
+html[data-theme="dark"] .hub-tip-card { background: var(--white); border-color: var(--border); }
+html[data-theme="dark"] .hub-tip-text { color: var(--text); }
+
+/* Tamagotchi mascot */
+.hub-tama { flex-shrink: 0; width: 72px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.tama-sprite { width: 48px; height: 48px; position: relative; image-rendering: pixelated; }
+/* SVG pixel art drawn inline — animations via CSS */
+@keyframes tama-idle { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+@keyframes tama-blink { 0%,90%,100%{opacity:1} 92%,98%{opacity:0} }
+@keyframes tama-wave { 0%,60%,100%{transform:rotate(0deg)} 65%{transform:rotate(-20deg)} 70%{transform:rotate(12deg)} 75%{transform:rotate(-15deg)} 80%{transform:rotate(8deg)} 85%{transform:rotate(0deg)} }
+@keyframes tama-trip { 0%,85%,100%{transform:translateY(0) rotate(0deg)} 88%{transform:translateY(1px) rotate(8deg)} 91%{transform:translateY(2px) rotate(-5deg)} 94%{transform:translateY(0) rotate(2deg)} }
+.tama-body { animation: tama-idle 2.4s ease-in-out infinite; transform-origin: bottom center; }
+.tama-eyes { animation: tama-blink 4s steps(1) infinite; }
+.tama-arm  { animation: tama-wave 7s ease-in-out infinite; transform-origin: 8px 4px; }
+/* Occasionally trip — driven by JS class toggle */
+.tama-sprite.tripping .tama-body { animation: tama-trip 1.1s ease-in-out forwards; }
+.tama-label { font-size: 9px; font-weight: 700; color: #94a3b8; text-align: center; margin-top: 3px; letter-spacing: .04em; }
+
 /* ── Hub token status chips ── */
 .ts-chip { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 11px;border-radius:99px;border:1px solid var(--border);color:var(--muted);background:var(--white);letter-spacing:.01em;transition:color .3s, border-color .3s, background .3s; }
 .ts-chip .ts-dot { width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0; }
@@ -974,6 +1000,64 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
   <div class="hub-intro">
     <p>Select a tool to get started</p>
   </div>
+  <!-- Fun row: survival tip + Tamagotchi -->
+  <div class="hub-tip-row" id="hubFunRow">
+    <div class="hub-tip-card">
+      <div class="hub-tip-icon">💡</div>
+      <div class="hub-tip-body">
+        <div class="hub-tip-label">Today's Sales Survival Tip</div>
+        <div class="hub-tip-text" id="hubTipText">Loading wisdom…</div>
+      </div>
+    </div>
+    <!-- Tamagotchi mascot: Wee Willie the warehouse worker -->
+    <div class="hub-tama">
+      <div class="tama-sprite" id="tamaSprite" title="Wee Willie — your warehouse mascot">
+        <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+          <!-- hard hat -->
+          <rect x="13" y="6" width="22" height="4" fill="#f59e0b"/>
+          <rect x="11" y="9" width="26" height="3" fill="#f59e0b"/>
+          <rect x="14" y="5" width="4" height="3" fill="#d97706"/>
+          <!-- head -->
+          <g class="tama-body">
+            <rect x="14" y="12" width="20" height="16" rx="3" fill="#fde68a"/>
+            <!-- eyes (blink group) -->
+            <g class="tama-eyes">
+              <rect x="18" y="17" width="4" height="4" rx="1" fill="#0f2a4e"/>
+              <rect x="26" y="17" width="4" height="4" rx="1" fill="#0f2a4e"/>
+              <!-- pupils -->
+              <rect x="19" y="18" width="2" height="2" fill="#fff"/>
+              <rect x="27" y="18" width="2" height="2" fill="#fff"/>
+            </g>
+            <!-- mouth: cheeky grin -->
+            <rect x="20" y="23" width="8" height="2" rx="1" fill="#b45309"/>
+            <rect x="20" y="24" width="8" height="1" rx="0" fill="#f87171" opacity=".5"/>
+            <!-- body / hi-vis jacket -->
+            <rect x="12" y="28" width="24" height="14" rx="2" fill="#0891b2"/>
+            <!-- hi-vis stripes -->
+            <rect x="12" y="32" width="24" height="3" fill="#fde68a" opacity=".7"/>
+            <!-- Peats logo badge -->
+            <rect x="16" y="29" width="6" height="4" rx="1" fill="#fff" opacity=".9"/>
+            <!-- right arm (waving) -->
+            <g class="tama-arm" transform="translate(36,29)">
+              <rect x="0" y="0" width="5" height="10" rx="2" fill="#0891b2"/>
+              <rect x="1" y="9" width="3" height="3" rx="1" fill="#fde68a"/>
+            </g>
+            <!-- left arm -->
+            <rect x="7" y="29" width="5" height="10" rx="2" fill="#0891b2"/>
+            <rect x="8" y="38" width="3" height="3" rx="1" fill="#fde68a"/>
+            <!-- legs -->
+            <rect x="15" y="42" width="7" height="5" rx="2" fill="#1e3a5f"/>
+            <rect x="26" y="42" width="7" height="5" rx="2" fill="#1e3a5f"/>
+            <!-- boots -->
+            <rect x="14" y="46" width="9" height="2" rx="1" fill="#374151"/>
+            <rect x="25" y="46" width="9" height="2" rx="1" fill="#374151"/>
+          </g>
+        </svg>
+      </div>
+      <div class="tama-label">Wee Willie</div>
+    </div>
+  </div>
+
   <div class="hub-cards">
 
     <!-- Order Conversion -->
@@ -13565,6 +13649,93 @@ function renderAdminLog() {
 const ADMIN_PIN = '2012'; // change this to your preferred PIN
 let hubAdminUnlocked = false;    // true once correct PIN entered this session
 let _pinLaunchTool   = null;     // if set, launch this tool on PIN success; else just unlock hub tiles
+
+// ── Hub fun: daily survival tip + Tamagotchi ────────────────────────────────
+(function initHubFun() {
+  const TIPS = [
+    "If a customer says \"we'll see how it goes with one unit\", they mean they're ordering 200 units from someone else.",
+    "The product is never the problem. The shelf position is always the problem.",
+    "A well-placed POS display is worth three sales calls. No one ever believed this until they tried it.",
+    "\"We're overstocked at the moment\" is retail for \"please call us again in exactly six weeks.\"",
+    "The customer who haggles hardest on price is usually the one who reorders fastest.",
+    "Rule of thumb: if it needs explaining, it needs better packaging.",
+    "Promotional pricing works best when the original price is one no one was actually paying.",
+    "A product nobody can find on the shelf is a product that doesn't exist.",
+    "The best time to push a new line is when a competitor's line is out of stock. The second best time is right now.",
+    "Every buyer says they want something different. What they want is something slightly different that sells exactly the same.",
+    "\"We'll trial it over Christmas\" means they want a full range, credit terms, and a sale-or-return arrangement.",
+    "Margin is not a feeling. Check the numbers before agreeing to anything at a trade show.",
+    "The product that looks best on a planogram is not always the product that sells best. But it usually is.",
+    "Never underestimate the power of a buyer who is two coffees in and had a good morning.",
+    "A customer who asks for the spec sheet has already decided not to buy. A customer who asks for stock availability has already decided to buy.",
+    "\"We'll discuss it at the next meeting\" is the retail equivalent of putting something in a drawer and hoping it goes away.",
+    "There is no such thing as a bad product. There are products in the wrong shop at the wrong price with the wrong facing.",
+    "A reorder means the product works. A reorder with an increased quantity means the buyer is taking credit for your idea.",
+    "The first person to mention price in a negotiation loses. The first person to mention stock availability wins.",
+    "A five-star product in a two-star location is a three-star outcome.",
+    "Customers don't buy what they need. They buy what they can see, reach, and justify to themselves in under eight seconds.",
+    "If your rep says \"the customer loves it\" and the customer hasn't reordered, the customer does not love it.",
+    "A buyer's silence after a pitch means either they're very interested or they've mentally moved on. It's 50/50. Guess wrong and you'll know immediately.",
+    "Free stock works. Discount works. Both together works better. None of them work if the product is in the wrong aisle.",
+    "The difference between a complaint and a compliment is usually one phone call answered on the first ring.",
+    "Never schedule a sales visit for a Monday morning or a Friday afternoon. You will not get the version of the buyer you were hoping for.",
+    "A planogram nobody follows is just a very expensive suggestion.",
+    "The customer who orders the least always has the most questions. This is not a coincidence.",
+    "If the feedback from three different buyers is the same, it is market intelligence. If it's from one buyer, it is one buyer's opinion.",
+    "A product launch without staff training is a product launch without a product launch.",
+    "The best follow-up email is the one that arrives before the buyer has to ask where their order is.",
+    "Sell-through data is the most important number in the room. It is also the number least likely to be in the room.",
+    "A trade show conversation is not a sales call. It is market research with better snacks.",
+    "The buyer who says they're happy with their current supplier is always taking your call for a reason.",
+    "End-of-aisle space is worth three times an in-aisle facing. Everyone knows this. Half the industry still doesn't act on it.",
+    "If you can't explain your margin structure in two sentences, your margin structure is the problem.",
+    "A product that ships late once is forgiven. A product that ships late twice is delisted.",
+    "\"We'll see how the season goes\" is buyer-speak for \"we don't believe your forecast but we're too polite to say so.\"",
+    "The easiest sale you will ever make is to a buyer who had a bad experience with your competitor last week.",
+    "A catalogue nobody reads is not a catalogue. It is a very expensive brochure in a drawer.",
+    "The difference between a line that sells and a line that doesn't is usually six centimetres of shelf space.",
+    "A sample that gets left on the buyer's desk is doing more work than a rep who emails twice a week.",
+    "Every brand thinks their product is self-explanatory. No product is self-explanatory.",
+    "Call your best customer once for no reason other than to check in. Do this every quarter. You will not regret it.",
+    "A buyer who replies to emails at 6am is not someone who loves their job. They are someone you should keep very happy.",
+  ];
+
+  function setTip() {
+    var el = document.getElementById('hubTipText');
+    if (!el) return;
+    var day = new Date();
+    var idx = (day.getFullYear() * 1000 + day.getMonth() * 31 + day.getDate()) % TIPS.length;
+    el.textContent = '"' + TIPS[idx] + '"';
+  }
+  setTip();
+
+  // Tamagotchi: random trip every 25–45 seconds
+  function scheduleTamaTrip() {
+    var delay = 25000 + Math.random() * 20000;
+    setTimeout(function() {
+      var sprite = document.getElementById('tamaSprite');
+      if (!sprite) return;
+      sprite.classList.add('tripping');
+      setTimeout(function() {
+        sprite.classList.remove('tripping');
+        scheduleTamaTrip();
+      }, 1200);
+    }, delay);
+  }
+  scheduleTamaTrip();
+
+  // Hide fun row when not on hub
+  var _origShowHub = window.showHub;
+  // Hook into launchTool / back navigation via observer on #hub visibility
+  var _hubFunRow = document.getElementById('hubFunRow');
+  var _hub = document.getElementById('hub');
+  if (_hubFunRow && _hub) {
+    var _hubObs = new MutationObserver(function() {
+      _hubFunRow.style.display = (_hub.style.display === 'none') ? 'none' : 'flex';
+    });
+    _hubObs.observe(_hub, { attributes: true, attributeFilter: ['style'] });
+  }
+})();
 
 // Show PIN prompt triggered by the hub unlock button (just reveals tiles)
 function showHubUnlockPin() {
