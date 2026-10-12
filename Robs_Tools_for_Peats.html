@@ -18482,7 +18482,7 @@ async function wiAutoSweep(forceAll) {
           foundInBatch.add(code);
           const ver = item.ImageVersion || 1;
           entry.webDesc      = wiStripHtml(item.WebDescription || '');
-          entry.longDescFull = wiStripHtml([item.WebExtendedDescription, item.Specification].filter(Boolean).join('\n\n'));
+          entry.longDescFull = wiStripHtml(item.Specification || '');
           entry.searchTerms  = item.SearchTerms || '';
           entry.imgAltText   = item.ImageAltText || '';
           entry.webImgVer    = ver;
@@ -18763,7 +18763,7 @@ async function wiSyncFromCrm() {
           if (!entry) return;
           const ver = item.ImageVersion || 1;
           entry.webDesc      = wiStripHtml(item.WebDescription         || '');
-          entry.longDescFull = wiStripHtml([item.WebExtendedDescription, item.Specification].filter(Boolean).join('\n\n'));
+          entry.longDescFull = wiStripHtml(item.Specification || '');
           entry.searchTerms  = item.SearchTerms            || '';
           entry.imgAltText   = item.ImageAltText           || '';
           entry.webImgVer    = ver;
