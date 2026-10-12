@@ -1278,6 +1278,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
                 style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">👥 Probe Customer Sales</button>
               <button onclick="crmProbeCustomerPrices()" id="crmCustomerPricesProbeBtn"
                 style="background:#be185d;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🎯 Probe Customer Special Prices</button>
+              <button onclick="crmProbeProductAttributes()" id="crmProductAttrsProbeBtn"
+                style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">🧪 Probe Product Attributes</button>
             </div>
           </details>
           <div id="crmApiOutput" style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:var(--text);white-space:pre-wrap;min-height:80px;max-height:400px;overflow-y:auto;line-height:1.6">
@@ -29688,6 +29690,208 @@ async function crmProbeCustomerPrices() {
 
   crmApiLog(out);
   btn.disabled = false; btn.textContent = '🎯 Probe Customer Special Prices';
+}
+
+// ── Product Attributes Probe ──────────────────────────────────────────────────
+// Finds the technical specification <ul> bullet points for a product SKU.
+// These are NOT in ProductItems — they live in attribute/value assignment entities.
+// Strategy:
+//   Stage 1 — query ProductItemAttributeValueAssignments filtered by ProductItemId
+//   Stage 2 — query ProductItemAttributes and ProductItemAttributeValues for schema
+//   Stage 3 — try to join/expand for human-readable attribute names + values
+async function crmProbeProductAttributes() {
+  const btn = document.getElementById('crmProductAttrsProbeBtn');
+  btn.disabled = true; btn.textContent = '⏳ Probing…';
+  const pat = getCrmPat();
+  if (!pat) {
+    crmApiLog('✗ No PAT saved — enter your token in Settings first.');
+    btn.disabled = false; btn.textContent = '🧪 Probe Product Attributes';
+    return;
+  }
+  const sku = (document.getElementById('crmSkuInput')?.value || '').trim();
+  if (!sku) {
+    crmApiLog('✗ Enter a SKU in the box above first, then click Probe Product Attributes.');
+    btn.disabled = false; btn.textContent = '🧪 Probe Product Attributes';
+    return;
+  }
+
+  const CRM = CRM_ODATA_BASE;
+  const h = { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' };
+  let out = '🧪 Product Attributes Probe — SKU: ' + sku + '\n' + '═'.repeat(56) + '\n\n';
+  crmApiLog(out);
+
+  // ── Stage 1: ProductItemAttributeValueAssignments filtered by ProductItemId ──
+  out += '── Stage 1: ProductItemAttributeValueAssignments?$filter=ProductItemId eq \'' + sku + '\' ──\n';
+  crmApiLog(out);
+  let assignmentRows = [];
+  try {
+    const url1 = CRM + '/ProductItemAttributeValueAssignments?$filter=' +
+      encodeURIComponent("ProductItemId eq '" + sku + "'") + '&$top=50';
+    const r1 = await fetch(url1, { headers: h });
+    if (r1.ok) {
+      const d1 = await r1.json();
+      assignmentRows = d1.value || [];
+      if (assignmentRows.length) {
+        out += '✅ Found ' + assignmentRows.length + ' assignment row(s).\n';
+        out += 'Fields: ' + Object.keys(assignmentRows[0]).join(', ') + '\n\n';
+        out += 'All rows:\n';
+        assignmentRows.forEach((row, i) => {
+          out += '  [' + (i+1) + '] ';
+          Object.entries(row).forEach(([k,v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+          out += '\n';
+        });
+      } else {
+        out += '⚠ 0 rows returned. Trying without quotes (numeric ID?)…\n';
+        // Try without quotes in case ProductItemId is numeric
+        const url1b = CRM + '/ProductItemAttributeValueAssignments?$filter=' +
+          encodeURIComponent("ProductItemId eq " + sku) + '&$top=50';
+        const r1b = await fetch(url1b, { headers: h });
+        if (r1b.ok) {
+          const d1b = await r1b.json();
+          assignmentRows = d1b.value || [];
+          if (assignmentRows.length) {
+            out += '✅ Found ' + assignmentRows.length + ' row(s) with numeric filter.\n';
+            out += 'Fields: ' + Object.keys(assignmentRows[0]).join(', ') + '\n\n';
+            assignmentRows.forEach((row, i) => {
+              out += '  [' + (i+1) + '] ';
+              Object.entries(row).forEach(([k,v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+              out += '\n';
+            });
+          } else {
+            out += '⚠ Still 0 rows. Fetching first 5 rows of entity to inspect field names…\n';
+            const url1c = CRM + '/ProductItemAttributeValueAssignments?$top=5';
+            const r1c = await fetch(url1c, { headers: h });
+            if (r1c.ok) {
+              const d1c = await r1c.json();
+              const sampleRows = d1c.value || [];
+              if (sampleRows.length) {
+                out += 'Sample fields: ' + Object.keys(sampleRows[0]).join(', ') + '\n';
+                sampleRows.slice(0,3).forEach(row => {
+                  out += '  ';
+                  Object.entries(row).forEach(([k,v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+                  out += '\n';
+                });
+              } else {
+                out += 'Entity appears empty.\n';
+              }
+            } else {
+              out += 'Entity returned HTTP ' + r1c.status + '\n';
+            }
+          }
+        } else {
+          out += 'HTTP ' + r1b.status + ' on numeric filter attempt.\n';
+        }
+      }
+    } else {
+      out += '✗ HTTP ' + r1.status + ' — entity may not exist or name differs.\n';
+    }
+  } catch(e) { out += '✗ Error: ' + e.message + '\n'; }
+  out += '\n';
+  crmApiLog(out);
+
+  // ── Stage 2: Inspect ProductItemAttributes (the attribute schema) ─────────
+  out += '── Stage 2: ProductItemAttributes — attribute schema ──\n';
+  crmApiLog(out);
+  let attrRows = [];
+  try {
+    const r2 = await fetch(CRM + '/ProductItemAttributes?$top=20', { headers: h });
+    if (r2.ok) {
+      const d2 = await r2.json();
+      attrRows = d2.value || [];
+      if (attrRows.length) {
+        out += '✅ ' + attrRows.length + ' attribute definition(s) found.\n';
+        out += 'Fields: ' + Object.keys(attrRows[0]).join(', ') + '\n\n';
+        out += 'All attribute definitions:\n';
+        attrRows.forEach((row, i) => {
+          out += '  [' + (i+1) + '] ';
+          Object.entries(row).forEach(([k,v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+          out += '\n';
+        });
+      } else {
+        out += '⚠ Empty — no attribute definitions found.\n';
+      }
+    } else {
+      out += '✗ HTTP ' + r2.status + '\n';
+    }
+  } catch(e) { out += '✗ Error: ' + e.message + '\n'; }
+  out += '\n';
+  crmApiLog(out);
+
+  // ── Stage 3: Inspect ProductItemAttributeValues (the value options) ───────
+  out += '── Stage 3: ProductItemAttributeValues — value options ──\n';
+  crmApiLog(out);
+  try {
+    const r3 = await fetch(CRM + '/ProductItemAttributeValues?$top=20', { headers: h });
+    if (r3.ok) {
+      const d3 = await r3.json();
+      const valRows = d3.value || [];
+      if (valRows.length) {
+        out += '✅ ' + valRows.length + ' attribute value(s) found.\n';
+        out += 'Fields: ' + Object.keys(valRows[0]).join(', ') + '\n\n';
+        out += 'Sample rows:\n';
+        valRows.slice(0, 10).forEach((row, i) => {
+          out += '  [' + (i+1) + '] ';
+          Object.entries(row).forEach(([k,v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+          out += '\n';
+        });
+      } else {
+        out += '⚠ Empty.\n';
+      }
+    } else {
+      out += '✗ HTTP ' + r3.status + '\n';
+    }
+  } catch(e) { out += '✗ Error: ' + e.message + '\n'; }
+  out += '\n';
+  crmApiLog(out);
+
+  // ── Stage 4: Also try ProductItemAttributeAssignments ────────────────────
+  out += '── Stage 4: ProductItemAttributeAssignments?$filter=ProductItemId eq \'' + sku + '\' ──\n';
+  crmApiLog(out);
+  try {
+    const url4 = CRM + '/ProductItemAttributeAssignments?$filter=' +
+      encodeURIComponent("ProductItemId eq '" + sku + "'") + '&$top=50';
+    const r4 = await fetch(url4, { headers: h });
+    if (r4.ok) {
+      const d4 = await r4.json();
+      const rows4 = d4.value || [];
+      if (rows4.length) {
+        out += '✅ Found ' + rows4.length + ' row(s).\n';
+        out += 'Fields: ' + Object.keys(rows4[0]).join(', ') + '\n\n';
+        rows4.forEach((row, i) => {
+          out += '  [' + (i+1) + '] ';
+          Object.entries(row).forEach(([k,v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+          out += '\n';
+        });
+      } else {
+        out += '⚠ 0 rows for this SKU.\n';
+        // Show schema sample
+        const r4s = await fetch(CRM + '/ProductItemAttributeAssignments?$top=3', { headers: h });
+        if (r4s.ok) {
+          const d4s = await r4s.json();
+          const s4 = d4s.value || [];
+          if (s4.length) {
+            out += 'Entity exists. Fields: ' + Object.keys(s4[0]).join(', ') + '\n';
+            s4.slice(0,3).forEach(row => {
+              out += '  ';
+              Object.entries(row).forEach(([k,v]) => { if (v != null && v !== '') out += k + '=' + v + '  '; });
+              out += '\n';
+            });
+          }
+        }
+      }
+    } else {
+      out += '✗ HTTP ' + r4.status + '\n';
+    }
+  } catch(e) { out += '✗ Error: ' + e.message + '\n'; }
+  out += '\n';
+  crmApiLog(out);
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  out += '═'.repeat(56) + '\n';
+  out += '✅ Probe complete for SKU: ' + sku + '\n';
+  out += 'Paste this output into chat to identify the correct entity/field for specs.\n';
+  crmApiLog(out);
+  btn.disabled = false; btn.textContent = '🧪 Probe Product Attributes';
 }
 
 // ── Customer Sales Probe ────────────────────────────────────────────────────
