@@ -3193,7 +3193,7 @@ async function githubPushCatalog(blob) {
   }
   const b64 = btoa(binary);
 
-  // 3. Commit the new file — retry once if SHA conflict (another push landed between our fetch and PUT)
+  // 3. Commit the new file — retry up to 5 times on SHA conflict (stale SHA from concurrent pushes)
   const _doPut = async (sha) => fetch(apiUrl, {
     method: 'PUT',
     headers,
@@ -3204,19 +3204,21 @@ async function githubPushCatalog(blob) {
       branch:  GITHUB_CONFIG.branch,
     }),
   });
+  const _isShaMismatch = (status, msg) =>
+    status === 409 || (status === 422 && (msg.includes('does not match') || msg.includes('sha')));
+
   let putResp = await _doPut(meta.sha);
-  // 409 = SHA conflict (another commit landed between our GET and PUT) — re-fetch and retry once
-  if (!putResp.ok && (putResp.status === 409 || putResp.status === 422)) {
+  // Retry loop: re-fetch fresh SHA and retry on conflict (up to 5 attempts total)
+  for (let attempt = 1; attempt < 5 && !putResp.ok; attempt++) {
     const errCheck = await putResp.json().catch(() => ({}));
     const errMsg   = (errCheck.message || '').toLowerCase();
-    if (errMsg.includes('does not match') || errMsg.includes('sha') || putResp.status === 409) {
-      // Re-fetch the latest SHA and retry
-      const retryMeta = await fetch(apiUrl + `?ref=${GITHUB_CONFIG.branch}`, { headers });
-      if (retryMeta.ok) {
-        const retryMetaJson = await retryMeta.json();
-        putResp = await _doPut(retryMetaJson.sha);
-      }
-    }
+    if (!_isShaMismatch(putResp.status, errMsg)) break; // not a SHA conflict — give up
+    // Small back-off before re-fetching so concurrent pushes have time to settle
+    await new Promise(r => setTimeout(r, 300 * attempt));
+    const freshMeta = await fetch(apiUrl + `?ref=${GITHUB_CONFIG.branch}`, { headers });
+    if (!freshMeta.ok) break; // can't get a fresh SHA
+    const freshMetaJson = await freshMeta.json();
+    putResp = await _doPut(freshMetaJson.sha);
   }
   if (!putResp.ok) {
     const errBody = await putResp.json().catch(() => ({}));
