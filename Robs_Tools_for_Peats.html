@@ -2963,10 +2963,13 @@ function _ghBadge(msg, hide) {
 async function githubLoadCatalog() {
   if (!GH_READY) return;
   _ghBadge('📋 Loading catalog…');
-  // Public repo — fetch raw file directly, no token required
+  // Fetch raw file — include token so private repos work
   const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.catalogPath}`;
+  const _ghTok = getGhToken();
+  const _fetchOpts = { cache: 'no-store' };
+  if (_ghTok) _fetchOpts.headers = { 'Authorization': `Bearer ${_ghTok.trim()}` };
   try {
-    const resp = await fetch(url, { cache: 'no-store' });
+    const resp = await fetch(url, _fetchOpts);
     if (!resp.ok) throw new Error(`GitHub ${resp.status}: ${resp.statusText}`);
     const arrayBuf = await resp.arrayBuffer();
     // Fix: XLSX.js 0.18.5 silently skips sheets whose Target path starts with "./"
