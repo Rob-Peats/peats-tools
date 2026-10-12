@@ -29236,27 +29236,33 @@ async function crmLookupSku() {
     const dateFields  = entries.filter(([k]) => dateRx.test(k));
     const stockFields = entries.filter(([k]) => stockRx.test(k));
 
-    const fmtVal = v => v == null ? '(null)' : (String(v).length > 90 ? String(v).slice(0, 90) + '…' : String(v));
+    const webFields = new Set(['WebExtendedDescription','Specification','WebDescription','SearchTerms','ImageAltText']);
+    const fmtVal = (v, k) => {
+      if (v == null) return '(null)';
+      const s = String(v);
+      const lim = webFields.has(k) ? 3000 : 90;
+      return s.length > lim ? s.slice(0, lim) + '…' : s;
+    };
 
     if (brandFields.length) {
       out += '🏷 Brand / Manufacturer fields:\n';
-      brandFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+      brandFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v, k) + '\n'; });
       out += '\n';
     }
     if (dateFields.length) {
       out += '📅 Date fields:\n';
-      dateFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+      dateFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v, k) + '\n'; });
       out += '\n';
     }
     if (stockFields.length) {
       out += '📦 Stock / Qty fields:\n';
-      stockFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+      stockFields.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v, k) + '\n'; });
       out += '\n';
     }
 
     out += '─'.repeat(50) + '\n';
     out += '📋 All fields:\n';
-    entries.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v) + '\n'; });
+    entries.forEach(([k, v]) => { out += '  ' + k.padEnd(36) + fmtVal(v, k) + '\n'; });
 
   } catch(e) {
     out += '✗ Error: ' + e.message + '\n';
