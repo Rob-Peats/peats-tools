@@ -8273,6 +8273,11 @@ window.addEventListener('message', function(e) {
     if (!soaAdvF || !soaAdvF.contentWindow) return;
     const t = document.documentElement.getAttribute('data-theme') || 'light';
     try { soaAdvF.contentWindow.postMessage({type:'peats-theme', theme:t}, '*'); } catch(ex){}
+    // Send CRM PAT so the iframe can call pricing bands and CRM stock
+    const _soaPat = getCrmPat();
+    if (_soaPat) {
+      try { soaAdvF.contentWindow.postMessage({type:'peats-config', crmPat: _soaPat}, '*'); } catch(ex){}
+    }
     if (state.catalogRawBuf) {
       try {
         const advCopy = state.catalogRawBuf.slice(0);
@@ -28196,6 +28201,12 @@ function saveCrmPat() {
     document.getElementById('crmPatInput').value = '••••••••••••••••';
     document.getElementById('crmPatStatus').innerHTML = '<span style="color:var(--green)">✔ Token saved.</span>';
     showToast('✔ CRM token saved.');
+    // Relay updated PAT to SOA+Ad iframe if it is open
+    try {
+      const _soaAdvF = document.getElementById('soaadvertFrame');
+      if (_soaAdvF && _soaAdvF.contentWindow && soaAdvertBlobUrl)
+        _soaAdvF.contentWindow.postMessage({type:'peats-config', crmPat: val}, '*');
+    } catch(ex){}
   } catch(e) { showToast('✗ Could not save: ' + e.message); }
 }
 
