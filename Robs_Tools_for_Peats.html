@@ -579,7 +579,7 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 #hubCardOrderBuilder { --tool-accent: #1a3c6e; background: linear-gradient(158deg, #c3d4ec 0%, #eaf0f8 82%); }
 html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158deg, #0d1f38 0%, var(--white) 78%); --tool-accent: #6aa9e0; }
 /* ── Order Builder native panel ────────────────────────────────────────────── */
-.ob-dropdown-panel { position:absolute; top:calc(100% + 6px); left:0; background:var(--white); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:16px; min-width:260px; z-index:9999; }
+.ob-dropdown-panel { position:fixed; background:var(--white); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); padding:16px; min-width:260px; z-index:99999; }
 .ob-period-row { display:flex; gap:6px; margin-top:6px; }
 .ob-period-btn { padding:5px 14px; border:1px solid var(--border); border-radius:6px; background:var(--light); color:var(--text); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-period-btn.active { background:var(--brand); color:#fff; border-color:var(--brand); }
@@ -2716,6 +2716,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-left:8px;">Exclude:</span>
     <button id="obExclTBDBtn" class="ob-exclude-btn" onclick="obToggleExclude('tbd')">⊘ TBD</button>
     <button id="obExclEOLBtn" class="ob-exclude-btn" onclick="obToggleExclude('eol')">⊘ EOL</button>
+    <span id="obQueuedCount" style="display:none;margin-left:8px;padding:3px 10px;background:#1a3c6e;color:#fff;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.04em;"></span>
     <span id="obRowCount" style="margin-left:auto;font-size:12px;color:var(--muted);"></span>
   </div>
 
@@ -8819,11 +8820,30 @@ function obCloseAllPanels(except) {
   }
 }
 
+function _obPositionPanel(panelId, btnEl, alignRight) {
+  const panel = document.getElementById(panelId);
+  const r = btnEl.getBoundingClientRect();
+  panel.style.top  = (r.bottom + 6) + 'px';
+  if (alignRight) {
+    panel.style.right = (window.innerWidth - r.right) + 'px';
+    panel.style.left  = 'auto';
+  } else {
+    panel.style.left  = r.left + 'px';
+    panel.style.right = 'auto';
+  }
+}
+
 function obToggleCustomerPanel(e) {
   e.stopPropagation();
   const open = !obSt.customerPanelOpen;
   obCloseAllPanels('customer');
-  document.getElementById('obCustomerPanel').style.display = open ? 'block' : 'none';
+  const panel = document.getElementById('obCustomerPanel');
+  if (open) {
+    _obPositionPanel('obCustomerPanel', e.currentTarget, false);
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
   obSt.customerPanelOpen = open;
   if (open) setTimeout(() => document.getElementById('obAccountInput').focus(), 60);
 }
@@ -8832,7 +8852,13 @@ function obToggleViewPanel(e) {
   e.stopPropagation();
   const open = !obSt.viewPanelOpen;
   obCloseAllPanels('view');
-  document.getElementById('obViewPanel').style.display = open ? 'block' : 'none';
+  const panel = document.getElementById('obViewPanel');
+  if (open) {
+    _obPositionPanel('obViewPanel', e.currentTarget, false);
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
   obSt.viewPanelOpen = open;
 }
 
@@ -8842,6 +8868,7 @@ function obToggleBrandPanel(e) {
   obCloseAllPanels('brand');
   if (open) {
     obBuildBrandList('');
+    _obPositionPanel('obBrandPanel', e.currentTarget, true);
     document.getElementById('obBrandPanel').style.display = 'block';
   } else {
     document.getElementById('obBrandPanel').style.display = 'none';
@@ -9127,6 +9154,35 @@ function obRender() {
   else obRenderNew();
 }
 
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+function _obFmtMoney(v) { return v != null ? '€' + Number(v).toFixed(2) : '—'; }
+function _obFmtDate(d)  { return d ? d.toLocaleDateString('en-IE', {day:'2-digit',month:'short',year:'2-digit'}) : '—'; }
+
+// Insert brand-group header rows into a sorted-by-brand rows array
+function _obGroupByBrand(rows, colCount, renderRow) {
+  var html = '';
+  var lastBrand = null;
+  rows.forEach(function(r) {
+    const brand = r.brand || '—';
+    if (brand !== lastBrand) {
+      lastBrand = brand;
+      html += '<tr><td colspan="' + colCount + '" style="background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;padding:5px 10px;position:sticky;top:36px;z-index:1;">' + brand + '</td></tr>';
+    }
+    html += renderRow(r);
+  });
+  return html;
+}
+
+function _obUpdateQueuedCount() {
+  const n = Object.keys(obOrderQtys).filter(function(k){ return obOrderQtys[k] > 0; }).length;
+  const el = document.getElementById('obQueuedCount');
+  if (el) {
+    el.textContent = n > 0 ? n + ' line' + (n === 1 ? '' : 's') + ' queued' : '';
+    el.style.display = n > 0 ? 'inline-block' : 'none';
+  }
+}
+
 // ── Their Range table ─────────────────────────────────────────────────────────
 
 function obRenderCurrent() {
@@ -9135,7 +9191,6 @@ function obRenderCurrent() {
   const showBrand  = document.getElementById('obShowBrand').checked;
   const showStatus = document.getElementById('obShowStatus').checked;
 
-  // Section header cells
   const sections = [];
   const cols     = [];
 
@@ -9146,29 +9201,36 @@ function obRenderCurrent() {
   if (showStatus) cols.push({ id:'status', label:'Status', sort:'statusClass', center:true });
 
   var histSpan = 2 + (showBrand ? 1 : 0);
-  sections.push({ label:'HISTORY', span:histSpan, bg:'#b07a10' });
-  cols.push({ id:'totalQty',    label:'Qty Sold',    sort:'totalQty',    center:true });
+  sections.push({ label:'HISTORY (' + obSt.months + 'mo)', span:histSpan, bg:'#b07a10' });
+  cols.push({ id:'totalQty',    label:'Qty Sold',     sort:'totalQty',    center:true });
   cols.push({ id:'lastOrdered', label:'Last Ordered', sort:'lastOrdered', center:true });
   if (showBrand) cols.push({ id:'brand', label:'Brand', sort:'brand', center:false });
 
   if (showCost)   { sections.push({ label:'COST',   span:1, bg:'#a03d00' }); cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true }); }
   if (showRetail) { sections.push({ label:'RETAIL', span:1, bg:'#5a2d8a' }); cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true }); }
+  sections.push({ label:'ORDER', span:1, bg:'#1a3c6e' });
+  cols.push({ id:'orderQty', label:'Order Qty', sort:null, center:true });
 
   const s = obSt.cSort;
   const secHtml = sections.map(function(sec) {
     return '<th colspan="' + sec.span + '" style="background:' + sec.bg + ';color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:4px 6px;border-right:2px solid #fff;">' + sec.label + '</th>';
   }).join('');
   const colHtml = cols.map(function(c) {
-    const arrow  = (s.col === c.sort) ? (s.dir === 1 ? ' ▲' : ' ▼') : '';
+    const arrow  = c.sort && s.col === c.sort ? (s.dir === 1 ? ' ▲' : ' ▼') : '';
+    const click  = c.sort ? 'onclick="obSortBy(\'current\',\'' + c.sort + '\')" style="cursor:pointer;' : 'style="';
     const center = c.center ? 'text-align:center;' : '';
     const width  = (c.cls === 'cost' || c.cls === 'retail') ? 'width:65px;max-width:70px;' : '';
-    return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" onclick="obSortBy(\'current\',\'' + c.sort + '\')" style="cursor:pointer;' + center + width + '">' + c.label + arrow + '</th>';
+    return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" ' + click + center + width + '">' + c.label + arrow + '</th>';
   }).join('');
   document.getElementById('obCurrentHead').innerHTML = '<tr>' + secHtml + '</tr><tr>' + colHtml + '</tr>';
 
-  // Filter + sort
+  // Filter then sort by brand first, then the chosen sort col
   var rows = obFilterRows(obSt.currentRows);
   rows.sort(function(a, b) {
+    // Always group by brand first
+    const ba = (a.brand || '').toLowerCase(), bb = (b.brand || '').toLowerCase();
+    if (ba < bb) return -1; if (ba > bb) return 1;
+    // Then apply user sort within brand
     var va = a[s.col], vb = b[s.col];
     if (va instanceof Date) va = va.getTime(); else if (!va && va !== 0) va = s.dir > 0 ? '￿' : '';
     if (vb instanceof Date) vb = vb.getTime(); else if (!vb && vb !== 0) vb = s.dir > 0 ? '￿' : '';
@@ -9184,20 +9246,20 @@ function obRenderCurrent() {
     return;
   }
 
-  function fmtMoney(v) { return v != null ? '€' + Number(v).toFixed(2) : '—'; }
-  function fmtDate(d)  { return d ? d.toLocaleDateString('en-IE', {day:'2-digit',month:'short',year:'2-digit'}) : '—'; }
-
-  tbody.innerHTML = rows.map(function(r) {
-    var cells = '<td style="font-weight:600;">' + r.sku + '</td>';
-    cells += '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;">' + (r.crmDesc || '—') + '</td>';
-    if (showStatus) cells += '<td style="text-align:center;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
-    cells += '<td style="text-align:center;font-weight:600;">' + r.totalQty + '</td>';
-    cells += '<td style="text-align:center;">' + fmtDate(r.lastOrdered) + '</td>';
-    if (showBrand)  cells += '<td>' + (r.brand || '—') + '</td>';
-    if (showCost)   cells += '<td class="cost" style="text-align:center;">' + fmtMoney(r.cost) + '</td>';
-    if (showRetail) cells += '<td class="retail" style="text-align:center;">' + fmtMoney(r.retail) + '</td>';
+  const colCount = cols.length;
+  tbody.innerHTML = _obGroupByBrand(rows, colCount, function(r) {
+    const existingQty = obOrderQtys[r.sku] || '';
+    var cells = '<td style="font-weight:600;padding:5px 8px;">' + r.sku + '</td>';
+    cells += '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.crmDesc || '—') + '</td>';
+    if (showStatus) cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
+    cells += '<td style="text-align:center;font-weight:600;padding:5px 8px;">' + r.totalQty + '</td>';
+    cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtDate(r.lastOrdered) + '</td>';
+    if (showBrand)  cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
+    if (showCost)   cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
+    if (showRetail) cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
+    cells += '<td style="text-align:center;padding:3px 6px;"><input type="number" class="ob-order-qty-input" min="0" placeholder="0" value="' + existingQty + '" oninput="obSetOrderQty(\'' + r.sku + '\',this.value)"></td>';
     return '<tr>' + cells + '</tr>';
-  }).join('');
+  });
 }
 
 // ── New Lines table ───────────────────────────────────────────────────────────
@@ -9240,9 +9302,11 @@ function obRenderNew() {
   // Filter
   var rows = obFilterRows(catRows);
 
-  // Sort
+  // Sort by brand first, then user-chosen col
   var ns = obSt.nSort;
   rows.sort(function(a, b) {
+    const ba = (a.brand || '').toLowerCase(), bb = (b.brand || '').toLowerCase();
+    if (ba < bb) return -1; if (ba > bb) return 1;
     var va = a[ns.col], vb = b[ns.col];
     if (!va && va !== 0) va = ns.dir > 0 ? '￿' : '';
     if (!vb && vb !== 0) vb = ns.dir > 0 ? '￿' : '';
@@ -9263,8 +9327,8 @@ function obRenderNew() {
   if (showBrand)  cols.push({ id:'brand', label:'Brand', sort:'brand', center:false });
   if (showStatus) cols.push({ id:'status', label:'Status', sort:'statusClass', center:true });
 
-  if (showCost)   { sections.push({ label:'COST',   span:1, bg:'#a03d00' }); cols.push({ id:'cost',     label:'Cost',      cls:'cost',   sort:'cost',   center:true }); }
-  if (showRetail) { sections.push({ label:'RETAIL', span:1, bg:'#5a2d8a' }); cols.push({ id:'retail',   label:'Retail',    cls:'retail', sort:'retail', center:true }); }
+  if (showCost)   { sections.push({ label:'COST',   span:1, bg:'#a03d00' }); cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true }); }
+  if (showRetail) { sections.push({ label:'RETAIL', span:1, bg:'#5a2d8a' }); cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true }); }
   sections.push({ label:'ORDER', span:1, bg:'#1a3c6e' });
   cols.push({ id:'orderQty', label:'Order Qty', sort:null, center:true });
 
@@ -9286,18 +9350,18 @@ function obRenderNew() {
     return;
   }
 
-  function fmtMoney(v) { return v != null ? '€' + Number(v).toFixed(2) : '—'; }
-
-  tbody.innerHTML = rows.map(function(r) {
-    var cells = '<td style="font-weight:600;">' + r.sku + '</td>';
-    cells += '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;">' + (r.description || '—') + '</td>';
-    if (showBrand)  cells += '<td>' + (r.brand || '—') + '</td>';
-    if (showStatus) cells += '<td style="text-align:center;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
-    if (showCost)   cells += '<td class="cost" style="text-align:center;">' + fmtMoney(r.cost) + '</td>';
-    if (showRetail) cells += '<td class="retail" style="text-align:center;">' + fmtMoney(r.retail) + '</td>';
-    cells += '<td style="text-align:center;padding:3px 6px;"><input type="number" class="ob-order-qty-input" min="0" placeholder="0" oninput="obSetOrderQty(\'' + r.sku + '\',this.value)"></td>';
+  const colCount = cols.length;
+  tbody.innerHTML = _obGroupByBrand(rows, colCount, function(r) {
+    const existingQty = obOrderQtys[r.sku] || '';
+    var cells = '<td style="font-weight:600;padding:5px 8px;">' + r.sku + '</td>';
+    cells += '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.description || '—') + '</td>';
+    if (showBrand)  cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
+    if (showStatus) cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
+    if (showCost)   cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
+    if (showRetail) cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
+    cells += '<td style="text-align:center;padding:3px 6px;"><input type="number" class="ob-order-qty-input" min="0" placeholder="0" value="' + existingQty + '" oninput="obSetOrderQty(\'' + r.sku + '\',this.value)"></td>';
     return '<tr>' + cells + '</tr>';
-  }).join('');
+  });
 }
 
 // ── Order qty tracking ────────────────────────────────────────────────────────
@@ -9307,6 +9371,7 @@ function obSetOrderQty(sku, val) {
   const n = parseInt(val, 10);
   if (n > 0) obOrderQtys[sku] = n;
   else delete obOrderQtys[sku];
+  _obUpdateQueuedCount();
 }
 
 // ── On tool open ──────────────────────────────────────────────────────────────
