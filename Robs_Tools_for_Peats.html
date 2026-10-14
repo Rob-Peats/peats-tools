@@ -590,9 +590,16 @@ html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158de
 .ob-tab-btn:last-child { border-right:none; }
 .ob-tab-btn.active { background:var(--brand); color:#fff; }
 .ob-tab-btn:disabled { opacity:.4; cursor:not-allowed; }
-.ob-view-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; font-size:13px; color:var(--text); cursor:pointer; border-bottom:1px solid rgba(245,214,168,.4); }
+.ob-view-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; font-size:13px; color:var(--text); border-bottom:1px solid rgba(245,214,168,.4); }
 .ob-view-row:last-child { border-bottom:none; }
-.ob-view-row input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-color:var(--brand); }
+/* Toggle switch */
+.ob-toggle-switch { position:relative; display:inline-block; width:34px; height:20px; flex-shrink:0; }
+.ob-toggle-switch input { opacity:0; width:0; height:0; margin:0; }
+.ob-toggle-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#d1d5db; border-radius:20px; transition:.2s; }
+.ob-toggle-slider:before { position:absolute; content:""; height:14px; width:14px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+input:checked + .ob-toggle-slider { background:var(--brand); }
+input:checked + .ob-toggle-slider:before { transform:translateX(14px); }
+.ob-panel-section-key { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:#b8860b; margin:12px 0 6px; padding:4px 8px; border-radius:5px; background:linear-gradient(90deg,rgba(184,134,11,.12),transparent); }
 .ob-exclude-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--light); color:var(--text); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-order-qty-input { width:60px; padding:3px 5px; border:1px solid var(--border); border-radius:5px; text-align:center; font-size:13px; font-family:inherit; background:var(--white); color:var(--text); }
 .ob-order-qty-input:focus { outline:none; border-color:var(--brand); }
@@ -2675,16 +2682,43 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <button class="btn" id="obViewBtn" onclick="obToggleViewPanel(event)" style="gap:5px;justify-content:center;">
         ⚙ View <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
-      <div id="obViewPanel" class="ob-dropdown-panel" style="display:none;min-width:200px;">
-        <div class="ob-panel-section">Show Columns</div>
-        <label class="ob-view-row"><span>Catalog Cost</span><input type="checkbox" id="obShowCost"   checked onchange="obRender()"></label>
-        <label class="ob-view-row"><span>Catalog Retail</span><input type="checkbox" id="obShowRetail" checked onchange="obRender()"></label>
-        <label class="ob-view-row"><span>Last Price</span><input type="checkbox" id="obShowLastPrice" checked onchange="obRender()"></label>
-        <label class="ob-view-row"><span>Brand</span><input type="checkbox" id="obShowBrand"  checked onchange="obRender()"></label>
-        <label class="ob-view-row"><span>Status</span><input type="checkbox" id="obShowStatus"       onchange="obRender()"></label>
-        <label class="ob-view-row"><span>Stock Levels</span><input type="checkbox" id="obShowStock"  onchange="obRender()"></label>
-        <label class="ob-view-row"><span>&#9733; Key Products</span><input type="checkbox" id="obShowKey"    onchange="obRender()"></label>
+      <div id="obViewPanel" class="ob-dropdown-panel" style="display:none;min-width:230px;">
+        <div class="ob-panel-section">STATUS</div>
+        <div class="ob-view-row"><span>Show Status column</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowStatus" onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+        <div class="ob-panel-section">SHOW STOCKS</div>
+        <div class="ob-view-row"><span>Stock levels</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowStock" onchange="obHandleStockToggle()"><span class="ob-toggle-slider"></span></label></div>
+        <div class="ob-panel-section-key">★ KEY PRODUCTS</div>
+        <div class="ob-view-row"><span>Top sellers (80/20)</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowKey" onchange="obHandleKeyToggle()"><span class="ob-toggle-slider"></span></label></div>
+        <div class="ob-panel-section">COLUMNS</div>
+        <div class="ob-view-row"><span>Brand</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowBrand" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+        <div class="ob-view-row"><span>Last Price</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowLastPrice" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
       </div>
+    </div>
+
+    <!-- Pricing Options pill (dropout) -->
+    <div class="t-pill" id="obPricingWrap">
+      <span class="t-label">Pricing</span>
+      <button class="btn" id="obPricingBtn" onclick="obTogglePricingPanel(event)" style="gap:5px;justify-content:center;">
+        🔥 Pricing <span style="opacity:.5;font-size:10px;">▾</span>
+      </button>
+      <div id="obPricingPanel" class="ob-dropdown-panel" style="display:none;min-width:230px;">
+        <div class="ob-panel-section">PRICE BAND</div>
+        <div style="display:flex;gap:6px;margin:4px 0 2px;">
+          <button id="obBandCBtn" class="band-btn active-teal" onclick="obToggleBandCol('C')">Band C</button>
+          <button id="obBandFBtn" class="band-btn active-purple" onclick="obToggleBandCol('F')">Band F</button>
+        </div>
+        <div class="ob-panel-section" style="margin-top:14px;">CATALOG PRICES</div>
+        <div class="ob-view-row"><span>Catalog Cost</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowCost" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+        <div class="ob-view-row"><span>Catalog Retail</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowRetail" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+      </div>
+    </div>
+
+    <!-- Show Selected toggle pill -->
+    <div class="t-pill" id="obShowSelWrap">
+      <span class="t-label">Filter</span>
+      <button class="btn" id="obShowSelBtn" onclick="obToggleShowSelected()" style="gap:5px;">
+        ☑ Show Selected
+      </button>
     </div>
 
     <!-- Brands pill (single-select) -->
@@ -8805,7 +8839,17 @@ const obSt = {
   customerPanelOpen : false,
   viewPanelOpen     : false,
   brandPanelOpen    : false,
+  pricingPanelOpen  : false,
+  showSelected      : false,
   stockData         : new Map(),
+  newStockData      : new Map(),
+  newStockLoaded    : false,
+  newStockLoading   : false,
+  globalKeySkus     : new Set(),
+  globalKeyLoaded   : false,
+  globalKeyLoading  : false,
+  bandCVisible      : true,
+  bandFVisible      : true,
 };
 
 // ── Panel toggles ─────────────────────────────────────────────────────────────
@@ -8822,6 +8866,62 @@ function obCloseAllPanels(except) {
   if (except !== 'brand' && obSt.brandPanelOpen) {
     document.getElementById('obBrandPanel').style.display = 'none';
     obSt.brandPanelOpen = false;
+  }
+  if (except !== 'pricing' && obSt.pricingPanelOpen) {
+    document.getElementById('obPricingPanel').style.display = 'none';
+    obSt.pricingPanelOpen = false;
+  }
+}
+
+function obTogglePricingPanel(e) {
+  e.stopPropagation();
+  const open = !obSt.pricingPanelOpen;
+  obCloseAllPanels('pricing');
+  const panel = document.getElementById('obPricingPanel');
+  if (open) {
+    _obPositionPanel('obPricingPanel', e.currentTarget, false);
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
+  obSt.pricingPanelOpen = open;
+}
+
+function obToggleBandCol(band) {
+  if (band === 'C') {
+    obSt.bandCVisible = !obSt.bandCVisible;
+    const btn = document.getElementById('obBandCBtn');
+    if (btn) { btn.classList.toggle('active-teal', obSt.bandCVisible); if (!obSt.bandCVisible) btn.classList.remove('active-teal'); }
+  } else {
+    obSt.bandFVisible = !obSt.bandFVisible;
+    const btn = document.getElementById('obBandFBtn');
+    if (btn) { btn.classList.toggle('active-purple', obSt.bandFVisible); if (!obSt.bandFVisible) btn.classList.remove('active-purple'); }
+  }
+  obRender();
+}
+
+function obToggleShowSelected() {
+  obSt.showSelected = !obSt.showSelected;
+  const btn = document.getElementById('obShowSelBtn');
+  if (btn) { btn.style.background = obSt.showSelected ? 'var(--brand)' : ''; btn.style.color = obSt.showSelected ? '#fff' : ''; btn.style.borderColor = obSt.showSelected ? 'var(--brand)' : ''; }
+  obRender();
+}
+
+function obHandleKeyToggle() {
+  const chk = document.getElementById('obShowKey');
+  if (chk && chk.checked && !obSt.globalKeyLoaded && !obSt.globalKeyLoading) {
+    obFetchGlobalKey();
+  } else {
+    obRender();
+  }
+}
+
+function obHandleStockToggle() {
+  const chk = document.getElementById('obShowStock');
+  if (chk && chk.checked && obSt.tab === 'new' && !obSt.newStockLoaded && !obSt.newStockLoading) {
+    obFetchNewLinesStock();
+  } else {
+    obRender();
   }
 }
 
@@ -8884,7 +8984,7 @@ function obToggleBrandPanel(e) {
 document.addEventListener('click', function(e) {
   const panel = document.getElementById('tool-orderbuilder');
   if (panel && panel.style.display !== 'none') {
-    if (!e.target.closest('#obCustomerWrap,#obViewWrap,#obBrandWrap')) obCloseAllPanels(null);
+    if (!e.target.closest('#obCustomerWrap,#obViewWrap,#obBrandWrap,#obPricingWrap')) obCloseAllPanels(null);
   }
 });
 
@@ -9002,9 +9102,11 @@ async function obFetchHistory() {
       const u = crmDesc.toUpperCase();
       const statusClass = u.startsWith('EOL') ? 'eol' : u.startsWith('TBD') ? 'tbd' : 'curr';
 
+      const bandC = catEntry && catEntry.bandC != null ? catEntry.bandC : null;
+      const bandF = catEntry && catEntry.bandF != null ? catEntry.bandF : null;
       rows.push({ sku: sku, crmDesc: crmDesc, lastOrdered: dateMap[sku] || null, totalQty: qtyMap[sku] || 0,
         cost: cost, retail: retail, brand: brand, statusClass: statusClass,
-        lastPrice: lastPrice, freeStock: freeStock, onOrder: onOrder });
+        lastPrice: lastPrice, freeStock: freeStock, onOrder: onOrder, bandC: bandC, bandF: bandF });
     }
 
     // Compute isKey: per-brand Pareto 80/20 on customer totalQty
@@ -9055,12 +9157,16 @@ async function obFetchHistory() {
 // ── Clear customer ────────────────────────────────────────────────────────────
 
 function obClear() {
-  obSt.accountCode = '';
-  obSt.loaded      = false;
-  obSt.loading     = false;
-  obSt.currentRows = [];
-  obSt.currentSkus = new Set();
-  obSt.tab         = 'current';
+  obSt.accountCode     = '';
+  obSt.loaded          = false;
+  obSt.loading         = false;
+  obSt.currentRows     = [];
+  obSt.currentSkus     = new Set();
+  obSt.tab             = 'current';
+  obSt.newStockData    = new Map();
+  obSt.newStockLoaded  = false;
+  obSt.newStockLoading = false;
+  obSt.stockData       = new Map();
   document.getElementById('obAccountInput').value             = '';
   document.getElementById('obCustomerLabel').textContent      = 'Enter Account';
   document.getElementById('obFetchStatus').style.display      = 'none';
@@ -9079,6 +9185,110 @@ function obReset() {
   showToast('↺ Order Builder cleared.');
 }
 
+// ── Global Key Products (all-customer Pareto 80/20) ───────────────────────────
+
+async function obFetchGlobalKey() {
+  if (obSt.globalKeyLoading) return;
+  obSt.globalKeyLoading = true;
+  const statusEl = document.getElementById('obFetchStatus');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Fetching global key products…'; }
+  try {
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - (obSt.months || 6));
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
+    const dateStr = startDate.toISOString().slice(0, 10);
+    const filter  = "TransactionType eq 'I' and ProductItemId ne null and InvoiceDate ge " + dateStr + " and Obsolete eq 0";
+    // ProductItemId in CRM is the actual SKU code
+    const qtyMap = {};  // sku → total qty
+    let path = '/SalesTransactions?$filter=' + encodeURIComponent(filter) + '&$select=ProductItemId,CalculatedInvoiceQuantity&$top=500';
+    let page = 0;
+    while (path) {
+      page++;
+      if (statusEl) statusEl.textContent = 'Fetching global sales (page ' + page + ')…';
+      const json = await crmApiFetch(path);
+      const items = json.value || [];
+      items.forEach(function(item) {
+        const sku = item.ProductItemId;
+        const qty = item.CalculatedInvoiceQuantity || 0;
+        if (!sku || qty <= 0) return;
+        qtyMap[sku] = (qtyMap[sku] || 0) + qty;
+      });
+      path = null;
+      const next = json['@odata.nextLink'] || null;
+      if (next) {
+        if (next.startsWith('http')) {
+          const idx = next.indexOf('/SalesTransactions');
+          path = idx >= 0 ? next.slice(idx) : null;
+        } else {
+          path = next;
+        }
+      }
+    }
+    // Build per-brand Pareto using catalog brand — only consider catalog SKUs
+    const cat = state.catalog || {};
+    const brandGrps = {};
+    Object.entries(qtyMap).forEach(function([sku, qty]) {
+      if (!cat[sku]) return;  // only catalog products
+      const brand = (cat[sku].brand) || '—';
+      if (!brandGrps[brand]) brandGrps[brand] = [];
+      brandGrps[brand].push({ sku: sku, qty: qty });
+    });
+    const keySkus = new Set();
+    Object.values(brandGrps).forEach(function(grp) {
+      grp.sort(function(a, b) { return b.qty - a.qty; });
+      const bt = grp.reduce(function(s, r) { return s + r.qty; }, 0);
+      var cum = 0;
+      for (var i = 0; i < grp.length; i++) {
+        keySkus.add(grp[i].sku);
+        cum += grp[i].qty;
+        if (bt > 0 && cum / bt >= 0.8) break;
+      }
+    });
+    obSt.globalKeySkus   = keySkus;
+    obSt.globalKeyLoaded = true;
+    if (statusEl) { statusEl.textContent = 'Key products loaded (' + keySkus.size + ' SKUs)'; setTimeout(function(){ if(statusEl) statusEl.style.display='none'; }, 2500); }
+    obRender();
+  } catch(e) {
+    console.warn('[OB] obFetchGlobalKey error:', e);
+    if (statusEl) { statusEl.textContent = 'Key products fetch failed: ' + e.message; }
+    obRender();
+  } finally {
+    obSt.globalKeyLoading = false;
+  }
+}
+
+// ── New Lines Stock (lazy fetch) ──────────────────────────────────────────────
+
+async function obFetchNewLinesStock() {
+  if (obSt.newStockLoading) return;
+  obSt.newStockLoading = true;
+  const statusEl = document.getElementById('obFetchStatus');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Fetching stock for new lines…'; }
+  try {
+    // Collect all catalog SKUs not in current customer range
+    const skus = [];
+    if (state.catalog) {
+      Object.keys(state.catalog).forEach(function(sku) {
+        if (!obSt.currentSkus.has(sku)) skus.push(sku);
+      });
+    }
+    if (!skus.length) { obSt.newStockLoaded = true; obRender(); return; }
+    if (statusEl) statusEl.textContent = 'Fetching stock for ' + skus.length + ' new line SKUs…';
+    const stockMap = await fetchConvStockLevels(skus);
+    obSt.newStockData   = stockMap;
+    obSt.newStockLoaded = true;
+    if (statusEl) { statusEl.textContent = 'Stock loaded.'; setTimeout(function(){ if(statusEl) statusEl.style.display='none'; }, 2000); }
+    obRender();
+  } catch(e) {
+    console.warn('[OB] obFetchNewLinesStock error:', e);
+    if (statusEl) { statusEl.textContent = 'Stock fetch failed: ' + e.message; }
+    obRender();
+  } finally {
+    obSt.newStockLoading = false;
+  }
+}
+
 // ── Tab switching ─────────────────────────────────────────────────────────────
 
 function obSwitchTab(tab) {
@@ -9088,6 +9298,14 @@ function obSwitchTab(tab) {
   document.getElementById('obTabLabel').textContent = tab === 'current' ? 'Their Range' : 'New Lines';
   var pane = document.getElementById('obTablePane');
   if (pane) { pane.style.display = 'block'; pane.scrollTop = 0; }
+  // If switching to New Lines with stock toggle on and not yet fetched, lazy-load now
+  if (tab === 'new') {
+    const stockChk = document.getElementById('obShowStock');
+    if (stockChk && stockChk.checked && !obSt.newStockLoaded && !obSt.newStockLoading) {
+      obFetchNewLinesStock();
+      return; // will call obRender() after fetch
+    }
+  }
   obRender();
 }
 
@@ -9111,14 +9329,22 @@ function obToggleExclude(type) {
 // ── Brand management ──────────────────────────────────────────────────────────
 
 function obBuildAllBrands() {
-  const brands = new Set();
+  const raw = new Set();
   if (state.catalog) {
-    Object.values(state.catalog).forEach(function(v) { if (v.brand) brands.add(v.brand); });
+    Object.values(state.catalog).forEach(function(v) { if (v.brand) raw.add(v.brand); });
   }
   if (asCrmProductData && asCrmProductData.forEach) {
-    asCrmProductData.forEach(function(v) { if (v.brand) brands.add(v.brand); });
+    asCrmProductData.forEach(function(v) { if (v.brand) raw.add(v.brand); });
   }
-  obSt.allBrands = Array.from(brands).sort(function(a, b) { return a.localeCompare(b); });
+  // Collapse AVSL sub-brands into virtual "AVSL" entry
+  const display = [];
+  let hasAvsl = false;
+  raw.forEach(function(b) {
+    if (AVSL_BRANDS && AVSL_BRANDS.has(b)) { hasAvsl = true; }
+    else { display.push(b); }
+  });
+  if (hasAvsl) display.push('AVSL');
+  obSt.allBrands = display.sort(function(a, b) { return a.localeCompare(b); });
   obSt.activeBrand = null;
 }
 
@@ -9156,7 +9382,7 @@ function obUpdateBrandPill() {
 function obSortBy(tab, col) {
   const s = tab === 'current' ? obSt.cSort : obSt.nSort;
   if (s.col === col) s.dir = -s.dir;
-  else { s.col = col; s.dir = (col === 'totalQty' || col === 'cost' || col === 'retail' || col === 'lastPrice' || col === 'freeStock' || col === 'onOrder' || col === 'isKey') ? -1 : 1; }
+  else { s.col = col; s.dir = (col === 'totalQty' || col === 'cost' || col === 'retail' || col === 'lastPrice' || col === 'freeStock' || col === 'onOrder' || col === 'isKey' || col === 'bandC' || col === 'bandF') ? -1 : 1; }
   obRender();
 }
 
@@ -9167,7 +9393,17 @@ function obFilterRows(rows) {
   return rows.filter(function(r) {
     if (obSt.exclTBD && r.statusClass === 'tbd') return false;
     if (obSt.exclEOL && r.statusClass === 'eol') return false;
-    if (obSt.activeBrand && (r.brand || '') !== obSt.activeBrand) return false;
+    if (obSt.showSelected && !obOrderQtys[r.sku]) return false;
+    // AVSL-aware brand filter
+    if (obSt.activeBrand) {
+      const brand = r.brand || '';
+      const selSet = new Set([obSt.activeBrand]);
+      if (typeof brandSelMatch === 'function') {
+        if (!brandSelMatch(brand, selSet)) return false;
+      } else {
+        if (brand !== obSt.activeBrand) return false;
+      }
+    }
     if (q) {
       const hay = ((r.sku || '') + ' ' + (r.crmDesc || '') + ' ' + (r.description || '') + ' ' + (r.brand || '')).toLowerCase();
       if (hay.indexOf(q) < 0) return false;
@@ -9238,18 +9474,22 @@ function obRenderCurrent() {
   const showLastPrice = document.getElementById('obShowLastPrice').checked;
   const showStock     = document.getElementById('obShowStock').checked;
   const showKey       = document.getElementById('obShowKey').checked;
+  const showBandC     = obSt.bandCVisible;
+  const showBandF     = obSt.bandFVisible;
 
   const cols = [];
-  if (showBrand)     cols.push({ id:'brand',     label:'Brand',                     sort:'brand',       center:false });
-  cols.push({          id:'sku',      label:'SKU',                       sort:'sku',         center:false });
-  cols.push({          id:'crmDesc',  label:'CRM Description',           sort:'crmDesc',     center:false });
-  if (showKey)       cols.push({ id:'key',       label:'★',                        sort:'isKey',       center:true, cls:'key' });
-  if (showStatus)    cols.push({ id:'status',    label:'Status',                    sort:'statusClass', center:true });
+  if (showBrand)     cols.push({ id:'brand',     label:'Brand',                       sort:'brand',       center:false });
+  cols.push({          id:'sku',      label:'SKU',                         sort:'sku',         center:false });
+  cols.push({          id:'crmDesc',  label:'CRM Description',             sort:'crmDesc',     center:false });
+  if (showKey)       cols.push({ id:'key',       label:'★',                          sort:'isKey',       center:true, cls:'key' });
+  if (showStatus)    cols.push({ id:'status',    label:'Status',                      sort:'statusClass', center:true });
   cols.push({          id:'totalQty', label:'QTY (' + obSt.months + 'mo)', sort:'totalQty',    center:true });
-  cols.push({          id:'lastOrdered', label:'Last Ordered',                      sort:'lastOrdered', center:true });
-  if (showLastPrice) cols.push({ id:'lastPrice', label:'Last Price',                sort:'lastPrice',   center:true, cls:'cost' });
-  if (showCost)      cols.push({ id:'cost',      label:'Cost',                      sort:'cost',        center:true, cls:'cost' });
-  if (showRetail)    cols.push({ id:'retail',    label:'Retail',                    sort:'retail',      center:true, cls:'retail' });
+  cols.push({          id:'lastOrdered', label:'Last Ordered',                        sort:'lastOrdered', center:true });
+  if (showLastPrice) cols.push({ id:'lastPrice', label:'Last Price',                  sort:'lastPrice',   center:true, cls:'cost' });
+  if (showBandC)     cols.push({ id:'bandC',     label:'Band C',                      sort:'bandC',       center:true, cls:'cost' });
+  if (showBandF)     cols.push({ id:'bandF',     label:'Band F',                      sort:'bandF',       center:true, cls:'retail' });
+  if (showCost)      cols.push({ id:'cost',      label:'Cost',                        sort:'cost',        center:true, cls:'cost' });
+  if (showRetail)    cols.push({ id:'retail',    label:'Retail',                      sort:'retail',      center:true, cls:'retail' });
   if (showStock) {
     cols.push({ id:'freeStock', label:'Free Stock', sort:'freeStock', center:true });
     cols.push({ id:'onOrder',   label:'On Order',   sort:'onOrder',   center:true });
@@ -9295,15 +9535,19 @@ function obRenderCurrent() {
   const colCount = cols.length;
   tbody.innerHTML = _obGroupByBrand(rows, colCount, function(r) {
     const existingQty = obOrderQtys[r.sku] || '';
+    // Use global key skus if loaded, otherwise fall back to per-customer
+    const isKeyVal = obSt.globalKeyLoaded ? obSt.globalKeySkus.has(r.sku) : r.isKey;
     var cells = '';
     if (showBrand)     cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
     cells += '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
     cells += '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.crmDesc || '—') + '</td>';
-    if (showKey)       cells += '<td style="text-align:center;padding:5px 8px;color:#b8860b;font-size:15px;">' + (r.isKey ? '★' : '<span style="color:var(--muted);">—</span>') + '</td>';
+    if (showKey)       cells += '<td style="text-align:center;padding:5px 8px;color:#b8860b;font-size:15px;">' + (isKeyVal ? '★' : '<span style="color:var(--muted);">—</span>') + '</td>';
     if (showStatus)    cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
     cells += '<td style="text-align:center;font-weight:600;padding:5px 8px;">' + r.totalQty + '</td>';
     cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtDate(r.lastOrdered) + '</td>';
     if (showLastPrice) cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.lastPrice) + '</td>';
+    if (showBandC)     cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.bandC != null ? r.bandC : null) + '</td>';
+    if (showBandF)     cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.bandF != null ? r.bandF : null) + '</td>';
     if (showCost)      cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
     if (showRetail)    cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
     if (showStock) {
@@ -9318,11 +9562,14 @@ function obRenderCurrent() {
 // ── New Lines table ───────────────────────────────────────────────────────────
 
 function obRenderNew() {
-  const showCost   = document.getElementById('obShowCost').checked;
-  const showRetail = document.getElementById('obShowRetail').checked;
-  const showBrand  = document.getElementById('obShowBrand').checked;
-  const showStatus = document.getElementById('obShowStatus').checked;
-  const showStock  = document.getElementById('obShowStock').checked;
+  const showCost      = document.getElementById('obShowCost').checked;
+  const showRetail    = document.getElementById('obShowRetail').checked;
+  const showBrand     = document.getElementById('obShowBrand').checked;
+  const showStatus    = document.getElementById('obShowStatus').checked;
+  const showStock     = document.getElementById('obShowStock').checked;
+  const showKey       = document.getElementById('obShowKey').checked;
+  const showBandC     = obSt.bandCVisible;
+  const showBandF     = obSt.bandFVisible;
 
   // Build catalog rows excluding customer's range
   var catRows = [];
@@ -9330,12 +9577,11 @@ function obRenderNew() {
     Object.keys(state.catalog).forEach(function(sku) {
       if (obSt.currentSkus.has(sku)) return;
       const catEntry  = state.catalog[sku];
-      const stockInfo = (asStockMap && asStockMap.get) ? (asStockMap.get(sku) || {}) : {};
       const crmProd   = (asCrmProductData && asCrmProductData.get) ? (asCrmProductData.get(sku) || null) : null;
-      const crmDesc   = stockInfo.crmName || (crmProd && crmProd.desc) || catEntry.desc || sku;
+      const crmDesc   = (crmProd && crmProd.desc) || catEntry.desc || sku;
       const u = crmDesc.toUpperCase();
-      // Stock from asStockMap if Stock Analysis has been run, otherwise null
-      const stockEntry = (asStockMap && asStockMap.get) ? asStockMap.get(sku) : null;
+      // Use newStockData (lazy-loaded) first, then fall back to asStockMap
+      const stockEntry = obSt.newStockData.get(sku) || ((asStockMap && asStockMap.get) ? asStockMap.get(sku) : null);
       catRows.push({
         sku:         sku,
         description: catEntry.desc || sku,
@@ -9343,9 +9589,12 @@ function obRenderNew() {
         brand:       catEntry.brand || (crmProd && crmProd.brand) || '',
         cost:        catEntry.cost   != null ? catEntry.cost   : (crmProd && crmProd.cost   != null ? crmProd.cost   : null),
         retail:      catEntry.retail != null ? catEntry.retail : (crmProd && crmProd.retail != null ? crmProd.retail : null),
+        bandC:       catEntry.bandC  != null ? catEntry.bandC  : null,
+        bandF:       catEntry.bandF  != null ? catEntry.bandF  : null,
         statusClass: u.startsWith('EOL') ? 'eol' : u.startsWith('TBD') ? 'tbd' : 'curr',
         freeStock:   stockEntry ? stockEntry.qty : null,
         onOrder:     stockEntry ? (stockEntry.onOrder || 0) : null,
+        isKey:       obSt.globalKeySkus.has(sku),
       });
     });
   }
@@ -9382,7 +9631,10 @@ function obRenderNew() {
   if (showBrand)  cols.push({ id:'brand',  label:'Brand',      sort:'brand',       center:false });
   cols.push({ id:'sku',         label:'SKU',         sort:'sku',         center:false });
   cols.push({ id:'description', label:'Description', sort:'description', center:false });
+  if (showKey)    cols.push({ id:'key',    label:'★',          sort:'isKey',       center:true, cls:'key' });
   if (showStatus) cols.push({ id:'status', label:'Status', sort:'statusClass', center:true });
+  if (showBandC)  cols.push({ id:'bandC',  label:'Band C', cls:'cost',   sort:'bandC',  center:true });
+  if (showBandF)  cols.push({ id:'bandF',  label:'Band F', cls:'retail', sort:'bandF',  center:true });
   if (showCost)   cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true });
   if (showRetail) cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true });
   if (showStock) {
@@ -9413,7 +9665,10 @@ function obRenderNew() {
     if (showBrand)  cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
     cells += '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
     cells += '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.description || '—') + '</td>';
+    if (showKey)    cells += '<td style="text-align:center;padding:5px 8px;color:#b8860b;font-size:15px;">' + (r.isKey ? '★' : '<span style="color:var(--muted);">—</span>') + '</td>';
     if (showStatus) cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
+    if (showBandC)  cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.bandC) + '</td>';
+    if (showBandF)  cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.bandF) + '</td>';
     if (showCost)   cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
     if (showRetail) cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
     if (showStock) {
