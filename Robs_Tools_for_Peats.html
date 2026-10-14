@@ -2631,15 +2631,15 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
 <div id="tool-orderbuilder" style="display:none; flex-direction:column; height:calc(100vh - 64px); overflow:hidden;">
 
   <!-- ── PILL BAR ──────────────────────────────────────────────────────────── -->
-  <div class="controls-top" id="obControlsTop">
+  <div class="controls-top" id="obControlsTop" style="background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;">
 
     <!-- Customer pill (dropout) -->
-    <div class="t-pill" id="obCustomerWrap" style="position:relative; min-width:150px;">
+    <div class="t-pill" id="obCustomerWrap">
       <span class="t-label">Customer</span>
-      <button class="btn" id="obCustomerBtn" onclick="obToggleCustomerPanel(event)" style="gap:5px; justify-content:center;">
+      <button class="btn" id="obCustomerBtn" onclick="obToggleCustomerPanel(event)" style="gap:5px;justify-content:center;">
         👤 <span id="obCustomerLabel">Enter Account</span> <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
-      <div id="obCustomerPanel" class="ob-dropdown-panel" style="display:none; min-width:280px;">
+      <div id="obCustomerPanel" class="ob-dropdown-panel" style="display:none;min-width:280px;">
         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Account Code</div>
         <input type="text" id="obAccountInput" placeholder="e.g. ABC001" autocomplete="off"
           style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:var(--white);color:var(--text);"
@@ -2661,7 +2661,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     </div>
 
     <!-- View Options pill (dropout) -->
-    <div class="t-pill" id="obViewWrap" style="position:relative; min-width:110px;">
+    <div class="t-pill" id="obViewWrap">
       <span class="t-label">View Options</span>
       <button class="btn" id="obViewBtn" onclick="obToggleViewPanel(event)" style="gap:5px;justify-content:center;">
         ⚙ View <span style="opacity:.5;font-size:10px;">▾</span>
@@ -2677,24 +2677,27 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <!-- Centre spacer -->
     <div style="flex:1;min-width:8px;"></div>
 
-    <!-- Tab switcher (hidden until customer loaded) -->
-    <div id="obTabSwitcher" class="ob-tab-switcher" style="display:none;">
-      <button id="obTabCurrentBtn" class="ob-tab-btn active" onclick="obSwitchTab('current')">📋 Their Range</button>
-      <button id="obTabNewBtn"     class="ob-tab-btn"        onclick="obSwitchTab('new')">✨ New Lines</button>
+    <!-- Tab switcher pill (hidden until customer loaded) -->
+    <div class="t-pill" id="obTabSwitcher" style="display:none;">
+      <span class="t-label">View · <span id="obTabLabel" style="color:var(--brand);font-weight:800;">Their Range</span></span>
+      <div class="ob-tab-switcher">
+        <button id="obTabCurrentBtn" class="ob-tab-btn active" onclick="obSwitchTab('current')">📋 Their Range</button>
+        <button id="obTabNewBtn"     class="ob-tab-btn"        onclick="obSwitchTab('new')">✨ New Lines</button>
+      </div>
     </div>
 
     <!-- Spacer -->
     <div style="flex:1;min-width:8px;"></div>
 
     <!-- Brands pill (dropout) -->
-    <div class="t-pill brand-filter-wrap" id="obBrandWrap" style="position:relative; min-width:110px;">
+    <div class="t-pill brand-filter-wrap" id="obBrandWrap">
       <span class="t-label">Brands</span>
       <button class="btn brand-filter-btn" id="obBrandBtn" onclick="obToggleBrandPanel(event)" style="gap:5px;justify-content:center;">
         🏷 <span id="obBrandLabel">All Brands</span>
         <span id="obBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
         <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
-      <div id="obBrandPanel" class="ob-dropdown-panel brand-filter-panel" style="display:none;min-width:320px;max-width:400px;right:0;left:auto;">
+      <div id="obBrandPanel" class="ob-dropdown-panel brand-filter-panel" style="display:none;min-width:320px;max-width:400px;">
         <input class="brand-search-inp" id="obBrandSearch" placeholder="Search brands…" oninput="obFilterBrandList(this.value)" autocomplete="off">
         <div id="obBrandList" class="brand-list-scroll" style="max-height:300px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px;">
@@ -2733,22 +2736,14 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <!-- Loading -->
     <div id="obLoadingState" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:14px;">
       <div style="width:36px;height:36px;border:4px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;"></div>
-      <div id="obLoadingMsg" style="font-size:14px;color:var(--muted);">Fetching sales history…</div>
+      <div style="font-size:14px;color:var(--muted);">Fetching sales history…</div>
     </div>
 
-    <!-- Their Range table -->
-    <div id="obCurrentPane" style="display:none;flex:1;overflow-y:auto;min-height:0;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
-        <thead id="obCurrentHead"></thead>
-        <tbody id="obCurrentTbody"></tbody>
-      </table>
-    </div>
-
-    <!-- New Lines table -->
-    <div id="obNewPane" style="display:none;flex:1;overflow-y:auto;min-height:0;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
-        <thead id="obNewHead"></thead>
-        <tbody id="obNewTbody"></tbody>
+    <!-- Single shared table pane -->
+    <div id="obTablePane" style="display:none;flex:1;overflow-y:auto;min-height:0;">
+      <table id="obTable" style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+        <thead id="obHead"></thead>
+        <tbody id="obTbody"></tbody>
       </table>
     </div>
 
@@ -8904,8 +8899,7 @@ async function obFetchHistory() {
 
   document.getElementById('obPromptState').style.display  = 'none';
   document.getElementById('obLoadingState').style.display = 'flex';
-  document.getElementById('obCurrentPane').style.display  = 'none';
-  document.getElementById('obNewPane').style.display      = 'none';
+  document.getElementById('obTablePane').style.display    = 'none';
   document.getElementById('obTabSwitcher').style.display  = 'none';
   const statusEl = document.getElementById('obFetchStatus');
   statusEl.style.display = 'block';
@@ -9020,11 +9014,11 @@ function obClear() {
   document.getElementById('obFetchStatus').style.display      = 'none';
   document.getElementById('obClearCustomerBtn').style.display = 'none';
   document.getElementById('obTabSwitcher').style.display      = 'none';
-  document.getElementById('obCurrentPane').style.display      = 'none';
-  document.getElementById('obNewPane').style.display          = 'none';
+  document.getElementById('obTablePane').style.display        = 'none';
   document.getElementById('obPromptState').style.display      = 'flex';
   document.getElementById('obTabCurrentBtn').classList.add('active');
   document.getElementById('obTabNewBtn').classList.remove('active');
+  document.getElementById('obTabLabel').textContent           = 'Their Range';
   document.getElementById('obRowCount').textContent           = '';
 }
 
@@ -9039,8 +9033,9 @@ function obSwitchTab(tab) {
   obSt.tab = tab;
   document.getElementById('obTabCurrentBtn').classList.toggle('active', tab === 'current');
   document.getElementById('obTabNewBtn').classList.toggle('active',     tab === 'new');
-  document.getElementById('obCurrentPane').style.display = tab === 'current' ? 'block' : 'none';
-  document.getElementById('obNewPane').style.display     = tab === 'new'     ? 'block' : 'none';
+  document.getElementById('obTabLabel').textContent = tab === 'current' ? 'Their Range' : 'New Lines';
+  var pane = document.getElementById('obTablePane');
+  if (pane) { pane.style.display = 'block'; pane.scrollTop = 0; }
   obRender();
 }
 
@@ -9164,10 +9159,11 @@ function _obGroupByBrand(rows, colCount, renderRow) {
   var html = '';
   var lastBrand = null;
   rows.forEach(function(r) {
-    const brand = r.brand || '—';
+    const rawBrand = (r.brand || '').trim();
+    const brand = (!rawBrand || rawBrand === '—') ? 'Uncategorised' : rawBrand;
     if (brand !== lastBrand) {
       lastBrand = brand;
-      html += '<tr><td colspan="' + colCount + '" style="background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;padding:5px 10px;position:sticky;top:36px;z-index:1;">' + brand + '</td></tr>';
+      html += '<tr><td colspan="' + colCount + '" style="background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;padding:5px 10px;position:sticky;top:52px;z-index:2;">' + brand + '</td></tr>';
     }
     html += renderRow(r);
   });
@@ -9213,23 +9209,26 @@ function obRenderCurrent() {
 
   const s = obSt.cSort;
   const secHtml = sections.map(function(sec) {
-    return '<th colspan="' + sec.span + '" style="background:' + sec.bg + ';color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:4px 6px;border-right:2px solid #fff;">' + sec.label + '</th>';
+    return '<th colspan="' + sec.span + '" style="background:' + sec.bg + ';color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:4px 6px;border-right:2px solid #fff;position:sticky;top:0;z-index:4;">' + sec.label + '</th>';
   }).join('');
   const colHtml = cols.map(function(c) {
     const arrow  = c.sort && s.col === c.sort ? (s.dir === 1 ? ' ▲' : ' ▼') : '';
-    const click  = c.sort ? 'onclick="obSortBy(\'current\',\'' + c.sort + '\')" style="cursor:pointer;' : 'style="';
+    const click  = c.sort ? 'onclick="obSortBy(\'current\',\'' + c.sort + '\')" style="cursor:pointer;position:sticky;top:24px;z-index:4;background:var(--light);' : 'style="position:sticky;top:24px;z-index:4;background:var(--light);';
     const center = c.center ? 'text-align:center;' : '';
     const width  = (c.cls === 'cost' || c.cls === 'retail') ? 'width:65px;max-width:70px;' : '';
     return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" ' + click + center + width + '">' + c.label + arrow + '</th>';
   }).join('');
-  document.getElementById('obCurrentHead').innerHTML = '<tr>' + secHtml + '</tr><tr>' + colHtml + '</tr>';
+  document.getElementById('obHead').innerHTML = '<tr>' + secHtml + '</tr><tr>' + colHtml + '</tr>';
 
   // Filter then sort by brand first, then the chosen sort col
   var rows = obFilterRows(obSt.currentRows);
   rows.sort(function(a, b) {
-    // Always group by brand first
-    const ba = (a.brand || '').toLowerCase(), bb = (b.brand || '').toLowerCase();
-    if (ba < bb) return -1; if (ba > bb) return 1;
+    // Always group by brand first — Uncategorised to bottom
+    const ba = (a.brand || '').trim(), bb = (b.brand || '').trim();
+    const aBot = (!ba || ba === '—'), bBot = (!bb || bb === '—');
+    if (aBot && !bBot) return 1; if (!aBot && bBot) return -1;
+    const bal = ba.toLowerCase(), bbl = bb.toLowerCase();
+    if (bal < bbl) return -1; if (bal > bbl) return 1;
     // Then apply user sort within brand
     var va = a[s.col], vb = b[s.col];
     if (va instanceof Date) va = va.getTime(); else if (!va && va !== 0) va = s.dir > 0 ? '￿' : '';
@@ -9240,7 +9239,7 @@ function obRenderCurrent() {
 
   document.getElementById('obRowCount').textContent = rows.length + ' lines';
 
-  const tbody = document.getElementById('obCurrentTbody');
+  const tbody = document.getElementById('obTbody');
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="' + cols.length + '" style="padding:32px;text-align:center;color:var(--muted);">No results match your filters.</td></tr>';
     return;
@@ -9293,8 +9292,8 @@ function obRenderNew() {
   }
 
   if (!catRows.length) {
-    document.getElementById('obNewTbody').innerHTML = '<tr><td colspan="8" style="padding:32px;text-align:center;color:var(--muted);">Catalog not loaded yet — upload the catalog from the main menu first.</td></tr>';
-    document.getElementById('obNewHead').innerHTML  = '';
+    document.getElementById('obTbody').innerHTML = '<tr><td colspan="8" style="padding:32px;text-align:center;color:var(--muted);">Catalog not loaded yet — upload the catalog from the main menu first.</td></tr>';
+    document.getElementById('obHead').innerHTML  = '';
     document.getElementById('obRowCount').textContent = '0 lines';
     return;
   }
@@ -9302,11 +9301,14 @@ function obRenderNew() {
   // Filter
   var rows = obFilterRows(catRows);
 
-  // Sort by brand first, then user-chosen col
+  // Sort by brand first (Uncategorised to bottom), then user-chosen col
   var ns = obSt.nSort;
   rows.sort(function(a, b) {
-    const ba = (a.brand || '').toLowerCase(), bb = (b.brand || '').toLowerCase();
-    if (ba < bb) return -1; if (ba > bb) return 1;
+    const ba = (a.brand || '').trim(), bb = (b.brand || '').trim();
+    const aBot = (!ba || ba === '—'), bBot = (!bb || bb === '—');
+    if (aBot && !bBot) return 1; if (!aBot && bBot) return -1;
+    const bal = ba.toLowerCase(), bbl = bb.toLowerCase();
+    if (bal < bbl) return -1; if (bal > bbl) return 1;
     var va = a[ns.col], vb = b[ns.col];
     if (!va && va !== 0) va = ns.dir > 0 ? '￿' : '';
     if (!vb && vb !== 0) vb = ns.dir > 0 ? '￿' : '';
@@ -9333,18 +9335,18 @@ function obRenderNew() {
   cols.push({ id:'orderQty', label:'Order Qty', sort:null, center:true });
 
   const secHtml = sections.map(function(sec) {
-    return '<th colspan="' + sec.span + '" style="background:' + sec.bg + ';color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:4px 6px;border-right:2px solid #fff;">' + sec.label + '</th>';
+    return '<th colspan="' + sec.span + '" style="background:' + sec.bg + ';color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:4px 6px;border-right:2px solid #fff;position:sticky;top:0;z-index:4;">' + sec.label + '</th>';
   }).join('');
   const colHtml = cols.map(function(c) {
     const arrow  = c.sort && ns.col === c.sort ? (ns.dir === 1 ? ' ▲' : ' ▼') : '';
-    const click  = c.sort ? 'onclick="obSortBy(\'new\',\'' + c.sort + '\')" style="cursor:pointer;' : 'style="';
+    const click  = c.sort ? 'onclick="obSortBy(\'new\',\'' + c.sort + '\')" style="cursor:pointer;position:sticky;top:24px;z-index:4;background:var(--light);' : 'style="position:sticky;top:24px;z-index:4;background:var(--light);';
     const center = c.center ? 'text-align:center;' : '';
     const width  = (c.cls === 'cost' || c.cls === 'retail') ? 'width:65px;max-width:70px;' : '';
     return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" ' + click + center + width + '">' + c.label + arrow + '</th>';
   }).join('');
-  document.getElementById('obNewHead').innerHTML = '<tr>' + secHtml + '</tr><tr>' + colHtml + '</tr>';
+  document.getElementById('obHead').innerHTML = '<tr>' + secHtml + '</tr><tr>' + colHtml + '</tr>';
 
-  const tbody = document.getElementById('obNewTbody');
+  const tbody = document.getElementById('obTbody');
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="' + cols.length + '" style="padding:32px;text-align:center;color:var(--muted);">No catalog lines outside this customer\'s range match your filters.</td></tr>';
     return;
@@ -9380,8 +9382,7 @@ function obOnOpen() {
   if (!obSt.loaded && !obSt.loading) {
     document.getElementById('obPromptState').style.display  = 'flex';
     document.getElementById('obLoadingState').style.display = 'none';
-    document.getElementById('obCurrentPane').style.display  = 'none';
-    document.getElementById('obNewPane').style.display      = 'none';
+    document.getElementById('obTablePane').style.display    = 'none';
     document.getElementById('obTabSwitcher').style.display  = 'none';
   }
   if (obSt.loaded && obSt.allBrands.length === 0) obBuildAllBrands();
