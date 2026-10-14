@@ -8897,8 +8897,8 @@ async function obFetchHistory() {
   let totalTxns = 0;
 
   try {
-    const filter = "Account eq '" + code.replace(/'/g, "''") + "' and TransactionType eq 'I' and ProductItemId ne null and TransactionDate ge " + dateStr;
-    let path = '/SalesTransactions?$filter=' + encodeURIComponent(filter) + '&$select=ProductItemId,Quantity,TransactionDate&$top=500';
+    const filter = "Account eq '" + code.replace(/'/g, "''") + "' and TransactionType eq 'I' and ProductItemId ne null and InvoiceDate ge " + dateStr + " and Obsolete eq 0";
+    let path = '/SalesTransactions?$filter=' + encodeURIComponent(filter) + '&$select=ProductItemId,CalculatedInvoiceQuantity,InvoiceDate&$top=500';
 
     while (path) {
       const json = await crmApiFetch(path);
@@ -8910,8 +8910,8 @@ async function obFetchHistory() {
         const item = items[i];
         const sku  = item.ProductItemId;
         if (!sku) continue;
-        qtyMap[sku] = (qtyMap[sku] || 0) + (item.Quantity || 0);
-        const d = item.TransactionDate ? new Date(item.TransactionDate) : null;
+        qtyMap[sku] = (qtyMap[sku] || 0) + (item.CalculatedInvoiceQuantity || 0);
+        const d = item.InvoiceDate ? new Date(item.InvoiceDate) : null;
         if (d && (!dateMap[sku] || d > dateMap[sku])) dateMap[sku] = d;
       }
 
