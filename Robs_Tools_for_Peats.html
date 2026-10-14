@@ -579,10 +579,19 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 #hubCardOrderBuilder { --tool-accent: #1a3c6e; background: linear-gradient(158deg, #c3d4ec 0%, #eaf0f8 82%); }
 html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158deg, #0d1f38 0%, var(--white) 78%); --tool-accent: #6aa9e0; }
 /* ── Order Builder native panel ────────────────────────────────────────────── */
-.ob-dropdown-panel { position:fixed; background:var(--white); border:1px solid var(--border); border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.10); padding:14px 16px; min-width:260px; z-index:99999; }
-.ob-panel-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:#0891b2; margin:14px -16px 8px; padding:5px 16px 5px 13px; border-left:3px solid #0891b2; border-top:1px solid rgba(8,145,178,.12); border-bottom:1px solid rgba(8,145,178,.12); background:rgba(8,145,178,.05); }
-.ob-panel-section:first-child { margin-top:-14px; border-top:none; border-radius:7px 7px 0 0; }
-.ob-period-row { display:flex; gap:6px; margin-top:6px; }
+.ob-dropdown-panel { position:fixed; background:var(--light); border:1.5px solid #86efac; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.14); padding:14px; min-width:260px; z-index:99999; display:flex; flex-direction:column; gap:10px; }
+.ob-panel-blue { border-color:#93c5fd; }
+.ob-panel-grey { border-color:#cbd5e1; }
+.ob-section { border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+.ob-sec-acct   { background:#f8faff; border-left:3px solid #94a3b8; }
+.ob-sec-status { background:#f0fdf4; border-left:3px solid #86efac; }
+.ob-sec-stocks { background:#eff6ff; border-left:3px solid #93c5fd; }
+.ob-sec-key    { background:#fefce8; border-left:3px solid #fde047; }
+.ob-sec-cols   { background:#f8faff; border-left:3px solid #cbd5e1; }
+.ob-sec-adj    { background:#eef4ff; border-left:3px solid #93c5fd; }
+.ob-sec-sp     { background:#fdf2f8; border-left:3px solid #be185d; }
+.ob-sec-head { font-size:10px; font-weight:800; letter-spacing:.06em; color:#64748b; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:4px; }
+.ob-period-row { display:flex; gap:6px; margin-top:2px; }
 .ob-period-btn { padding:5px 14px; border:1px solid var(--border); border-radius:6px; background:var(--white); color:var(--text); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-period-btn.active { background:var(--brand); color:#fff; border-color:var(--brand); }
 .ob-tab-switcher { display:flex; align-items:center; border:1px solid var(--border); border-radius:8px; overflow:hidden; align-self:center; }
@@ -590,8 +599,7 @@ html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158de
 .ob-tab-btn:last-child { border-right:none; }
 .ob-tab-btn.active { background:var(--brand); color:#fff; }
 .ob-tab-btn:disabled { opacity:.4; cursor:not-allowed; }
-.ob-view-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; font-size:13px; color:var(--text); border-bottom:1px solid rgba(0,0,0,.06); }
-.ob-view-row:last-child { border-bottom:none; }
+.ob-view-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:3px 0; font-size:13px; color:var(--text); }
 /* Toggle switch */
 .ob-toggle-switch { position:relative; display:inline-block; width:34px; height:20px; flex-shrink:0; }
 .ob-toggle-switch input { opacity:0; width:0; height:0; margin:0; }
@@ -599,7 +607,7 @@ html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158de
 .ob-toggle-slider:before { position:absolute; content:""; height:14px; width:14px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
 input:checked + .ob-toggle-slider { background:var(--brand); }
 input:checked + .ob-toggle-slider:before { transform:translateX(14px); }
-.ob-panel-section-key { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:#b8860b; margin:14px -16px 8px; padding:5px 16px 5px 13px; border-left:3px solid #b8860b; border-top:1px solid rgba(184,134,11,.18); border-bottom:1px solid rgba(184,134,11,.18); background:rgba(184,134,11,.07); }
+/* ob-panel-section-key retired — use .ob-section.ob-sec-key + .ob-sec-head */
 .ob-exclude-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--light); color:var(--text); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-order-qty-input { width:60px; padding:3px 5px; border:1px solid var(--border); border-radius:5px; text-align:center; font-size:13px; font-family:inherit; background:var(--white); color:var(--text); }
 .ob-order-qty-input:focus { outline:none; border-color:var(--brand); }
@@ -2655,24 +2663,28 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <button class="btn" id="obCustomerBtn" onclick="obToggleCustomerPanel(event)" style="gap:5px;justify-content:center;">
         👤 <span id="obCustomerLabel">Enter Account</span> <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
-      <div id="obCustomerPanel" class="ob-dropdown-panel" style="display:none;min-width:280px;">
-        <div class="ob-panel-section">Account Code</div>
-        <input type="text" id="obAccountInput" placeholder="e.g. ABC001" autocomplete="off"
-          style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:var(--white);color:var(--text);"
-          onkeydown="if(event.key==='Enter')obFetchHistory()">
-        <div class="ob-panel-section">History Period</div>
-        <div class="ob-period-row">
-          <button class="ob-period-btn active" data-months="6"  onclick="obSetPeriod(6)">6m</button>
-          <button class="ob-period-btn" data-months="12" onclick="obSetPeriod(12)">12m</button>
-          <button class="ob-period-btn" data-months="18" onclick="obSetPeriod(18)">18m</button>
-          <button class="ob-period-btn" data-months="24" onclick="obSetPeriod(24)">24m</button>
+      <div id="obCustomerPanel" class="ob-dropdown-panel ob-panel-grey" style="display:none;min-width:280px;">
+        <div class="ob-section ob-sec-acct">
+          <div class="ob-sec-head">Account Code</div>
+          <input type="text" id="obAccountInput" placeholder="e.g. ABC001" autocomplete="off"
+            style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:var(--white);color:var(--text);"
+            onkeydown="if(event.key==='Enter')obFetchHistory()">
+        </div>
+        <div class="ob-section ob-sec-acct">
+          <div class="ob-sec-head">History Period</div>
+          <div class="ob-period-row">
+            <button class="ob-period-btn active" data-months="6"  onclick="obSetPeriod(6)">6m</button>
+            <button class="ob-period-btn" data-months="12" onclick="obSetPeriod(12)">12m</button>
+            <button class="ob-period-btn" data-months="18" onclick="obSetPeriod(18)">18m</button>
+            <button class="ob-period-btn" data-months="24" onclick="obSetPeriod(24)">24m</button>
+          </div>
         </div>
         <button onclick="obFetchHistory()"
-          style="margin-top:14px;width:100%;padding:8px;background:var(--brand);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+          style="width:100%;padding:8px;background:var(--brand);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
           ▶ Load Customer
         </button>
-        <div id="obFetchStatus" style="margin-top:8px;font-size:12px;color:var(--muted);display:none;text-align:center;line-height:1.4;"></div>
-        <button id="obClearCustomerBtn" onclick="obClear()" style="display:none;margin-top:8px;width:100%;padding:6px;background:var(--light);color:var(--muted);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;">✕ Clear Customer</button>
+        <div id="obFetchStatus" style="font-size:12px;color:var(--muted);display:none;text-align:center;line-height:1.4;"></div>
+        <button id="obClearCustomerBtn" onclick="obClear()" style="display:none;width:100%;padding:6px;background:var(--white);color:var(--muted);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;">✕ Clear Customer</button>
       </div>
     </div>
 
@@ -2682,16 +2694,28 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <button class="btn" id="obViewBtn" onclick="obToggleViewPanel(event)" style="gap:5px;justify-content:center;">
         ⚙ View <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
-      <div id="obViewPanel" class="ob-dropdown-panel" style="display:none;min-width:230px;">
-        <div class="ob-panel-section">STATUS</div>
-        <div class="ob-view-row"><span>Show Status column</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowStatus" onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
-        <div class="ob-panel-section">SHOW STOCKS</div>
-        <div class="ob-view-row"><span>Stock levels</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowStock" onchange="obHandleStockToggle()"><span class="ob-toggle-slider"></span></label></div>
-        <div class="ob-panel-section-key">★ KEY PRODUCTS</div>
-        <div class="ob-view-row"><span>Top sellers (80/20)</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowKey" onchange="obHandleKeyToggle()"><span class="ob-toggle-slider"></span></label></div>
-        <div class="ob-panel-section">COLUMNS</div>
-        <div class="ob-view-row"><span>Brand</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowBrand" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
-        <div class="ob-view-row"><span>Last Price</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowLastPrice" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+      <div id="obViewPanel" class="ob-dropdown-panel" style="display:none;min-width:250px;">
+        <div class="ob-section ob-sec-status">
+          <div class="ob-sec-head">Status</div>
+          <div class="ob-view-row"><span>Show Status column</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowStatus" onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+        </div>
+        <div class="ob-section ob-sec-stocks">
+          <div class="ob-sec-head">Show Stocks</div>
+          <div class="ob-view-row"><span>Stock levels</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowStock" onchange="obHandleStockToggle()"><span class="ob-toggle-slider"></span></label></div>
+        </div>
+        <div class="ob-section ob-sec-key">
+          <div class="ob-sec-head">★ Key Products</div>
+          <div class="ob-view-row"><span>Top sellers (80/20)</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowKey" onchange="obHandleKeyToggle()"><span class="ob-toggle-slider"></span></label></div>
+        </div>
+        <div class="ob-section ob-sec-cols">
+          <div class="ob-sec-head">Columns</div>
+          <div class="ob-view-row"><span>Brand</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowBrand" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+          <div class="ob-view-row"><span>Last Price</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowLastPrice" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+          <div class="ob-view-row"><span>Band C</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowBandC" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+          <div class="ob-view-row"><span>Band F</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowBandF" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+          <div class="ob-view-row"><span>Catalog Cost</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowCost" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+          <div class="ob-view-row"><span>Catalog Retail</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowRetail" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+        </div>
       </div>
     </div>
 
@@ -2699,17 +2723,32 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
     <div class="t-pill" id="obPricingWrap">
       <span class="t-label">Pricing</span>
       <button class="btn" id="obPricingBtn" onclick="obTogglePricingPanel(event)" style="gap:5px;justify-content:center;">
-        🔥 Pricing <span style="opacity:.5;font-size:10px;">▾</span>
+        🔥 Pricing Options<span id="obPricingActiveLbl" style="font-size:11px;font-weight:700;color:#1d4ed8;white-space:nowrap;"></span> <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
-      <div id="obPricingPanel" class="ob-dropdown-panel" style="display:none;min-width:230px;">
-        <div class="ob-panel-section">PRICE BAND</div>
-        <div style="display:flex;gap:6px;margin:4px 0 2px;">
-          <button id="obBandCBtn" class="band-btn active-teal" onclick="obToggleBandCol('C')">Band C</button>
-          <button id="obBandFBtn" class="band-btn active-purple" onclick="obToggleBandCol('F')">Band F</button>
+      <div id="obPricingPanel" class="ob-dropdown-panel ob-panel-blue" style="display:none;min-width:280px;">
+        <!-- Adjust Pricing section -->
+        <div class="ob-section ob-sec-adj">
+          <div class="ob-sec-head">Adjust Pricing</div>
+          <div class="ob-view-row" style="cursor:pointer;" onclick="document.getElementById('obAdjEnabled').click()">
+            <span style="font-weight:700;">Enable price adjustments</span>
+            <label class="ob-toggle-switch" onclick="event.stopPropagation()"><input type="checkbox" id="obAdjEnabled" onchange="obToggleAdjPricing()"><span class="ob-toggle-slider"></span></label>
+          </div>
+          <div id="obAdjBulkRow" style="display:none;align-items:center;gap:6px;margin-top:2px;">
+            <input type="number" id="obAdjBulkPct" min="0" max="100" step="0.5" placeholder="%"
+              style="width:54px;border:1.5px solid #c7d2dc;border-radius:6px;padding:3px 6px;font-size:12px;font-weight:700;text-align:center;font-family:inherit;" />
+            <button onclick="obApplyBulkDiscount()"
+              style="background:#1e2535;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;">Apply to All</button>
+          </div>
         </div>
-        <div class="ob-panel-section" style="margin-top:14px;">CATALOG PRICES</div>
-        <div class="ob-view-row"><span>Catalog Cost</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowCost" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
-        <div class="ob-view-row"><span>Catalog Retail</span><label class="ob-toggle-switch"><input type="checkbox" id="obShowRetail" checked onchange="obRender()"><span class="ob-toggle-slider"></span></label></div>
+        <!-- Special Pricing section -->
+        <div class="ob-section ob-sec-sp">
+          <div class="ob-sec-head">Special Pricing 💎</div>
+          <div class="ob-view-row">
+            <span style="font-weight:700;color:#9d174d;">Customer prices</span>
+            <label class="ob-toggle-switch"><input type="checkbox" id="obSpEnabled" onchange="obToggleSpecialPricing()"><span class="ob-toggle-slider" style=""></span></label>
+          </div>
+          <div id="obSpStatus" style="font-size:11px;color:var(--muted);padding-top:2px;"></div>
+        </div>
       </div>
     </div>
 
@@ -8848,8 +8887,11 @@ const obSt = {
   globalKeySkus     : new Set(),
   globalKeyLoaded   : false,
   globalKeyLoading  : false,
-  bandCVisible      : true,
-  bandFVisible      : true,
+  adjEnabled        : false,          // Adjust pricing toggle
+  adjRowPct         : {},             // sku → discount % (per-row override)
+  spEnabled         : false,          // Special pricing toggle
+  spPrices          : {},             // sku (upper) → special agreed price
+  spLoading         : false,
 };
 
 // ── Panel toggles ─────────────────────────────────────────────────────────────
@@ -8887,17 +8929,82 @@ function obTogglePricingPanel(e) {
   obSt.pricingPanelOpen = open;
 }
 
-function obToggleBandCol(band) {
-  if (band === 'C') {
-    obSt.bandCVisible = !obSt.bandCVisible;
-    const btn = document.getElementById('obBandCBtn');
-    if (btn) { btn.classList.toggle('active-teal', obSt.bandCVisible); if (!obSt.bandCVisible) btn.classList.remove('active-teal'); }
-  } else {
-    obSt.bandFVisible = !obSt.bandFVisible;
-    const btn = document.getElementById('obBandFBtn');
-    if (btn) { btn.classList.toggle('active-purple', obSt.bandFVisible); if (!obSt.bandFVisible) btn.classList.remove('active-purple'); }
-  }
+// ── Adjust Pricing ────────────────────────────────────────────────────────────
+
+function obToggleAdjPricing() {
+  const chk = document.getElementById('obAdjEnabled');
+  obSt.adjEnabled = chk ? chk.checked : !obSt.adjEnabled;
+  if (chk) chk.checked = obSt.adjEnabled;
+  const bulkRow = document.getElementById('obAdjBulkRow');
+  if (bulkRow) bulkRow.style.display = obSt.adjEnabled ? 'flex' : 'none';
+  if (!obSt.adjEnabled) { obSt.adjRowPct = {}; const inp = document.getElementById('obAdjBulkPct'); if (inp) inp.value = ''; }
+  obUpdatePricingLbl();
   obRender();
+}
+
+function obApplyBulkDiscount() {
+  const pct = parseFloat(document.getElementById('obAdjBulkPct')?.value);
+  if (isNaN(pct) || pct < 0 || pct > 100) { showToast('Enter a valid % between 0 and 100'); return; }
+  // Apply to all currently visible rows
+  const rows = obSt.currentRows || [];
+  rows.forEach(function(r) { obSt.adjRowPct[r.sku] = pct; });
+  obRender();
+}
+
+// ── Special Pricing ───────────────────────────────────────────────────────────
+
+async function obToggleSpecialPricing() {
+  const chk = document.getElementById('obSpEnabled');
+  obSt.spEnabled = chk ? chk.checked : !obSt.spEnabled;
+  if (chk) chk.checked = obSt.spEnabled;
+  if (obSt.spEnabled && !obSt.spLoading) {
+    await obLoadOBSpecialPrices();
+  }
+  obUpdatePricingLbl();
+  obRender();
+}
+
+async function obLoadOBSpecialPrices() {
+  if (!obSt.accountCode) { showToast('⚠ Load a customer first'); const chk=document.getElementById('obSpEnabled'); if(chk)chk.checked=false; obSt.spEnabled=false; return; }
+  const pat = localStorage.getItem('peats_crm_pat');
+  if (!pat) { showToast('⚠ No CRM token'); return; }
+  obSt.spLoading = true;
+  const statusEl = document.getElementById('obSpStatus');
+  if (statusEl) statusEl.textContent = 'Loading special prices…';
+  try {
+    const CRM    = 'https://crm-odata-v1-westeurope.prospect365.com';
+    const filter = "SledgerId eq '" + obSt.accountCode.replace(/'/g, "''") + "'";
+    const url    = CRM + '/ExchequerSpecialAccountDiscounts?$filter=' + encodeURIComponent(filter) + '&$select=StockCode,Price&$top=500';
+    const res    = await fetch(url, { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const map  = {};
+    (data.value || []).forEach(function(entry) {
+      if (!entry.StockCode) return;
+      const price = parseFloat(entry.Price);
+      if (!price || price <= 0) return;
+      const sku = entry.StockCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (map[sku] == null || price < map[sku]) map[sku] = price;
+    });
+    obSt.spPrices = map;
+    const count = Object.keys(map).length;
+    if (statusEl) statusEl.textContent = count > 0 ? '💎 ' + count + ' special prices loaded' : 'No special prices found';
+    obUpdatePricingLbl();
+  } catch(e) {
+    console.warn('[OB] Special prices error:', e);
+    if (statusEl) statusEl.textContent = 'Failed: ' + e.message;
+  } finally {
+    obSt.spLoading = false;
+  }
+}
+
+function obUpdatePricingLbl() {
+  const lbl = document.getElementById('obPricingActiveLbl');
+  if (!lbl) return;
+  const parts = [];
+  if (obSt.adjEnabled) parts.push('Adj ✓');
+  if (obSt.spEnabled && Object.keys(obSt.spPrices).length > 0) parts.push('💎');
+  lbl.textContent = parts.length ? ' · ' + parts.join(' · ') : '';
 }
 
 function obToggleShowSelected() {
@@ -9189,8 +9296,22 @@ function obReset() {
 
 async function obFetchGlobalKey() {
   if (obSt.globalKeyLoading) return;
-  obSt.globalKeyLoading = true;
+  const GLOBAL_KEY_CACHE_KEY = 'peats_global_key_skus';
+  const GLOBAL_KEY_TTL = 14 * 24 * 60 * 60 * 1000; // 14 days
   const statusEl = document.getElementById('obFetchStatus');
+  // Check localStorage cache first
+  try {
+    const cached = JSON.parse(localStorage.getItem(GLOBAL_KEY_CACHE_KEY) || 'null');
+    if (cached && cached.ts && (Date.now() - cached.ts) < GLOBAL_KEY_TTL && Array.isArray(cached.skus)) {
+      obSt.globalKeySkus    = new Set(cached.skus);
+      obSt.globalKeyLoaded  = true;
+      obSt.globalKeyLoading = false;
+      if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '★ Key products loaded from cache (' + cached.skus.length + ' SKUs)'; setTimeout(function(){ if(statusEl) statusEl.style.display='none'; }, 1500); }
+      obRender();
+      return;
+    }
+  } catch(e) {}
+  obSt.globalKeyLoading = true;
   if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Fetching global key products…'; }
   try {
     const startDate = new Date();
@@ -9247,6 +9368,8 @@ async function obFetchGlobalKey() {
     });
     obSt.globalKeySkus   = keySkus;
     obSt.globalKeyLoaded = true;
+    // Save to localStorage cache (2-week TTL)
+    try { localStorage.setItem(GLOBAL_KEY_CACHE_KEY, JSON.stringify({ ts: Date.now(), skus: Array.from(keySkus) })); } catch(e) {}
     if (statusEl) { statusEl.textContent = 'Key products loaded (' + keySkus.size + ' SKUs)'; setTimeout(function(){ if(statusEl) statusEl.style.display='none'; }, 2500); }
     obRender();
   } catch(e) {
@@ -9467,15 +9590,16 @@ function _obUpdateQueuedCount() {
 // ── Their Range table ─────────────────────────────────────────────────────────
 
 function obRenderCurrent() {
-  const showCost      = document.getElementById('obShowCost').checked;
-  const showRetail    = document.getElementById('obShowRetail').checked;
-  const showBrand     = document.getElementById('obShowBrand').checked;
-  const showStatus    = document.getElementById('obShowStatus').checked;
-  const showLastPrice = document.getElementById('obShowLastPrice').checked;
-  const showStock     = document.getElementById('obShowStock').checked;
-  const showKey       = document.getElementById('obShowKey').checked;
-  const showBandC     = obSt.bandCVisible;
-  const showBandF     = obSt.bandFVisible;
+  const showCost      = document.getElementById('obShowCost')?.checked;
+  const showRetail    = document.getElementById('obShowRetail')?.checked;
+  const showBrand     = document.getElementById('obShowBrand')?.checked;
+  const showStatus    = document.getElementById('obShowStatus')?.checked;
+  const showLastPrice = document.getElementById('obShowLastPrice')?.checked;
+  const showStock     = document.getElementById('obShowStock')?.checked;
+  const showKey       = document.getElementById('obShowKey')?.checked;
+  const showBandC     = document.getElementById('obShowBandC')?.checked;
+  const showBandF     = document.getElementById('obShowBandF')?.checked;
+  const showAdj       = obSt.adjEnabled;
 
   const cols = [];
   if (showBrand)     cols.push({ id:'brand',     label:'Brand',                       sort:'brand',       center:false });
@@ -9490,6 +9614,12 @@ function obRenderCurrent() {
   if (showBandF)     cols.push({ id:'bandF',     label:'Band F',                      sort:'bandF',       center:true, cls:'retail' });
   if (showCost)      cols.push({ id:'cost',      label:'Cost',                        sort:'cost',        center:true, cls:'cost' });
   if (showRetail)    cols.push({ id:'retail',    label:'Retail',                      sort:'retail',      center:true, cls:'retail' });
+  if (showAdj) {
+    cols.push({ id:'adjCost',   label:'Adj. Cost',   sort:'adjCost',   center:true, cls:'cost' });
+    cols.push({ id:'adjDisc',   label:'% Disc',      sort:'adjDisc',   center:true });
+    cols.push({ id:'adjRetail', label:'Adj. Retail', sort:'adjRetail', center:true, cls:'retail' });
+    cols.push({ id:'adjMargin', label:'Adj. Margin', sort:'adjMargin', center:true });
+  }
   if (showStock) {
     cols.push({ id:'freeStock', label:'Free Stock', sort:'freeStock', center:true });
     cols.push({ id:'onOrder',   label:'On Order',   sort:'onOrder',   center:true });
@@ -9550,6 +9680,20 @@ function obRenderCurrent() {
     if (showBandF)     cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.bandF != null ? r.bandF : null) + '</td>';
     if (showCost)      cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
     if (showRetail)    cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
+    if (showAdj) {
+      // Base cost: special price if loaded, otherwise catalog cost
+      const spPrice = obSt.spEnabled ? (obSt.spPrices[r.sku.toUpperCase().replace(/[^A-Z0-9]/g,'')] || null) : null;
+      const baseCost = spPrice != null ? spPrice : r.cost;
+      const rowPct = obSt.adjRowPct[r.sku];
+      const pct = (rowPct != null && rowPct >= 0) ? rowPct : null;
+      const adjCost   = (baseCost != null && pct != null) ? baseCost * (1 - pct / 100) : null;
+      const adjRetail = (r.retail != null && pct != null) ? r.retail * (1 - pct / 100) : null;
+      const adjMargin = (adjRetail != null && adjCost != null && adjRetail > 0) ? ((adjRetail - adjCost) / adjRetail * 100) : null;
+      cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + (adjCost != null ? _obFmtMoney(adjCost) : '<span style="color:var(--muted);">—</span>') + '</td>';
+      cells += '<td style="text-align:center;padding:3px 5px;"><input type="number" class="ob-order-qty-input" min="0" max="100" step="0.5" placeholder="%" value="' + (pct != null ? pct : '') + '" style="width:52px;text-align:center;font-size:11px;font-weight:700;" oninput="obSt.adjRowPct[\'' + r.sku + '\']=parseFloat(this.value)||0;obRender()"></td>';
+      cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + (adjRetail != null ? _obFmtMoney(adjRetail) : '<span style="color:var(--muted);">—</span>') + '</td>';
+      cells += '<td style="text-align:center;padding:5px 8px;">' + (adjMargin != null ? adjMargin.toFixed(1) + '%' : '<span style="color:var(--muted);">—</span>') + '</td>';
+    }
     if (showStock) {
       cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.freeStock) + '</td>';
       cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.onOrder) + '</td>';
@@ -9562,14 +9706,15 @@ function obRenderCurrent() {
 // ── New Lines table ───────────────────────────────────────────────────────────
 
 function obRenderNew() {
-  const showCost      = document.getElementById('obShowCost').checked;
-  const showRetail    = document.getElementById('obShowRetail').checked;
-  const showBrand     = document.getElementById('obShowBrand').checked;
-  const showStatus    = document.getElementById('obShowStatus').checked;
-  const showStock     = document.getElementById('obShowStock').checked;
-  const showKey       = document.getElementById('obShowKey').checked;
-  const showBandC     = obSt.bandCVisible;
-  const showBandF     = obSt.bandFVisible;
+  const showCost      = document.getElementById('obShowCost')?.checked;
+  const showRetail    = document.getElementById('obShowRetail')?.checked;
+  const showBrand     = document.getElementById('obShowBrand')?.checked;
+  const showStatus    = document.getElementById('obShowStatus')?.checked;
+  const showStock     = document.getElementById('obShowStock')?.checked;
+  const showKey       = document.getElementById('obShowKey')?.checked;
+  const showBandC     = document.getElementById('obShowBandC')?.checked;
+  const showBandF     = document.getElementById('obShowBandF')?.checked;
+  const showAdj       = obSt.adjEnabled;
 
   // Build catalog rows excluding customer's range
   var catRows = [];
@@ -9637,6 +9782,12 @@ function obRenderNew() {
   if (showBandF)  cols.push({ id:'bandF',  label:'Band F', cls:'retail', sort:'bandF',  center:true });
   if (showCost)   cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true });
   if (showRetail) cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true });
+  if (showAdj) {
+    cols.push({ id:'adjCost',   label:'Adj. Cost',   sort:'adjCost',   center:true, cls:'cost' });
+    cols.push({ id:'adjDisc',   label:'% Disc',      sort:'adjDisc',   center:true });
+    cols.push({ id:'adjRetail', label:'Adj. Retail', sort:'adjRetail', center:true, cls:'retail' });
+    cols.push({ id:'adjMargin', label:'Adj. Margin', sort:'adjMargin', center:true });
+  }
   if (showStock) {
     cols.push({ id:'freeStock', label:'Free Stock', sort:'freeStock', center:true });
     cols.push({ id:'onOrder',   label:'On Order',   sort:'onOrder',   center:true });
@@ -9671,6 +9822,19 @@ function obRenderNew() {
     if (showBandF)  cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.bandF) + '</td>';
     if (showCost)   cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
     if (showRetail) cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
+    if (showAdj) {
+      const spPrice = obSt.spEnabled ? (obSt.spPrices[r.sku.toUpperCase().replace(/[^A-Z0-9]/g,'')] || null) : null;
+      const baseCost = spPrice != null ? spPrice : r.cost;
+      const rowPct = obSt.adjRowPct[r.sku];
+      const pct = (rowPct != null && rowPct >= 0) ? rowPct : null;
+      const adjCost   = (baseCost != null && pct != null) ? baseCost * (1 - pct / 100) : null;
+      const adjRetail = (r.retail != null && pct != null) ? r.retail * (1 - pct / 100) : null;
+      const adjMargin = (adjRetail != null && adjCost != null && adjRetail > 0) ? ((adjRetail - adjCost) / adjRetail * 100) : null;
+      cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + (adjCost != null ? _obFmtMoney(adjCost) : '<span style="color:var(--muted);">—</span>') + '</td>';
+      cells += '<td style="text-align:center;padding:3px 5px;"><input type="number" class="ob-order-qty-input" min="0" max="100" step="0.5" placeholder="%" value="' + (pct != null ? pct : '') + '" style="width:52px;text-align:center;font-size:11px;font-weight:700;" oninput="obSt.adjRowPct[\'' + r.sku + '\']=parseFloat(this.value)||0;obRender()"></td>';
+      cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + (adjRetail != null ? _obFmtMoney(adjRetail) : '<span style="color:var(--muted);">—</span>') + '</td>';
+      cells += '<td style="text-align:center;padding:5px 8px;">' + (adjMargin != null ? adjMargin.toFixed(1) + '%' : '<span style="color:var(--muted);">—</span>') + '</td>';
+    }
     if (showStock) {
       cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.freeStock) + '</td>';
       cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.onOrder) + '</td>';
