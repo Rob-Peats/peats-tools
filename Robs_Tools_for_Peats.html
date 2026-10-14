@@ -2679,8 +2679,11 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         <div class="ob-panel-section">Show Columns</div>
         <label class="ob-view-row"><span>Catalog Cost</span><input type="checkbox" id="obShowCost"   checked onchange="obRender()"></label>
         <label class="ob-view-row"><span>Catalog Retail</span><input type="checkbox" id="obShowRetail" checked onchange="obRender()"></label>
+        <label class="ob-view-row"><span>Last Price</span><input type="checkbox" id="obShowLastPrice" checked onchange="obRender()"></label>
         <label class="ob-view-row"><span>Brand</span><input type="checkbox" id="obShowBrand"  checked onchange="obRender()"></label>
         <label class="ob-view-row"><span>Status</span><input type="checkbox" id="obShowStatus"       onchange="obRender()"></label>
+        <label class="ob-view-row"><span>Stock Levels</span><input type="checkbox" id="obShowStock"  onchange="obRender()"></label>
+        <label class="ob-view-row"><span>&#9733; Key Products</span><input type="checkbox" id="obShowKey"    onchange="obRender()"></label>
       </div>
     </div>
 
@@ -8802,6 +8805,7 @@ const obSt = {
   customerPanelOpen : false,
   viewPanelOpen     : false,
   brandPanelOpen    : false,
+  stockData         : new Map(),
 };
 
 // ── Panel toggles ─────────────────────────────────────────────────────────────
@@ -8919,13 +8923,14 @@ async function obFetchHistory() {
   startDate.setHours(0, 0, 0, 0);
   const dateStr = startDate.toISOString().slice(0, 10);
 
-  const qtyMap  = {};   // sku → total units
-  const dateMap = {};   // sku → most-recent transaction Date
+  const qtyMap   = {};   // sku → total units
+  const dateMap  = {};   // sku → most-recent transaction Date
+  const priceMap = {};   // sku → {price, date} of most-recent transaction
   let totalTxns = 0;
 
   try {
     const filter = "Account eq '" + code.replace(/'/g, "''") + "' and TransactionType eq 'I' and ProductItemId ne null and InvoiceDate ge " + dateStr + " and Obsolete eq 0";
-    let path = '/SalesTransactions?$filter=' + encodeURIComponent(filter) + '&$select=ProductItemId,CalculatedInvoiceQuantity,InvoiceDate&$top=500';
+    let path = '/SalesTransactions?$filter=' + encodeURIComponent(filter) + '&$select=ProductItemId,CalculatedInvoiceQuantity,CalculatedLineValue,InvoiceDate&$top=500';
 
     while (path) {
       const json = await crmApiFetch(path);
@@ -8940,6 +8945,12 @@ async function obFetchHistory() {
         qtyMap[sku] = (qtyMap[sku] || 0) + (item.CalculatedInvoiceQuantity || 0);
         const d = item.InvoiceDate ? new Date(item.InvoiceDate) : null;
         if (d && (!dateMap[sku] || d > dateMap[sku])) dateMap[sku] = d;
+        // Track last-price: unit price from most-recent transaction
+        const qty = item.CalculatedInvoiceQuantity || 0;
+        const val = item.CalculatedLineValue;
+        if (qty > 0 && val != null && d && (!priceMap[sku] || d > priceMap[sku].date)) {
+          priceMap[sku] = { price: val / qty, date: d };
+        }
       }
 
       const next = json['@odata.nextLink'] || null;
@@ -8956,26 +8967,61 @@ async function obFetchHistory() {
     // Build rows joining catalog / CRM product data
     const rows = [];
     const skus  = Object.keys(qtyMap);
+
+    // Fetch CRM short descriptions so EOL/TBD detection works even without Stock Analysis loaded
+    statusEl.textContent = 'Fetching product info…';
+    let crmNamesMap = new Map();
+    try { crmNamesMap = await fetchCrmNames(skus); } catch(e) { /* non-fatal */ }
+
+    // Fetch live stock levels for all customer SKUs
+    statusEl.textContent = 'Fetching stock levels…';
+    let obStockMap = new Map();
+    try { obStockMap = await fetchConvStockLevels(skus); } catch(e) { /* non-fatal */ }
+    obSt.stockData = obStockMap;
+
     for (var j = 0; j < skus.length; j++) {
       const sku = skus[j];
       const catEntry  = (state.catalog && state.catalog[sku]) || null;
       const stockInfo = (asStockMap && asStockMap.get) ? (asStockMap.get(sku) || {}) : {};
       const crmProd   = (asCrmProductData && asCrmProductData.get) ? (asCrmProductData.get(sku) || null) : null;
+      const stockEntry = obStockMap.get(sku) || null;
 
-      const crmDesc = stockInfo.crmName
+      const crmDesc = crmNamesMap.get(sku)
+        || stockInfo.crmName
         || (crmProd && crmProd.desc)
         || (catEntry && catEntry.desc)
         || sku;
 
-      const brand   = (catEntry && catEntry.brand) || (crmProd && crmProd.brand) || '';
-      const cost    = catEntry && catEntry.cost   != null ? catEntry.cost   : (crmProd && crmProd.cost   != null ? crmProd.cost   : null);
-      const retail  = catEntry && catEntry.retail != null ? catEntry.retail : (crmProd && crmProd.retail != null ? crmProd.retail : null);
+      const brand      = (catEntry && catEntry.brand) || (crmProd && crmProd.brand) || '';
+      const cost       = catEntry && catEntry.cost   != null ? catEntry.cost   : (crmProd && crmProd.cost   != null ? crmProd.cost   : null);
+      const retail     = catEntry && catEntry.retail != null ? catEntry.retail : (crmProd && crmProd.retail != null ? crmProd.retail : null);
+      const lastPrice  = priceMap[sku] ? priceMap[sku].price : null;
+      const freeStock  = stockEntry ? stockEntry.qty : null;
+      const onOrder    = stockEntry ? (stockEntry.onOrder || 0) : null;
 
       const u = crmDesc.toUpperCase();
       const statusClass = u.startsWith('EOL') ? 'eol' : u.startsWith('TBD') ? 'tbd' : 'curr';
 
-      rows.push({ sku: sku, crmDesc: crmDesc, lastOrdered: dateMap[sku] || null, totalQty: qtyMap[sku] || 0, cost: cost, retail: retail, brand: brand, statusClass: statusClass });
+      rows.push({ sku: sku, crmDesc: crmDesc, lastOrdered: dateMap[sku] || null, totalQty: qtyMap[sku] || 0,
+        cost: cost, retail: retail, brand: brand, statusClass: statusClass,
+        lastPrice: lastPrice, freeStock: freeStock, onOrder: onOrder });
     }
+
+    // Compute isKey: per-brand Pareto 80/20 on customer totalQty
+    var brandGrps = {};
+    rows.forEach(function(r) { var b = r.brand || '—'; if (!brandGrps[b]) brandGrps[b] = []; brandGrps[b].push(r); });
+    var keySkus = new Set();
+    Object.values(brandGrps).forEach(function(grp) {
+      grp.sort(function(a, b) { return b.totalQty - a.totalQty; });
+      var bt = grp.reduce(function(s, r) { return s + r.totalQty; }, 0);
+      var cum = 0;
+      for (var gi = 0; gi < grp.length; gi++) {
+        keySkus.add(grp[gi].sku);
+        cum += grp[gi].totalQty;
+        if (bt > 0 && cum / bt >= 0.8) break;
+      }
+    });
+    rows.forEach(function(r) { r.isKey = keySkus.has(r.sku); });
 
     rows.sort(function(a, b) { return b.totalQty - a.totalQty; });
 
@@ -9110,7 +9156,7 @@ function obUpdateBrandPill() {
 function obSortBy(tab, col) {
   const s = tab === 'current' ? obSt.cSort : obSt.nSort;
   if (s.col === col) s.dir = -s.dir;
-  else { s.col = col; s.dir = (col === 'totalQty' || col === 'cost' || col === 'retail') ? -1 : 1; }
+  else { s.col = col; s.dir = (col === 'totalQty' || col === 'cost' || col === 'retail' || col === 'lastPrice' || col === 'freeStock' || col === 'onOrder' || col === 'isKey') ? -1 : 1; }
   obRender();
 }
 
@@ -9150,6 +9196,12 @@ function obRender() {
 
 function _obFmtMoney(v) { return v != null ? '€' + Number(v).toFixed(2) : '—'; }
 function _obFmtDate(d)  { return d ? d.toLocaleDateString('en-IE', {day:'2-digit',month:'short',year:'2-digit'}) : '—'; }
+function _obFmtStock(v) {
+  if (v == null) return '<span style="color:var(--muted);">—</span>';
+  const n = Math.round(v);
+  const col = n > 0 ? '#16a34a' : n < 0 ? '#dc2626' : 'var(--muted)';
+  return '<span style="color:' + col + ';font-weight:600;">' + n + '</span>';
+}
 
 // Insert brand-group header rows into a sorted-by-brand rows array
 function _obGroupByBrand(rows, colCount, renderRow) {
@@ -9179,22 +9231,29 @@ function _obUpdateQueuedCount() {
 // ── Their Range table ─────────────────────────────────────────────────────────
 
 function obRenderCurrent() {
-  const showCost   = document.getElementById('obShowCost').checked;
-  const showRetail = document.getElementById('obShowRetail').checked;
-  const showBrand  = document.getElementById('obShowBrand').checked;
-  const showStatus = document.getElementById('obShowStatus').checked;
+  const showCost      = document.getElementById('obShowCost').checked;
+  const showRetail    = document.getElementById('obShowRetail').checked;
+  const showBrand     = document.getElementById('obShowBrand').checked;
+  const showStatus    = document.getElementById('obShowStatus').checked;
+  const showLastPrice = document.getElementById('obShowLastPrice').checked;
+  const showStock     = document.getElementById('obShowStock').checked;
+  const showKey       = document.getElementById('obShowKey').checked;
 
-  const sections = [];
-  const cols     = [];
-
-  cols.push({ id:'sku',      label:'SKU',             sort:'sku',         center:false });
-  cols.push({ id:'crmDesc',  label:'CRM Description', sort:'crmDesc',     center:false });
-  if (showStatus) cols.push({ id:'status', label:'Status', sort:'statusClass', center:true });
-  cols.push({ id:'totalQty',    label:'QTY (' + obSt.months + 'mo)', sort:'totalQty',    center:true });
-  cols.push({ id:'lastOrdered', label:'Last Ordered',                  sort:'lastOrdered', center:true });
-  if (showBrand) cols.push({ id:'brand', label:'Brand', sort:'brand', center:false });
-  if (showCost)   cols.push({ id:'cost',     label:'Cost',      cls:'cost',   sort:'cost',   center:true });
-  if (showRetail) cols.push({ id:'retail',   label:'Retail',    cls:'retail', sort:'retail', center:true });
+  const cols = [];
+  if (showBrand)     cols.push({ id:'brand',     label:'Brand',                     sort:'brand',       center:false });
+  cols.push({          id:'sku',      label:'SKU',                       sort:'sku',         center:false });
+  cols.push({          id:'crmDesc',  label:'CRM Description',           sort:'crmDesc',     center:false });
+  if (showKey)       cols.push({ id:'key',       label:'★',                        sort:'isKey',       center:true, cls:'key' });
+  if (showStatus)    cols.push({ id:'status',    label:'Status',                    sort:'statusClass', center:true });
+  cols.push({          id:'totalQty', label:'QTY (' + obSt.months + 'mo)', sort:'totalQty',    center:true });
+  cols.push({          id:'lastOrdered', label:'Last Ordered',                      sort:'lastOrdered', center:true });
+  if (showLastPrice) cols.push({ id:'lastPrice', label:'Last Price',                sort:'lastPrice',   center:true, cls:'cost' });
+  if (showCost)      cols.push({ id:'cost',      label:'Cost',                      sort:'cost',        center:true, cls:'cost' });
+  if (showRetail)    cols.push({ id:'retail',    label:'Retail',                    sort:'retail',      center:true, cls:'retail' });
+  if (showStock) {
+    cols.push({ id:'freeStock', label:'Free Stock', sort:'freeStock', center:true });
+    cols.push({ id:'onOrder',   label:'On Order',   sort:'onOrder',   center:true });
+  }
   cols.push({ id:'orderQty', label:'Order Qty', sort:null, center:true });
 
   const s = obSt.cSort;
@@ -9202,8 +9261,9 @@ function obRenderCurrent() {
     const arrow  = c.sort && s.col === c.sort ? (s.dir === 1 ? ' ▲' : ' ▼') : '';
     const click  = c.sort ? 'onclick="obSortBy(\'current\',\'' + c.sort + '\')" style="cursor:pointer;position:sticky;top:0;z-index:4;background:var(--light);' : 'style="position:sticky;top:0;z-index:4;background:var(--light);';
     const center = c.center ? 'text-align:center;' : '';
-    const width  = (c.cls === 'cost' || c.cls === 'retail') ? 'width:65px;max-width:70px;' : '';
-    return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" ' + click + center + width + '">' + c.label + arrow + '</th>';
+    const width  = (c.cls === 'cost' || c.cls === 'retail') ? 'width:65px;max-width:70px;' : c.cls === 'key' ? 'width:36px;max-width:40px;' : '';
+    const color  = c.cls === 'key' ? 'color:#b8860b;' : '';
+    return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" ' + click + center + width + color + '">' + c.label + arrow + '</th>';
   }).join('');
   document.getElementById('obHead').innerHTML = '<tr>' + colHtml + '</tr>';
 
@@ -9235,14 +9295,21 @@ function obRenderCurrent() {
   const colCount = cols.length;
   tbody.innerHTML = _obGroupByBrand(rows, colCount, function(r) {
     const existingQty = obOrderQtys[r.sku] || '';
-    var cells = '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
+    var cells = '';
+    if (showBrand)     cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
+    cells += '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
     cells += '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.crmDesc || '—') + '</td>';
-    if (showStatus) cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
+    if (showKey)       cells += '<td style="text-align:center;padding:5px 8px;color:#b8860b;font-size:15px;">' + (r.isKey ? '★' : '<span style="color:var(--muted);">—</span>') + '</td>';
+    if (showStatus)    cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
     cells += '<td style="text-align:center;font-weight:600;padding:5px 8px;">' + r.totalQty + '</td>';
     cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtDate(r.lastOrdered) + '</td>';
-    if (showBrand)  cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
-    if (showCost)   cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
-    if (showRetail) cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
+    if (showLastPrice) cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.lastPrice) + '</td>';
+    if (showCost)      cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
+    if (showRetail)    cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
+    if (showStock) {
+      cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.freeStock) + '</td>';
+      cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.onOrder) + '</td>';
+    }
     cells += '<td style="text-align:center;padding:3px 6px;"><input type="number" class="ob-order-qty-input" min="0" placeholder="0" value="' + existingQty + '" oninput="obSetOrderQty(\'' + r.sku + '\',this.value)"></td>';
     return '<tr>' + cells + '</tr>';
   });
@@ -9255,6 +9322,7 @@ function obRenderNew() {
   const showRetail = document.getElementById('obShowRetail').checked;
   const showBrand  = document.getElementById('obShowBrand').checked;
   const showStatus = document.getElementById('obShowStatus').checked;
+  const showStock  = document.getElementById('obShowStock').checked;
 
   // Build catalog rows excluding customer's range
   var catRows = [];
@@ -9266,6 +9334,8 @@ function obRenderNew() {
       const crmProd   = (asCrmProductData && asCrmProductData.get) ? (asCrmProductData.get(sku) || null) : null;
       const crmDesc   = stockInfo.crmName || (crmProd && crmProd.desc) || catEntry.desc || sku;
       const u = crmDesc.toUpperCase();
+      // Stock from asStockMap if Stock Analysis has been run, otherwise null
+      const stockEntry = (asStockMap && asStockMap.get) ? asStockMap.get(sku) : null;
       catRows.push({
         sku:         sku,
         description: catEntry.desc || sku,
@@ -9274,6 +9344,8 @@ function obRenderNew() {
         cost:        catEntry.cost   != null ? catEntry.cost   : (crmProd && crmProd.cost   != null ? crmProd.cost   : null),
         retail:      catEntry.retail != null ? catEntry.retail : (crmProd && crmProd.retail != null ? crmProd.retail : null),
         statusClass: u.startsWith('EOL') ? 'eol' : u.startsWith('TBD') ? 'tbd' : 'curr',
+        freeStock:   stockEntry ? stockEntry.qty : null,
+        onOrder:     stockEntry ? (stockEntry.onOrder || 0) : null,
       });
     });
   }
@@ -9305,14 +9377,18 @@ function obRenderNew() {
 
   document.getElementById('obRowCount').textContent = rows.length + ' lines';
 
-  // Build header
+  // Build header — Brand first, then SKU
   const cols = [];
+  if (showBrand)  cols.push({ id:'brand',  label:'Brand',      sort:'brand',       center:false });
   cols.push({ id:'sku',         label:'SKU',         sort:'sku',         center:false });
-  cols.push({ id:'description', label:'Description',  sort:'description', center:false });
-  if (showBrand)  cols.push({ id:'brand',  label:'Brand',  sort:'brand',       center:false });
+  cols.push({ id:'description', label:'Description', sort:'description', center:false });
   if (showStatus) cols.push({ id:'status', label:'Status', sort:'statusClass', center:true });
   if (showCost)   cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true });
   if (showRetail) cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true });
+  if (showStock) {
+    cols.push({ id:'freeStock', label:'Free Stock', sort:'freeStock', center:true });
+    cols.push({ id:'onOrder',   label:'On Order',   sort:'onOrder',   center:true });
+  }
   cols.push({ id:'orderQty', label:'Order Qty', sort:null, center:true });
 
   const colHtml = cols.map(function(c) {
@@ -9333,12 +9409,17 @@ function obRenderNew() {
   const colCount = cols.length;
   tbody.innerHTML = _obGroupByBrand(rows, colCount, function(r) {
     const existingQty = obOrderQtys[r.sku] || '';
-    var cells = '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
-    cells += '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.description || '—') + '</td>';
+    var cells = '';
     if (showBrand)  cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
+    cells += '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
+    cells += '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.description || '—') + '</td>';
     if (showStatus) cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
     if (showCost)   cells += '<td class="cost" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.cost) + '</td>';
     if (showRetail) cells += '<td class="retail" style="text-align:center;padding:5px 8px;">' + _obFmtMoney(r.retail) + '</td>';
+    if (showStock) {
+      cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.freeStock) + '</td>';
+      cells += '<td style="text-align:center;padding:5px 8px;">' + _obFmtStock(r.onOrder) + '</td>';
+    }
     cells += '<td style="text-align:center;padding:3px 6px;"><input type="number" class="ob-order-qty-input" min="0" placeholder="0" value="' + existingQty + '" oninput="obSetOrderQty(\'' + r.sku + '\',this.value)"></td>';
     return '<tr>' + cells + '</tr>';
   });
