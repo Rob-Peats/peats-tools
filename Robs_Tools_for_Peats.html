@@ -579,9 +579,9 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 #hubCardOrderBuilder { --tool-accent: #1a3c6e; background: linear-gradient(158deg, #c3d4ec 0%, #eaf0f8 82%); }
 html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158deg, #0d1f38 0%, var(--white) 78%); --tool-accent: #6aa9e0; }
 /* ── Order Builder native panel ────────────────────────────────────────────── */
-.ob-dropdown-panel { position:fixed; background:#fef8f0; border:1px solid #f5d6a8; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.14); padding:14px 16px; min-width:260px; z-index:99999; }
-.ob-panel-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:12px 0 6px; padding-bottom:4px; border-bottom:1px solid #f5d6a8; }
-.ob-panel-section:first-child { margin-top:0; }
+.ob-dropdown-panel { position:fixed; background:var(--white); border:1px solid var(--border); border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.10); padding:14px 16px; min-width:260px; z-index:99999; }
+.ob-panel-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:#0891b2; margin:14px -16px 8px; padding:5px 16px 5px 13px; border-left:3px solid #0891b2; border-top:1px solid rgba(8,145,178,.12); border-bottom:1px solid rgba(8,145,178,.12); background:rgba(8,145,178,.05); }
+.ob-panel-section:first-child { margin-top:-14px; border-top:none; border-radius:7px 7px 0 0; }
 .ob-period-row { display:flex; gap:6px; margin-top:6px; }
 .ob-period-btn { padding:5px 14px; border:1px solid var(--border); border-radius:6px; background:var(--white); color:var(--text); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-period-btn.active { background:var(--brand); color:#fff; border-color:var(--brand); }
@@ -590,7 +590,7 @@ html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158de
 .ob-tab-btn:last-child { border-right:none; }
 .ob-tab-btn.active { background:var(--brand); color:#fff; }
 .ob-tab-btn:disabled { opacity:.4; cursor:not-allowed; }
-.ob-view-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; font-size:13px; color:var(--text); border-bottom:1px solid rgba(245,214,168,.4); }
+.ob-view-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; font-size:13px; color:var(--text); border-bottom:1px solid rgba(0,0,0,.06); }
 .ob-view-row:last-child { border-bottom:none; }
 /* Toggle switch */
 .ob-toggle-switch { position:relative; display:inline-block; width:34px; height:20px; flex-shrink:0; }
@@ -599,7 +599,7 @@ html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158de
 .ob-toggle-slider:before { position:absolute; content:""; height:14px; width:14px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
 input:checked + .ob-toggle-slider { background:var(--brand); }
 input:checked + .ob-toggle-slider:before { transform:translateX(14px); }
-.ob-panel-section-key { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:#b8860b; margin:12px 0 6px; padding:4px 8px; border-radius:5px; background:linear-gradient(90deg,rgba(184,134,11,.12),transparent); }
+.ob-panel-section-key { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:#b8860b; margin:14px -16px 8px; padding:5px 16px 5px 13px; border-left:3px solid #b8860b; border-top:1px solid rgba(184,134,11,.18); border-bottom:1px solid rgba(184,134,11,.18); background:rgba(184,134,11,.07); }
 .ob-exclude-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--light); color:var(--text); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-order-qty-input { width:60px; padding:3px 5px; border:1px solid var(--border); border-radius:5px; text-align:center; font-size:13px; font-family:inherit; background:var(--white); color:var(--text); }
 .ob-order-qty-input:focus { outline:none; border-color:var(--brand); }
