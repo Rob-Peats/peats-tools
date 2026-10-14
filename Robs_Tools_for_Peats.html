@@ -579,20 +579,29 @@ html[data-theme="dark"] .hub-card:nth-child(9) { background: linear-gradient(158
 #hubCardOrderBuilder { --tool-accent: #1a3c6e; background: linear-gradient(158deg, #c3d4ec 0%, #eaf0f8 82%); }
 html[data-theme="dark"] #hubCardOrderBuilder { background: linear-gradient(158deg, #0d1f38 0%, var(--white) 78%); --tool-accent: #6aa9e0; }
 /* ── Order Builder native panel ────────────────────────────────────────────── */
-.ob-dropdown-panel { position:fixed; background:var(--white); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); padding:16px; min-width:260px; z-index:99999; }
+.ob-dropdown-panel { position:fixed; background:#fef8f0; border:1px solid #f5d6a8; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.14); padding:14px 16px; min-width:260px; z-index:99999; }
+.ob-panel-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:12px 0 6px; padding-bottom:4px; border-bottom:1px solid #f5d6a8; }
+.ob-panel-section:first-child { margin-top:0; }
 .ob-period-row { display:flex; gap:6px; margin-top:6px; }
-.ob-period-btn { padding:5px 14px; border:1px solid var(--border); border-radius:6px; background:var(--light); color:var(--text); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
+.ob-period-btn { padding:5px 14px; border:1px solid var(--border); border-radius:6px; background:var(--white); color:var(--text); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-period-btn.active { background:var(--brand); color:#fff; border-color:var(--brand); }
 .ob-tab-switcher { display:flex; align-items:center; border:1px solid var(--border); border-radius:8px; overflow:hidden; align-self:center; }
 .ob-tab-btn { padding:7px 20px; border:none; background:var(--light); color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.04em; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; border-right:1px solid var(--border); }
 .ob-tab-btn:last-child { border-right:none; }
 .ob-tab-btn.active { background:var(--brand); color:#fff; }
 .ob-tab-btn:disabled { opacity:.4; cursor:not-allowed; }
-.ob-view-row { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13px; color:var(--text); cursor:pointer; }
-.ob-view-row input[type=checkbox] { width:15px; height:15px; cursor:pointer; }
+.ob-view-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; font-size:13px; color:var(--text); cursor:pointer; border-bottom:1px solid rgba(245,214,168,.4); }
+.ob-view-row:last-child { border-bottom:none; }
+.ob-view-row input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-color:var(--brand); }
 .ob-exclude-btn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--light); color:var(--text); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
 .ob-order-qty-input { width:60px; padding:3px 5px; border:1px solid var(--border); border-radius:5px; text-align:center; font-size:13px; font-family:inherit; background:var(--white); color:var(--text); }
 .ob-order-qty-input:focus { outline:none; border-color:var(--brand); }
+/* Brand single-select list */
+.ob-brand-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; font-size:13px; color:var(--text); cursor:pointer; transition:background .1s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ob-brand-item:hover { background:rgba(245,214,168,.5); }
+.ob-brand-item.active { background:var(--brand); color:#fff; font-weight:700; }
+.ob-brand-item.all-brands { font-weight:700; border-bottom:1px solid #f5d6a8; margin-bottom:4px; padding-bottom:8px; border-radius:0; }
+.ob-brand-item.all-brands.active { background:var(--brand); color:#fff; border-radius:6px; }
 @media (max-width: 900px) {
   .hub-cards { grid-template-columns: repeat(2, 1fr); max-width: 620px; }
   #hub { height: auto; min-height: calc(100vh - 100px); }
@@ -2640,15 +2649,15 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
         👤 <span id="obCustomerLabel">Enter Account</span> <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
       <div id="obCustomerPanel" class="ob-dropdown-panel" style="display:none;min-width:280px;">
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Account Code</div>
+        <div class="ob-panel-section">Account Code</div>
         <input type="text" id="obAccountInput" placeholder="e.g. ABC001" autocomplete="off"
           style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:var(--white);color:var(--text);"
           onkeydown="if(event.key==='Enter')obFetchHistory()">
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:12px;margin-bottom:4px;">History Period</div>
+        <div class="ob-panel-section">History Period</div>
         <div class="ob-period-row">
-          <button class="ob-period-btn" data-months="6"  onclick="obSetPeriod(6)">6m</button>
+          <button class="ob-period-btn active" data-months="6"  onclick="obSetPeriod(6)">6m</button>
           <button class="ob-period-btn" data-months="12" onclick="obSetPeriod(12)">12m</button>
-          <button class="ob-period-btn active" data-months="18" onclick="obSetPeriod(18)">18m</button>
+          <button class="ob-period-btn" data-months="18" onclick="obSetPeriod(18)">18m</button>
           <button class="ob-period-btn" data-months="24" onclick="obSetPeriod(24)">24m</button>
         </div>
         <button onclick="obFetchHistory()"
@@ -2666,11 +2675,26 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       <button class="btn" id="obViewBtn" onclick="obToggleViewPanel(event)" style="gap:5px;justify-content:center;">
         ⚙ View <span style="opacity:.5;font-size:10px;">▾</span>
       </button>
-      <div id="obViewPanel" class="ob-dropdown-panel" style="display:none;min-width:175px;">
-        <label class="ob-view-row"><input type="checkbox" id="obShowCost"   checked onchange="obRender()"> Catalog Cost</label>
-        <label class="ob-view-row"><input type="checkbox" id="obShowRetail" checked onchange="obRender()"> Catalog Retail</label>
-        <label class="ob-view-row"><input type="checkbox" id="obShowBrand"  checked onchange="obRender()"> Brand</label>
-        <label class="ob-view-row"><input type="checkbox" id="obShowStatus"       onchange="obRender()"> Status</label>
+      <div id="obViewPanel" class="ob-dropdown-panel" style="display:none;min-width:200px;">
+        <div class="ob-panel-section">Show Columns</div>
+        <label class="ob-view-row"><span>Catalog Cost</span><input type="checkbox" id="obShowCost"   checked onchange="obRender()"></label>
+        <label class="ob-view-row"><span>Catalog Retail</span><input type="checkbox" id="obShowRetail" checked onchange="obRender()"></label>
+        <label class="ob-view-row"><span>Brand</span><input type="checkbox" id="obShowBrand"  checked onchange="obRender()"></label>
+        <label class="ob-view-row"><span>Status</span><input type="checkbox" id="obShowStatus"       onchange="obRender()"></label>
+      </div>
+    </div>
+
+    <!-- Brands pill (single-select) -->
+    <div class="t-pill brand-filter-wrap" id="obBrandWrap">
+      <span class="t-label">Brands</span>
+      <button class="btn brand-filter-btn" id="obBrandBtn" onclick="obToggleBrandPanel(event)" style="gap:5px;justify-content:center;">
+        🏷 <span id="obBrandLabel">All Brands</span>
+        <span style="opacity:.5;font-size:10px;">▾</span>
+      </button>
+      <div id="obBrandPanel" class="ob-dropdown-panel" style="display:none;min-width:200px;max-width:320px;max-height:420px;overflow-y:auto;padding:10px 12px;">
+        <input class="brand-search-inp" id="obBrandSearch" placeholder="Search brands…" oninput="obFilterBrandList(this.value)" autocomplete="off"
+          style="margin-bottom:6px;border-color:#f5d6a8;background:var(--white);">
+        <div id="obBrandList" style="display:flex;flex-direction:column;gap:1px;"></div>
       </div>
     </div>
 
@@ -2686,26 +2710,8 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
       </div>
     </div>
 
-    <!-- Spacer -->
+    <!-- Right spacer -->
     <div style="flex:1;min-width:8px;"></div>
-
-    <!-- Brands pill (dropout) -->
-    <div class="t-pill brand-filter-wrap" id="obBrandWrap">
-      <span class="t-label">Brands</span>
-      <button class="btn brand-filter-btn" id="obBrandBtn" onclick="obToggleBrandPanel(event)" style="gap:5px;justify-content:center;">
-        🏷 <span id="obBrandLabel">All Brands</span>
-        <span id="obBrandCount" style="background:var(--brand);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;display:none;"></span>
-        <span style="opacity:.5;font-size:10px;">▾</span>
-      </button>
-      <div id="obBrandPanel" class="ob-dropdown-panel brand-filter-panel" style="display:none;min-width:320px;max-width:400px;">
-        <input class="brand-search-inp" id="obBrandSearch" placeholder="Search brands…" oninput="obFilterBrandList(this.value)" autocomplete="off">
-        <div id="obBrandList" class="brand-list-scroll" style="max-height:300px;display:grid;grid-template-columns:1fr 1fr;column-gap:4px;"></div>
-        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px;">
-          <button onclick="obSelectAllBrands(true)"  style="flex:1;padding:5px;font-size:12px;font-weight:700;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:var(--light);font-family:inherit;color:var(--text);">All</button>
-          <button onclick="obSelectAllBrands(false)" style="flex:1;padding:5px;font-size:12px;font-weight:700;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:var(--light);font-family:inherit;color:var(--text);">None</button>
-        </div>
-      </div>
-    </div>
 
   </div><!-- /.controls-top -->
 
@@ -8780,7 +8786,7 @@ function pushCatalogToExport() {
 
 const obSt = {
   accountCode : '',
-  months      : 18,
+  months      : 6,
   loaded      : false,
   loading     : false,
   currentRows : [],           // [{sku,crmDesc,lastOrdered,totalQty,cost,retail,brand,statusClass}]
@@ -8790,7 +8796,7 @@ const obSt = {
   search      : '',
   exclTBD     : false,
   exclEOL     : false,
-  selectedBrands : new Set(),
+  activeBrand    : null,
   allBrands      : [],
   tab            : 'current',
   customerPanelOpen : false,
@@ -9067,44 +9073,36 @@ function obBuildAllBrands() {
     asCrmProductData.forEach(function(v) { if (v.brand) brands.add(v.brand); });
   }
   obSt.allBrands = Array.from(brands).sort(function(a, b) { return a.localeCompare(b); });
-  obSt.selectedBrands = new Set(obSt.allBrands);
+  obSt.activeBrand = null;
 }
 
 function obBuildBrandList(search) {
   const container = document.getElementById('obBrandList');
-  const s = search.toLowerCase();
+  const s = (search || '').toLowerCase();
   const filtered = obSt.allBrands.filter(function(b) { return !s || b.toLowerCase().indexOf(s) >= 0; });
-  container.innerHTML = filtered.map(function(brand) {
-    const chk = obSt.selectedBrands.has(brand) ? 'checked' : '';
-    const esc = brand.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<label class="brand-chk-row"><input type="checkbox" ' + chk + ' onchange="obSetBrand(\'' + esc + '\',this.checked)"> ' + brand + '</label>';
+  const allActive = !obSt.activeBrand;
+  var html = '<div class="ob-brand-item all-brands' + (allActive ? ' active' : '') + '" onclick="obSelectBrand(null)">All Brands</div>';
+  html += filtered.map(function(brand) {
+    const active = obSt.activeBrand === brand;
+    const esc = brand.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');
+    const escJs = brand.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div class="ob-brand-item' + (active ? ' active' : '') + '" onclick="obSelectBrand(\'' + escJs + '\')">' + esc + '</div>';
   }).join('');
+  container.innerHTML = html;
 }
 
 function obFilterBrandList(val) { obBuildBrandList(val || ''); }
 
-function obSetBrand(brand, checked) {
-  if (checked) obSt.selectedBrands.add(brand);
-  else         obSt.selectedBrands.delete(brand);
+function obSelectBrand(brand) {
+  obSt.activeBrand = brand || null;
+  obBuildBrandList(document.getElementById('obBrandSearch') ? document.getElementById('obBrandSearch').value : '');
   obUpdateBrandPill();
-  obRender();
-}
-
-function obSelectAllBrands(all) {
-  if (all) obSt.selectedBrands = new Set(obSt.allBrands);
-  else     obSt.selectedBrands = new Set();
-  obBuildBrandList(document.getElementById('obBrandSearch').value || '');
-  obUpdateBrandPill();
+  obCloseAllPanels();
   obRender();
 }
 
 function obUpdateBrandPill() {
-  const count = obSt.selectedBrands.size;
-  const total = obSt.allBrands.length;
-  document.getElementById('obBrandLabel').textContent = count === total || total === 0 ? 'All Brands' : 'Brands';
-  const badge = document.getElementById('obBrandCount');
-  if (count < total && total > 0) { badge.textContent = count; badge.style.display = 'inline'; }
-  else { badge.style.display = 'none'; }
+  document.getElementById('obBrandLabel').textContent = obSt.activeBrand || 'All Brands';
 }
 
 // ── Sort ──────────────────────────────────────────────────────────────────────
@@ -9120,11 +9118,10 @@ function obSortBy(tab, col) {
 
 function obFilterRows(rows) {
   const q = (document.getElementById('obSearch').value || '').toLowerCase();
-  const brandFiltered = obSt.allBrands.length > 0 && obSt.selectedBrands.size < obSt.allBrands.length;
   return rows.filter(function(r) {
     if (obSt.exclTBD && r.statusClass === 'tbd') return false;
     if (obSt.exclEOL && r.statusClass === 'eol') return false;
-    if (brandFiltered && !obSt.selectedBrands.has(r.brand || '')) return false;
+    if (obSt.activeBrand && (r.brand || '') !== obSt.activeBrand) return false;
     if (q) {
       const hay = ((r.sku || '') + ' ' + (r.crmDesc || '') + ' ' + (r.description || '') + ' ' + (r.brand || '')).toLowerCase();
       if (hay.indexOf(q) < 0) return false;
@@ -9163,7 +9160,7 @@ function _obGroupByBrand(rows, colCount, renderRow) {
     const brand = (!rawBrand || rawBrand === '—') ? 'Uncategorised' : rawBrand;
     if (brand !== lastBrand) {
       lastBrand = brand;
-      html += '<tr><td colspan="' + colCount + '" style="background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;padding:5px 10px;position:sticky;top:52px;z-index:2;">' + brand + '</td></tr>';
+      html += '<tr><td colspan="' + colCount + '" style="background:#1a3c6e;color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;padding:5px 10px;position:sticky;top:28px;z-index:2;">' + brand + '</td></tr>';
     }
     html += renderRow(r);
   });
@@ -9190,35 +9187,25 @@ function obRenderCurrent() {
   const sections = [];
   const cols     = [];
 
-  var prodSpan = 2 + (showStatus ? 1 : 0);
-  sections.push({ label:'PRODUCT', span:prodSpan, bg:'#1a3c6e' });
   cols.push({ id:'sku',      label:'SKU',             sort:'sku',         center:false });
   cols.push({ id:'crmDesc',  label:'CRM Description', sort:'crmDesc',     center:false });
   if (showStatus) cols.push({ id:'status', label:'Status', sort:'statusClass', center:true });
-
-  var histSpan = 2 + (showBrand ? 1 : 0);
-  sections.push({ label:'HISTORY (' + obSt.months + 'mo)', span:histSpan, bg:'#b07a10' });
-  cols.push({ id:'totalQty',    label:'Qty Sold',     sort:'totalQty',    center:true });
-  cols.push({ id:'lastOrdered', label:'Last Ordered', sort:'lastOrdered', center:true });
+  cols.push({ id:'totalQty',    label:'QTY (' + obSt.months + 'mo)', sort:'totalQty',    center:true });
+  cols.push({ id:'lastOrdered', label:'Last Ordered',                  sort:'lastOrdered', center:true });
   if (showBrand) cols.push({ id:'brand', label:'Brand', sort:'brand', center:false });
-
-  if (showCost)   { sections.push({ label:'COST',   span:1, bg:'#a03d00' }); cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true }); }
-  if (showRetail) { sections.push({ label:'RETAIL', span:1, bg:'#5a2d8a' }); cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true }); }
-  sections.push({ label:'ORDER', span:1, bg:'#1a3c6e' });
+  if (showCost)   cols.push({ id:'cost',     label:'Cost',      cls:'cost',   sort:'cost',   center:true });
+  if (showRetail) cols.push({ id:'retail',   label:'Retail',    cls:'retail', sort:'retail', center:true });
   cols.push({ id:'orderQty', label:'Order Qty', sort:null, center:true });
 
   const s = obSt.cSort;
-  const secHtml = sections.map(function(sec) {
-    return '<th colspan="' + sec.span + '" style="background:' + sec.bg + ';color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:4px 6px;border-right:2px solid #fff;position:sticky;top:0;z-index:4;">' + sec.label + '</th>';
-  }).join('');
   const colHtml = cols.map(function(c) {
     const arrow  = c.sort && s.col === c.sort ? (s.dir === 1 ? ' ▲' : ' ▼') : '';
-    const click  = c.sort ? 'onclick="obSortBy(\'current\',\'' + c.sort + '\')" style="cursor:pointer;position:sticky;top:24px;z-index:4;background:var(--light);' : 'style="position:sticky;top:24px;z-index:4;background:var(--light);';
+    const click  = c.sort ? 'onclick="obSortBy(\'current\',\'' + c.sort + '\')" style="cursor:pointer;position:sticky;top:0;z-index:4;background:var(--light);' : 'style="position:sticky;top:0;z-index:4;background:var(--light);';
     const center = c.center ? 'text-align:center;' : '';
     const width  = (c.cls === 'cost' || c.cls === 'retail') ? 'width:65px;max-width:70px;' : '';
     return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" ' + click + center + width + '">' + c.label + arrow + '</th>';
   }).join('');
-  document.getElementById('obHead').innerHTML = '<tr>' + secHtml + '</tr><tr>' + colHtml + '</tr>';
+  document.getElementById('obHead').innerHTML = '<tr>' + colHtml + '</tr>';
 
   // Filter then sort by brand first, then the chosen sort col
   var rows = obFilterRows(obSt.currentRows);
@@ -9248,7 +9235,7 @@ function obRenderCurrent() {
   const colCount = cols.length;
   tbody.innerHTML = _obGroupByBrand(rows, colCount, function(r) {
     const existingQty = obOrderQtys[r.sku] || '';
-    var cells = '<td style="font-weight:600;padding:5px 8px;">' + r.sku + '</td>';
+    var cells = '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
     cells += '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.crmDesc || '—') + '</td>';
     if (showStatus) cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
     cells += '<td style="text-align:center;font-weight:600;padding:5px 8px;">' + r.totalQty + '</td>';
@@ -9319,32 +9306,23 @@ function obRenderNew() {
   document.getElementById('obRowCount').textContent = rows.length + ' lines';
 
   // Build header
-  const sections = [];
-  const cols     = [];
-
-  var prodSpan = 2 + (showBrand ? 1 : 0) + (showStatus ? 1 : 0);
-  sections.push({ label:'PRODUCT', span:prodSpan, bg:'#1a3c6e' });
+  const cols = [];
   cols.push({ id:'sku',         label:'SKU',         sort:'sku',         center:false });
   cols.push({ id:'description', label:'Description',  sort:'description', center:false });
-  if (showBrand)  cols.push({ id:'brand', label:'Brand', sort:'brand', center:false });
+  if (showBrand)  cols.push({ id:'brand',  label:'Brand',  sort:'brand',       center:false });
   if (showStatus) cols.push({ id:'status', label:'Status', sort:'statusClass', center:true });
-
-  if (showCost)   { sections.push({ label:'COST',   span:1, bg:'#a03d00' }); cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true }); }
-  if (showRetail) { sections.push({ label:'RETAIL', span:1, bg:'#5a2d8a' }); cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true }); }
-  sections.push({ label:'ORDER', span:1, bg:'#1a3c6e' });
+  if (showCost)   cols.push({ id:'cost',   label:'Cost',   cls:'cost',   sort:'cost',   center:true });
+  if (showRetail) cols.push({ id:'retail', label:'Retail', cls:'retail', sort:'retail', center:true });
   cols.push({ id:'orderQty', label:'Order Qty', sort:null, center:true });
 
-  const secHtml = sections.map(function(sec) {
-    return '<th colspan="' + sec.span + '" style="background:' + sec.bg + ';color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:4px 6px;border-right:2px solid #fff;position:sticky;top:0;z-index:4;">' + sec.label + '</th>';
-  }).join('');
   const colHtml = cols.map(function(c) {
     const arrow  = c.sort && ns.col === c.sort ? (ns.dir === 1 ? ' ▲' : ' ▼') : '';
-    const click  = c.sort ? 'onclick="obSortBy(\'new\',\'' + c.sort + '\')" style="cursor:pointer;position:sticky;top:24px;z-index:4;background:var(--light);' : 'style="position:sticky;top:24px;z-index:4;background:var(--light);';
+    const click  = c.sort ? 'onclick="obSortBy(\'new\',\'' + c.sort + '\')" style="cursor:pointer;position:sticky;top:0;z-index:4;background:var(--light);' : 'style="position:sticky;top:0;z-index:4;background:var(--light);';
     const center = c.center ? 'text-align:center;' : '';
     const width  = (c.cls === 'cost' || c.cls === 'retail') ? 'width:65px;max-width:70px;' : '';
     return '<th class="th-col' + (c.cls ? ' ' + c.cls : '') + '" ' + click + center + width + '">' + c.label + arrow + '</th>';
   }).join('');
-  document.getElementById('obHead').innerHTML = '<tr>' + secHtml + '</tr><tr>' + colHtml + '</tr>';
+  document.getElementById('obHead').innerHTML = '<tr>' + colHtml + '</tr>';
 
   const tbody = document.getElementById('obTbody');
   if (!rows.length) {
@@ -9355,7 +9333,7 @@ function obRenderNew() {
   const colCount = cols.length;
   tbody.innerHTML = _obGroupByBrand(rows, colCount, function(r) {
     const existingQty = obOrderQtys[r.sku] || '';
-    var cells = '<td style="font-weight:600;padding:5px 8px;">' + r.sku + '</td>';
+    var cells = '<td data-img-sku="' + r.sku + '" style="font-weight:600;padding:5px 8px;cursor:default;font-family:monospace;">' + r.sku + '</td>';
     cells += '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:5px 8px;">' + (r.description || '—') + '</td>';
     if (showBrand)  cells += '<td style="padding:5px 8px;">' + (r.brand || '—') + '</td>';
     if (showStatus) cells += '<td style="text-align:center;padding:5px 8px;">' + (OB_BADGE[r.statusClass] || '') + '</td>';
