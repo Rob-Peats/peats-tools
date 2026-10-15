@@ -8699,7 +8699,10 @@ window.addEventListener('message', function(e) {
   }
   // Sync Tools: web assets CRM fetch (delegated — blob iframe can't call crm-odata from null origin)
   if (e.data && e.data.type === 'peats-sync-web-fetch') {
-    syncFetchWebAssets(e.data.catalog || []);
+    // setTimeout breaks out of the postMessage handler before fetching —
+    // Chrome can silently block fetch from within a cross-origin message handler
+    const _waCat = e.data.catalog || [];
+    setTimeout(() => syncFetchWebAssets(_waCat), 0);
   }
   // Order Builder CRM push — create a Quote for a single branch
   if (e.data && e.data.type === 'peats-ob-crm-push-branch') {
@@ -9233,7 +9236,7 @@ async function syncFetchWebAssets(catalogItems) {
     const filter = batch.map(s => "ProductItemId eq '" + s.replace(/'/g, "''") + "'").join(' or ');
     const foundInBatch = new Set();
     try {
-      const resp = await fetch(CRM + '/ProductItems?$filter=' + encodeURIComponent(filter) + '&' + SELECT, { headers, cache: 'no-store' });
+      const resp = await fetch(CRM + '/ProductItems?$filter=' + encodeURIComponent(filter) + '&' + SELECT, { headers });
       if (resp.ok) {
         const data = await resp.json();
         (data.value || []).forEach(item => {
