@@ -9040,11 +9040,12 @@ function pushCatalogToSync() {
     const startRow = state.catalogHdrIdx != null ? state.catalogHdrIdx + 1 : 1;
     for (let _ri = startRow; _ri < state.catalogRows.length; _ri++) {
       const row = state.catalogRows[_ri];
-      const code = String(row[cIdx] || '').replace(/[\s\u00a0]+/g,' ').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+      const rawCode = String(row[cIdx] || '').replace(/[\s\u00a0]+/g,' ').trim(); // original for CRM filter
+      const code = rawCode.toUpperCase().replace(/[^A-Z0-9]/g,'');               // normalised for local lookup
       if (!code) continue;
       const brand = bIdx >= 0 ? String(row[bIdx] || '').trim() : '';
       const desc  = dIdx >= 0 ? String(row[dIdx] || '').trim() : '';
-      catalogItems.push({ code, brand, desc });
+      catalogItems.push({ code, rawCode, brand, desc });
     }
   }
   const lastSyncs = {
@@ -9229,16 +9230,15 @@ async function syncFetchWebAssets(catalogItems) {
   const SELECT   = '$select=ProductItemId,WebDescription,Specification,SearchTerms,ImageAltText,ImageName,ImageVersion,WebCatalog,Barcode';
   const headers  = { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' };
 
-  const skus     = catalogItems.map(r => r.code);
-  const total    = skus.length;
+  const total    = catalogItems.length;
   const webData  = {};
   let synced = 0, errors = 0, firstError = null;
   const notFound = [];
 
-  // Pass 1: ProductItems
-  for (let i = 0; i < skus.length; i += BATCH) {
-    const batch  = skus.slice(i, i + BATCH);
-    const filter = batch.map(s => "ProductItemId eq '" + s.replace(/'/g, "''") + "'").join(' or ');
+  // Pass 1: ProductItems — use rawCode in OData filter so spaces in SKUs are preserved for CRM match
+  for (let i = 0; i < catalogItems.length; i += BATCH) {
+    const batch  = catalogItems.slice(i, i + BATCH);
+    const filter = batch.map(item => "ProductItemId eq '" + (item.rawCode || item.code).replace(/'/g, "''") + "'").join(' or ');
     const foundInBatch = new Set();
     try {
       const resp = await fetch(CRM + '/ProductItems?$filter=' + encodeURIComponent(filter) + '&' + SELECT, { headers });
@@ -9259,7 +9259,7 @@ async function syncFetchWebAssets(catalogItems) {
           };
           synced++;
         });
-        batch.forEach(code => { if (!foundInBatch.has(code)) notFound.push(code); });
+        batch.forEach(item => { if (!foundInBatch.has(item.code)) notFound.push(item.code); });
       } else {
         if (!firstError) {
           const errText = await resp.text().catch(() => '');
@@ -9272,11 +9272,11 @@ async function syncFetchWebAssets(catalogItems) {
     await new Promise(r => setTimeout(r, 0));
   }
 
-  // Pass 2: ProductItemImages (extra image URLs)
-  const imgSkus = skus.filter(k => webData[k] && webData[k].imgUrl1);
-  for (let i = 0; i < imgSkus.length; i += BATCH) {
-    const batch  = imgSkus.slice(i, i + BATCH);
-    const filter = 'Obsolete eq false and (' + batch.map(s => "ProductItemId eq '" + s.replace(/'/g, "''") + "'").join(' or ') + ')';
+  // Pass 2: ProductItemImages (extra image URLs) — same rawCode fix for filter
+  const imgItems = catalogItems.filter(item => webData[item.code] && webData[item.code].imgUrl1);
+  for (let i = 0; i < imgItems.length; i += BATCH) {
+    const batch  = imgItems.slice(i, i + BATCH);
+    const filter = 'Obsolete eq false and (' + batch.map(item => "ProductItemId eq '" + (item.rawCode || item.code).replace(/'/g, "''") + "'").join(' or ') + ')';
     try {
       const resp = await fetch(CRM + '/ProductItemImages?$filter=' + encodeURIComponent(filter) + '&$select=ProductItemId,ImageNumber,Obsolete&$orderby=ProductItemId,Sequence', { headers, cache: 'no-store' });
       if (resp.ok) {
