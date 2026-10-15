@@ -9221,7 +9221,7 @@ async function syncFetchWebAssets(catalogItems) {
   if (!pat) { complete({ error: 'No CRM PAT' }); return; }
   const CRM      = 'https://crm-odata-v1-westeurope.prospect365.com';
   const IMG_BASE = 'https://peats-img-proxy.rob-noonan.workers.dev/';
-  const BATCH    = 50;
+  const BATCH    = 10;
   const SELECT   = '$select=ProductItemId,WebDescription,Specification,SearchTerms,ImageAltText,ImageName,ImageVersion,WebCatalog,Barcode';
   const headers  = { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' };
 
