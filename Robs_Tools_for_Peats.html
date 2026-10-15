@@ -9251,7 +9251,7 @@ async function syncFetchWebAssets(catalogItems) {
           const ver = item.ImageVersion || 1;
           webData[code] = {
             webDesc:      wiStripHtml(item.WebDescription || ''),
-            longDescFull: wiStripHtml(item.Specification || item.WebExtendedDescription || ''),
+            longDescFull: wiStripHtml(item.WebExtendedDescription || item.Specification || ''),
             searchTerms:  item.SearchTerms || '',
             imgUrl1:      IMG_BASE + '?ref=' + encodeURIComponent(item.ImageName || code) + '&ver=' + ver,
             imgUrl2: '', imgUrl3: '', imgUrl4: '',
