@@ -3422,7 +3422,7 @@ async function githubPushCatalog(blob) {
     'Content-Type': 'application/json',
   };
   // 1. Get current file SHA (required for updates)
-  const metaResp = await fetch(apiUrl + `?ref=${GITHUB_CONFIG.branch}`, { headers });
+  const metaResp = await fetch(apiUrl + `?ref=${GITHUB_CONFIG.branch}`, { headers, cache: 'no-store' });
   if (!metaResp.ok) {
     if (metaResp.status === 401) {
       try { localStorage.removeItem(GH_TOKEN_KEY); } catch (e) {}
@@ -3460,7 +3460,7 @@ async function githubPushCatalog(blob) {
     const errMsg   = (errCheck.message || '').toLowerCase();
     if (errMsg.includes('does not match') || errMsg.includes('sha') || putResp.status === 409) {
       // Re-fetch the latest SHA and retry
-      const retryMeta = await fetch(apiUrl + `?ref=${GITHUB_CONFIG.branch}`, { headers });
+      const retryMeta = await fetch(apiUrl + `?ref=${GITHUB_CONFIG.branch}`, { headers, cache: 'no-store' });
       if (retryMeta.ok) {
         const retryMetaJson = await retryMeta.json();
         putResp = await _doPut(retryMetaJson.sha);
