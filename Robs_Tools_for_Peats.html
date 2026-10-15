@@ -9306,6 +9306,15 @@ async function syncFetchWebAssets(catalogItems) {
     .map(item => ({ code: item.code, brand: item.brand, desc: item.desc }))
     .sort((a, b) => (a.brand + a.code).localeCompare(b.brand + b.code));
 
+  // Diagnostic: confirm wiStripHtml worked on a sample
+  const _sampleKey = Object.keys(webData).find(k => webData[k].longDescFull);
+  if (_sampleKey) {
+    const _sample = webData[_sampleKey].longDescFull;
+    const _hasHtml = /<[a-z]/i.test(_sample);
+    console.log('[WebAssets] longDescFull strip check — code:', _sampleKey,
+      '| hasHtml:', _hasHtml,
+      '| first 120 chars:', JSON.stringify(_sample.substring(0, 120)));
+  }
   complete({ webData, synced, errors, total, gaps, firstError });
 }
 
