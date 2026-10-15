@@ -9047,9 +9047,10 @@ async function obSearchAccounts(term) {
       ef.contentWindow.postMessage({ type: 'peats-ob-account-results', results: [] }, '*');
       return;
     }
-    const safeTerm  = term.trim().toLowerCase().replace(/'/g, "''");
+    const safeTerm  = term.trim().replace(/'/g, "''");
     const safeUpper = term.trim().toUpperCase().replace(/'/g, "''");
-    const f = "substringof('" + safeTerm + "', tolower(Name)) or substringof('" + safeUpper + "', SalesLedgerId)";
+    const f = "contains(Name,'" + safeTerm + "') or contains(SalesLedgerId,'" + safeUpper + "')";
+    // Note: Prospect365 OData v4 — substringof not supported, contains is case-insensitive
     const url = CRM_ODATA_BASE + '/Divisions?$filter=' + encodeURIComponent(f) +
                 '&$select=Name,SalesLedgerId,StatusFlag&$top=15&$orderby=Name';
     const resp = await fetch(url, {
