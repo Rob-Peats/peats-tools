@@ -3748,6 +3748,7 @@ function parseCatalog(rows, name, wb, rawBuf) {
     if (cells.some(h => /(peats|stock|product|item)?\s*code$/.test(h) || h === 'sku' || h === 'code')) { hdrIdx = r; break; }
   }
   if (hdrIdx < 0) hdrIdx = 0;
+  state.catalogHdrIdx = hdrIdx;   // stored so pushCatalogToSync can skip header rows
   const HDR = (rows[hdrIdx] || []).map(v => String(v == null ? '' : v).trim());
 
   // Exact header match first, then "contains", then a fixed-position fallback
@@ -9036,7 +9037,9 @@ function pushCatalogToSync() {
     const cIdx     = state.catalogColIdx.code  !== undefined ? state.catalogColIdx.code  : 0;
     const bIdx     = state.catalogColIdx.brand !== undefined ? state.catalogColIdx.brand : -1;
     const dIdx     = state.catalogColIdx.desc  !== undefined ? state.catalogColIdx.desc  : -1;
-    for (const row of state.catalogRows) {
+    const startRow = state.catalogHdrIdx != null ? state.catalogHdrIdx + 1 : 1;
+    for (let _ri = startRow; _ri < state.catalogRows.length; _ri++) {
+      const row = state.catalogRows[_ri];
       const code = String(row[cIdx] || '').replace(/[\s\u00a0]+/g,' ').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
       if (!code) continue;
       const brand = bIdx >= 0 ? String(row[bIdx] || '').trim() : '';
@@ -9247,8 +9250,8 @@ async function syncFetchWebAssets(catalogItems) {
           foundInBatch.add(code);
           const ver = item.ImageVersion || 1;
           webData[code] = {
-            webDesc:      (item.WebDescription || '').replace(/<[^>]*>/g, '').trim(),
-            longDescFull: (item.Specification  || '').replace(/<[^>]*>/g, '').trim(),
+            webDesc:      wiStripHtml(item.WebDescription || ''),
+            longDescFull: wiStripHtml(item.Specification  || ''),
             searchTerms:  item.SearchTerms || '',
             imgUrl1:      IMG_BASE + '?ref=' + encodeURIComponent(item.ImageName || code) + '&ver=' + ver,
             imgUrl2: '', imgUrl3: '', imgUrl4: '',
