@@ -2673,7 +2673,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
           <div class="ob-sec-head">Account Code</div>
           <input type="text" id="obAccountInput" placeholder="e.g. ABC001" autocomplete="off"
             style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:var(--white);color:var(--text);"
-            onkeydown="if(event.key==='Enter')obFetchHistory()">
+            onkeydown="if(event.key==='Enter')obLegacyFetchHistory()">
         </div>
         <div class="ob-section ob-sec-acct">
           <div class="ob-sec-head">History Period</div>
@@ -2684,7 +2684,7 @@ html[data-theme="dark"] .hub-card:hover .hub-card-launch { background: rgba(255,
             <button class="ob-period-btn" data-months="24" onclick="obSetPeriod(24)">24m</button>
           </div>
         </div>
-        <button onclick="obFetchHistory()"
+        <button onclick="obLegacyFetchHistory()"
           style="width:100%;padding:8px;background:var(--brand);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
           ▶ Load Customer
         </button>
@@ -9277,7 +9277,7 @@ function obSetPeriod(months) {
 
 // ── Customer fetch ────────────────────────────────────────────────────────────
 
-async function obFetchHistory() {
+async function obLegacyFetchHistory() {
   const code = (document.getElementById('obAccountInput').value || '').trim().toUpperCase();
   if (!code) { showToast('Enter an account code first.'); return; }
   if (obSt.loading) return;
@@ -15277,9 +15277,10 @@ function checkAdminPin() {
 function backToHub() {
   activeTool = null;
   document.body.style.overflowY = 'hidden';
-  document.getElementById('hub').style.display             = 'flex';
-  document.getElementById('tool-generator').style.display  = 'none';
-  document.getElementById('tool-conversion').style.display = 'none';
+  document.getElementById('hub').style.display               = 'flex';
+  document.getElementById('tool-orderbuilder').style.display = 'none';
+  document.getElementById('tool-generator').style.display    = 'none';
+  document.getElementById('tool-conversion').style.display   = 'none';
   document.getElementById('tool-soa').style.display        = 'none';
   document.getElementById('tool-soaadvert').style.display  = 'none';
   document.getElementById('tool-export').style.display     = 'none';
