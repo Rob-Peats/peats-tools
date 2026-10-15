@@ -9180,7 +9180,7 @@ async function syncPushWebAssets(catalog) {
     ws.eachRow({ includeEmpty: false }, (row, rn) => { if (rn === 1) hdrRow = row; });
     const hdrs = [];
     if (hdrRow) hdrRow.eachCell((cell, cn) => { hdrs[cn] = String(cell.value || '').trim().toLowerCase(); });
-    const _codeIdx = hdrs.findIndex(h => h === 'code' || h === 'productitemid' || h === 'sku');
+    const _codeIdx = hdrs.findIndex(h => h === 'code' || h === 'peats code' || h === 'productitemid' || h === 'sku');
     const codeCol = _codeIdx >= 1 ? _codeIdx : 1;
     // Diagnostic: confirm catalog size, header layout, and code column
     console.log('[PushWebAssets diag] catalog size:', Object.keys(catalog).length, '| sample keys:', Object.keys(catalog).slice(0, 3));
