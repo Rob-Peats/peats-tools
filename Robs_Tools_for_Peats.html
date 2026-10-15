@@ -9176,7 +9176,8 @@ async function syncPushWebAssets(catalog) {
     ws.eachRow({ includeEmpty: false }, (row, rn) => { if (rn === 1) hdrRow = row; });
     const hdrs = [];
     if (hdrRow) hdrRow.eachCell((cell, cn) => { hdrs[cn] = String(cell.value || '').trim().toLowerCase(); });
-    const codeCol = hdrs.findIndex(h => h === 'code' || h === 'productitemid' || h === 'sku') || 1;
+    const _codeIdx = hdrs.findIndex(h => h === 'code' || h === 'productitemid' || h === 'sku');
+    const codeCol = _codeIdx >= 1 ? _codeIdx : 1;
     // Write web asset columns (N=14, O=15, P=16, Q=17, R=18, S=19, T=20, U=21)
     ws.eachRow({ includeEmpty: false }, (row, rn) => {
       if (rn === 1) return; // skip header
