@@ -9182,12 +9182,26 @@ async function syncPushWebAssets(catalog) {
     if (hdrRow) hdrRow.eachCell((cell, cn) => { hdrs[cn] = String(cell.value || '').trim().toLowerCase(); });
     const _codeIdx = hdrs.findIndex(h => h === 'code' || h === 'productitemid' || h === 'sku');
     const codeCol = _codeIdx >= 1 ? _codeIdx : 1;
+    // Diagnostic: confirm catalog size, header layout, and code column
+    console.log('[PushWebAssets diag] catalog size:', Object.keys(catalog).length, '| sample keys:', Object.keys(catalog).slice(0, 3));
+    console.log('[PushWebAssets diag] Excel headers (1-based col \u2192 label):', JSON.stringify(hdrs.map((h,i) => h ? i+':'+h : null).filter(Boolean)));
+    console.log('[PushWebAssets diag] code col (ExcelJS 1-based):', codeCol, '| col header:', hdrs[codeCol]);
+    console.log('[PushWebAssets diag] writing webDesc\u2192col14, longDescFull\u2192col15 | col14 hdr:', hdrs[14], '| col15 hdr:', hdrs[15]);
+    // Check TAPOC500 specifically
+    const _tapoc = catalog['TAPOC500'];
+    if (_tapoc) console.log('[PushWebAssets diag] TAPOC500 in catalog | webDesc len:', (_tapoc.webDesc||'').length, '| longDescFull len:', (_tapoc.longDescFull||'').length, '| longDescFull[0:80]:', JSON.stringify((_tapoc.longDescFull||'').substring(0,80)));
+    else console.log('[PushWebAssets diag] TAPOC500 NOT found in catalog');
     // Write web asset columns (N=14, O=15, P=16, Q=17, R=18, S=19, T=20, U=21)
+    let _pushRowsUpdated = 0, _pushSampleLogged = 0;
     ws.eachRow({ includeEmpty: false }, (row, rn) => {
       if (rn === 1) return; // skip header
       const code = String(row.getCell(codeCol).value || '').replace(/[\s\u00a0]+/g,' ').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
       if (!code || !catalog[code]) return;
       const d = catalog[code];
+      if (_pushSampleLogged < 3) {
+        console.log('[PushWebAssets diag] updating row', rn, '| code:', code, '| longDescFull len:', (d.longDescFull||'').length, '| val[0:60]:', JSON.stringify((d.longDescFull||'').substring(0,60)));
+        _pushSampleLogged++;
+      }
       row.getCell(14).value = d.webDesc      || '';
       row.getCell(15).value = d.longDescFull || '';
       row.getCell(16).value = d.imgUrl1      || '';
@@ -9196,7 +9210,9 @@ async function syncPushWebAssets(catalog) {
       row.getCell(19).value = d.imgUrl4      || '';
       row.getCell(20).value = d.ean          || '';
       row.getCell(21).value = d.searchTerms  || '';
+      _pushRowsUpdated++;
     });
+    console.log('[PushWebAssets diag] total rows updated:', _pushRowsUpdated);
     const buf  = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const ok   = await githubPushCatalog(blob);
