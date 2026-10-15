@@ -9227,7 +9227,7 @@ async function syncFetchWebAssets(catalogItems) {
   const CRM      = 'https://crm-odata-v1-westeurope.prospect365.com';
   const IMG_BASE = 'https://peats-img-proxy.rob-noonan.workers.dev/';
   const BATCH    = 25;
-  const SELECT   = '$select=ProductItemId,WebDescription,Specification,SearchTerms,ImageAltText,ImageName,ImageVersion,WebCatalog,Barcode';
+  const SELECT   = '$select=ProductItemId,WebDescription,WebExtendedDescription,Specification,SearchTerms,ImageAltText,ImageName,ImageVersion,WebCatalog,Barcode';
   const headers  = { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' };
 
   const total    = catalogItems.length;
@@ -9251,7 +9251,7 @@ async function syncFetchWebAssets(catalogItems) {
           const ver = item.ImageVersion || 1;
           webData[code] = {
             webDesc:      wiStripHtml(item.WebDescription || ''),
-            longDescFull: wiStripHtml(item.Specification  || ''),
+            longDescFull: wiStripHtml(item.Specification || item.WebExtendedDescription || ''),
             searchTerms:  item.SearchTerms || '',
             imgUrl1:      IMG_BASE + '?ref=' + encodeURIComponent(item.ImageName || code) + '&ver=' + ver,
             imgUrl2: '', imgUrl3: '', imgUrl4: '',
@@ -9306,15 +9306,16 @@ async function syncFetchWebAssets(catalogItems) {
     .map(item => ({ code: item.code, brand: item.brand, desc: item.desc }))
     .sort((a, b) => (a.brand + a.code).localeCompare(b.brand + b.code));
 
-  // Diagnostic: confirm wiStripHtml worked on a sample
-  const _sampleKey = Object.keys(webData).find(k => webData[k].longDescFull);
-  if (_sampleKey) {
-    const _sample = webData[_sampleKey].longDescFull;
-    const _hasHtml = /<[a-z]/i.test(_sample);
-    console.log('[WebAssets] longDescFull strip check — code:', _sampleKey,
-      '| hasHtml:', _hasHtml,
-      '| first 120 chars:', JSON.stringify(_sample.substring(0, 120)));
-  }
+  // Diagnostic: log first 3 products from CRM showing which fields have content
+  const _diagKeys = Object.keys(webData).slice(0, 3);
+  _diagKeys.forEach(_k => {
+    const _d = webData[_k];
+    console.log('[WebAssets diag] code:', _k,
+      '| webDesc len:', _d.webDesc.length,
+      '| longDescFull len:', _d.longDescFull.length,
+      '| longDescFull[0:80]:', JSON.stringify(_d.longDescFull.substring(0, 80)));
+  });
+  if (!_diagKeys.length) console.log('[WebAssets diag] webData is empty — no products returned from CRM');
   complete({ webData, synced, errors, total, gaps, firstError });
 }
 
