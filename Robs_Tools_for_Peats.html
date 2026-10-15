@@ -9224,6 +9224,23 @@ async function syncFetchWebAssets(catalogItems) {
   const BATCH    = 50;
   const SELECT   = '$select=ProductItemId,WebDescription,Specification,SearchTerms,ImageAltText,ImageName,ImageVersion,WebCatalog,Barcode';
   const headers  = { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/json' };
+
+  // ── Preflight: confirm parent can reach CRM at all ──
+  try {
+    progress(0, 1, 'Pre-flight check…');
+    const pfResp = await fetch(CRM + '/ProductItems?$top=1', { headers });
+    console.log('[WebAssets preflight] status:', pfResp.status, pfResp.statusText);
+    if (!pfResp.ok) {
+      const pfErr = await pfResp.text().catch(() => '');
+      complete({ error: 'Pre-flight HTTP ' + pfResp.status + (pfErr ? ': ' + pfErr.slice(0, 200) : '') });
+      return;
+    }
+  } catch(pfEx) {
+    console.error('[WebAssets preflight] FAILED:', pfEx);
+    complete({ error: 'Pre-flight Failed to fetch — parent cannot reach CRM. Cause: ' + (pfEx.message || pfEx) });
+    return;
+  }
+
   const skus     = catalogItems.map(r => r.code);
   const total    = skus.length;
   const webData  = {};
